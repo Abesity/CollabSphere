@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="username" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+
+        <div class="form-options">
+            <label>
+                <input type="checkbox" name="remember"> Remember Me
+            </label>
+            <a href="">Forgot password?</a> 
+            {% comment %} to add password reset {% endcomment %}
+        </div>
+
+        <button type="submit" class="btn">Login</button>
+
+        <div class="divider">
+            <span>OR</span>
+        </div>
+
+        <p class="social-text">Sign in using your account with</p>
+        <div class="social-login">
+            <a href="" class="btn-facebook">Facebook</a>
+            <a href="" class="btn-google">Google</a>
+      {% comment %} to add facebook and google login {% endcomment %}
+        </div>
+    </form>
+</div>
+{% endblock %}
