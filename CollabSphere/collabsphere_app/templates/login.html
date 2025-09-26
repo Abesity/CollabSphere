@@ -5,6 +5,12 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/login.css' %}?v=1.0">
+<style>
+  .errorlist { color: red; font-size: 0.9em; margin-top: 4px; list-style: none; padding-left: 0; }
+  .is-invalid { border: 2px solid red; }
+  .is-valid { border: 2px solid green; }
+  .form-error { color: red; margin-bottom: 10px; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -12,47 +18,87 @@
     <form method="post" action="{% url 'login' %}">
         {% csrf_token %}
 
+        {# Non-field errors (e.g., invalid credentials) #}
+        {% if form and form.non_field_errors %}
+          <div class="form-error">
+            {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+          </div>
+        {% endif %}
+
         <div class="form-group">
-            <label  id="emaillabel" for="email">Email:</label>
-            <input type="email" id="email" name="email" required>
+            <label id="emaillabel" for="email">Email:</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              value="{{ form.data.email|default_if_none:'' }}"
+              class="
+                {% if form and form.is_bound %}
+                  {% if form.errors.email %}is-invalid{% else %}is-valid{% endif %}
+                {% endif %}
+              "
+              {% if form and form.errors.email %}autofocus{% endif %}
+            >
+            {% if form and form.errors.email %}
+              <ul class="errorlist">
+                {% for e in form.errors.email %}
+                  <li>{{ e }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
         </div>
 
         <div class="form-group">
             <label id="passwordlabel" for="password">Password:</label>
-            <input type="password" id="password" name="password" required>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              class="
+                {% if form and form.is_bound %}
+                  {% if form.errors.password %}is-invalid{% else %}is-valid{% endif %}
+                {% endif %}
+              "
+              {% if form and not form.errors.email and form.errors.password %}autofocus{% endif %}
+            >
+            {% if form and form.errors.password %}
+              <ul class="errorlist">
+                {% for e in form.errors.password %}
+                  <li>{{ e }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
         </div>
-
 
         <div class="checkbox-container">
-        <div class="left-side">
+          <div class="left-side">
             <label>
-            <input type="checkbox" name="remember"> Remember Me?
+              <input type="checkbox" name="remember"> Remember Me?
             </label>
-        </div>
-        <div class="right-side">
+          </div>
+          <div class="right-side">
             <a id="forgot-pass" href="">Forgot Password?</a>
             {% comment %} for forget password link {% endcomment %}
-        </div>
-        </div>
-
-
-
-    <div class="form-options">
-            <button type="submit" class="btn">Login</button>
-            <p id="register-link"> Don't have an account? <a href="{% url 'register' %}">Register here</a> </p>
-    </div>
-
-    <div class = "social-container">
-        <div class="divider">
-            <span>OR</span>
+          </div>
         </div>
 
-        <p class="social-text">Sign in using your account with</p>
-        <div class="social-login">
+        <div class="form-options">
+          <button type="submit" class="btn">Login</button>
+          <p id="register-link"> Don't have an account?
+            <a href="{% url 'register' %}">Register here</a>
+          </p>
+        </div>
+
+        <div class="social-container">
+          <div class="divider"><span>OR</span></div>
+          <p class="social-text">Sign in using your account with</p>
+          <div class="social-login">
             <a href="" class="btn-facebook">Facebook</a>
             <a href="" class="btn-google">Google</a>
+          </div>
         </div>
-    </div>
     </form>
 </div>
 {% endblock %}

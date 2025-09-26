@@ -1,14 +1,116 @@
-<!DOCTYPE html>
-<html>
-<head><title>Register</title></head>
-<body>
-<h2>Register</h2>
-<form method="post">
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Register{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/register.css' %}?v=1.0">
+<style>
+  .errorlist { color: red; font-size: 0.9em; margin-top: 4px; list-style: none; padding-left: 0; }
+  .is-invalid { border: 2px solid red; }
+  .is-valid { border: 2px solid green; }
+  .form-error { color: red; margin-bottom: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-container">
+  <form method="post" action="{% url 'register' %}">
     {% csrf_token %}
-<input type="text" name="username" placeholder="Username" required><br>
-<input type="email" name="email" placeholder="Email" required><br>
-<input type="password" name="password" placeholder="Password" required><br>
-<button type="submit">Register</button>
-</form>
-</body>
-</html>
+
+    {# Non-field errors, if any #}
+    {% if form and form.non_field_errors %}
+      <div class="form-error">
+        {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="form-group">
+      <label id="usernamelabel" for="username">Username:</label>
+      <input
+        type="text"
+        id="username"
+        name="username"
+        required
+        value="{{ form.data.username|default_if_none:'' }}"
+        class="
+          {% if form and form.is_bound %}
+            {% if form.errors.username %}is-invalid{% else %}is-valid{% endif %}
+          {% endif %}
+        "
+        {% if form and form.errors.username %}autofocus{% endif %}
+      >
+    </div>
+    {% if form and form.errors.username %}
+      <ul class="errorlist">
+        {% for e in form.errors.username %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <div class="form-group">
+      <label id="emaillabel" for="email">Email:</label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        required
+        value="{{ form.data.email|default_if_none:'' }}"
+        class="
+          {% if form and form.is_bound %}
+            {% if form.errors.email %}is-invalid{% else %}is-valid{% endif %}
+          {% endif %}
+        "
+        {% if form and not form.errors.username and form.errors.email %}autofocus{% endif %}
+      >
+    </div>
+    {% if form and form.errors.email %}
+      <ul class="errorlist">
+        {% for e in form.errors.email %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <div class="form-group">
+      <label id="passwordlabel" for="password">Password:</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        required
+        class="
+          {% if form and form.is_bound %}
+            {% if form.errors.password %}is-invalid{% else %}is-valid{% endif %}
+          {% endif %}
+        "
+        {% if form and not form.errors.username and not form.errors.email and form.errors.password %}autofocus{% endif %}
+      >
+    </div>
+    {% if form and form.errors.password %}
+      <ul class="errorlist">
+        {% for e in form.errors.password %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+        <div class="form-options">
+            <button type="submit" class="btn">Register</button>
+            <p id="login-link"> Already have an account?
+                <a href="{% url 'login' %}">Login here</a>
+            </p>
+            </div>
+
+        <div class="social-container">
+          <div class="divider"><span>OR</span></div>
+          <p class="social-text">Sign up using your account with</p>
+          <div class="social-login">
+            <a href="" class="btn-facebook">Facebook</a>
+            <a href="" class="btn-google">Google</a>
+          </div>
+        </div>
+  </form>
+</div>
+{% endblock %}
