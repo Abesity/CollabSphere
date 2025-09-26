@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Login{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/login.css' %}?v=1.0">
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label  id="emaillabel" for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+
+        <div class="form-group">
+            <label id="passwordlabel" for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+
+
+        <div class="checkbox-container">
+        <div class="left-side">
+            <label>
+            <input type="checkbox" name="remember"> Remember Me?
+            </label>
+        </div>
+        <div class="right-side">
+            <a id="forgot-pass" href="">Forgot Password?</a>
+            {% comment %} for forget password link {% endcomment %}
+        </div>
+        </div>
+
+
+
+    <div class="form-options">
+            <button type="submit" class="btn">Login</button>
+            <p id="register-link"> Don't have an account? <a href="{% url 'register' %}">Register here</a> </p>
+    </div>
+
+    <div class = "social-container">
+        <div class="divider">
+            <span>OR</span>
+        </div>
+
+        <p class="social-text">Sign in using your account with</p>
+        <div class="social-login">
+            <a href="" class="btn-facebook">Facebook</a>
+            <a href="" class="btn-google">Google</a>
+        </div>
+    </div>
+    </form>
+</div>
+{% endblock %}
