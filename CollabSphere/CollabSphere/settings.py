@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -28,7 +28,10 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://oafdtoodydpmqryfulvu.supabase.co")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZmR0b29keWRwbXFyeWZ1bHZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4MDQxNTEsImV4cCI6MjA3NDM4MDE1MX0.tLNm5vLBpCtAtiCXSJYIbxOE-T2XySOlsEkD_vCzg8E") #replace with your supabase URL
 # Application definition
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -115,7 +118,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

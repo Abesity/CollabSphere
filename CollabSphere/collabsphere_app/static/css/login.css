@@ -39,6 +39,7 @@ label {
     margin-left: -20px;
 }
 
+
 .login-container input[type="email"],
 .login-container input[type="password"] {
     flex: 1;
@@ -53,18 +54,6 @@ label {
 
 .login-container input:focus {
     border-color: #007bff;
-}
-
-/* Remember me*/
-.login-container label input[type="checkbox"] {
-    margin-right: 6px;
-}
-.login-container > form > label {
-    display: flex;
-    align-items: center;
-    margin-left: 90px; 
-    text-wrap: nowrap;
-    margin-bottom: 1rem;
 }
 
 .form-options {
@@ -91,6 +80,37 @@ label {
     margin-right: 30px;
     -right: 10px;
 }
+
+.register-link {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+
+.checkbox-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  text-wrap: nowrap;
+  margin-left: 90px;
+margin-bottom: 20px;
+}
+
+.checkbox-container .left-side label {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-container input[type="checkbox"] {
+  margin-right: 6px;
+}
+
+.checkbox-container .right-side a {
+  text-decoration: underline;
+  color: #007bff;
+}
+
 
 #forgot-pass {
     text-decoration: underline;
@@ -140,6 +160,8 @@ label {
     width: 100%;
     margin: auto;
 }
+
+
 
 .btn-facebook,
 .btn-google {
