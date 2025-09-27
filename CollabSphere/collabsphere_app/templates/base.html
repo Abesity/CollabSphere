@@ -17,11 +17,15 @@
             <!-- Logo placeholder -->
             <div style="width:40px; height:40px; background:#ccc; border-radius:5px; margin-right:8px;"></div>
             <span class="fw-bold me-4">CollabSphere</span>
-
             <!-- Links inline -->
             <a class="nav-link d-inline-block me-3" href="#">Home</a>
             <a class="nav-link d-inline-block me-3" href="#">About</a>
             <a class="nav-link d-inline-block" href="#">Help</a>
+        </div>
+
+        <div class="login-signup-container" >
+            <a class="btn btn-outline-primary me-2" href="{% url 'login' %}">Log In</a>
+            <a class="btn btn-primary" href="{% url 'register' %}">Register</a>
         </div>
     </nav>
 
