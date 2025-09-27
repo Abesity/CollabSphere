@@ -1,0 +1,112 @@
+{% extends "base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Profile – CollabSphere{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+    <div class="list-group list-group-flush">
+        <a href="#" class="list-group-item sidebar-link active">Profile</a>
+        <a href="#" class="list-group-item sidebar-link">Security</a>
+        <a href="#" class="list-group-item sidebar-link">Notifications</a>
+        <a href="#" class="list-group-item sidebar-link">Team Members</a>
+    </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <!-- Profile Header Row -->
+          <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+              <h1 class="card-title mb-1">Profile</h1>
+              <p class="text-muted mb-0">
+                This information will be displayed publicly, so be careful what you share.
+              </p>
+            </div>
+            <div class="profile-img">
+              <img src="{% static 'images/user.jpg' %}" alt="Profile Image"
+                   class="rounded-circle me-3" width="80" height="80">
+              <button class="btn btn-outline-secondary btn-sm">Update Profile Image</button>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Info List -->
+          <div class="list-group list-group-flush">
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">Full Name</div>
+                <div class="text-muted small">John Doe</div>
+              </div>
+              <button class="btn btn-sm btn-outline-primary">Update</button>
+            </div>
+
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">Email Address</div>
+                <div class="text-muted small">john@example.com</div>
+              </div>
+              <button class="btn btn-sm btn-outline-primary">Update</button>
+            </div>
+
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">Title</div>
+                <div class="text-muted small">Software Engineer</div>
+              </div>
+              <button class="btn btn-sm btn-outline-primary">Update</button>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Languages & Dates -->
+          <h3 class="fw-bold mb-3">Languages and Dates</h3>
+          <p class="text-muted small">
+            Choose what language and date format to use throughout your account.
+          </p>
+
+          <div class="list-group list-group-flush">
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">Language</div>
+                <div class="text-muted small">English</div>
+              </div>
+              <button class="btn btn-sm btn-outline-primary">Update</button>
+            </div>
+
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">Date Format</div>
+                <div class="text-muted small">DD-mm-yy</div>
+              </div>
+              <button class="btn btn-sm btn-outline-primary">Update</button>
+            </div>
+
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">Automatic Timezone</div>
+                <div class="text-muted small">Enabled</div>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="timezoneToggle" checked>
+                <label class="form-check-label" for="timezoneToggle"></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}
