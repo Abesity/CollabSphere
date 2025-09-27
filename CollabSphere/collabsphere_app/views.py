@@ -4,6 +4,7 @@ from supabase import create_client
 from django.conf import settings
 from .forms import RegistrationForm 
 from .forms import LoginForm
+from django.contrib.auth.decorators import login_required
 
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
@@ -64,3 +65,10 @@ def dashboard(request):
     users = response.data
 
     return render(request, "dashboard.html", {"users": users})
+
+# require login here to view profile please
+def profile_view(request):
+    """
+    Render the user profile page.
+    """
+    return render(request, "profile.html")
