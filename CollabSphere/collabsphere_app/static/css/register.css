@@ -1,14 +1,12 @@
 body{
-    margin: 0;
-    padding: 0;
+    margin: 0%;
+    padding: 0%;
 }
-
-
 .register-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: #f0f0f0;
+    background: #f0f0f0; 
     padding: 2rem 3rem;
     border-radius: 12px;
     box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
@@ -19,31 +17,32 @@ body{
 form {
     width: 100%;
     max-width: 800px;
+   
 }
-
 .form-group {
     display: flex;
     align-items: center;
     margin-bottom: 1rem;
+    
 }
 
 label {
     font-weight: bold;
     margin-right: 10px;
     text-align: right;
-    width: 120px; /* a bit wider for 'Username' label */
+    width: 100px; 
 }
 
-#usernamelabel,
 #emaillabel,
-#passwordlabel {
+#passwordlabel, #usernamelabel {
     text-align: right;
     margin-left: -20px;
 }
 
-.register-container input[type="text"],
+
 .register-container input[type="email"],
-.register-container input[type="password"] {
+.register-container input[type="password"],
+.register-container input[type="text"] {
     flex: 1;
     padding: 0.6rem;
     border: 1px solid #ccc;
@@ -56,6 +55,15 @@ label {
 
 .register-container input:focus {
     border-color: #007bff;
+}
+
+.form-options {
+    display: flex;
+    align-items: center;
+    margin-left: 110px; 
+    margin-bottom: 1.2rem;
+    font-size: 0.9rem;
+    width: calc(100% - 110px);
 }
 
 .register-container .btn {
@@ -71,43 +79,82 @@ label {
     flex: 1;
     margin-left: -20px;
     margin-right: 30px;
+    -right: 10px;
 }
 
+.register-link {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+
+.checkbox-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  text-wrap: nowrap;
+  margin-left: 90px;
+margin-bottom: 20px;
+}
+
+.checkbox-container .left-side label {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-container input[type="checkbox"] {
+  margin-right: 6px;
+}
+
+.checkbox-container .right-side a {
+  text-decoration: underline;
+  color: #007bff;
+}
+
+
+#forgot-pass {
+    text-decoration: underline;
+    color: #007bff;
+    
+    transition: color 0.3s;
+}
 .register-container .btn:hover {
     background-color: #0056b3;
 }
 
-.errorlist {
-    color: red;
+.divider {
+    text-align: center;
+    margin: 1.5rem 0;
+    position: relative;
+}
+
+.divider span {
+    background: #f0f0f0;
+    padding: 0 10px;
+    position: relative;
+    z-index: 1;
     font-size: 0.9rem;
-    margin-top: 5px;
-    list-style: none;
-    padding-left: 0;
+    color: #555;
 }
 
-.is-invalid {
-    border: 2px solid red !important;
+.social-container{
+    margin-left: 90px;
+    
 }
 
-.is-valid {
-    border: 2px solid green !important;
+.divider::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #bbb;
+    z-index: 0;
 }
 
-.form-actions {
-    display: flex;
-    align-items: center;
-    margin-left: 120px; 
-    margin-bottom: 1.2rem;
-    width: calc(100% - 120px);
-}
-
-.form-error {
-    color: red;
-    margin-bottom: 10px;
-    margin-left: 120px;
-}
-
-.social-login {
+.social-register {
     display: flex;
     justify-content: space-evenly;
     gap: 10px;
@@ -145,4 +192,3 @@ label {
 .btn-google:hover {
     background: #a33224;
 }
-
