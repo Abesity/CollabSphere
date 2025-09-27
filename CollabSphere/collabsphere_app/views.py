@@ -58,3 +58,9 @@ def login(request):
 
 def home(request):
     return render(request, 'home.html')
+
+def dashboard(request):
+    response = supabase.table("users").select("*").execute()
+    users = response.data
+
+    return render(request, "dashboard.html", {"users": users})
