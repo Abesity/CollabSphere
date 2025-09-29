@@ -5,6 +5,7 @@ from django.conf import settings
 from .forms import RegistrationForm 
 from .forms import LoginForm
 from django.contrib.auth.decorators import login_required
+from .utils.passwords import hash_password, verify_password
 
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
@@ -27,10 +28,11 @@ def register(request):
 
             if not form.errors:
                 # NOTE: In real apps, store a password hash instead of plaintext.
+                password_hash = hash_password(password)
                 supabase.table("users").insert({
                     "username": username,
                     "email": email,
-                    "password": password
+                    "password": password_hash
                 }).execute()
                 return redirect("login")  # or redirect to 'home'
 
@@ -49,11 +51,14 @@ def login(request):
             response = supabase.table("users").select("password").eq("email", email).execute()
 
             # Compare (NOTE: plaintext; recommend hashing in real apps)
-            if response.data and response.data[0].get("password") == password:
-                return redirect("home")
-            else:
-                # Non-field error shown at top of the form
-                form.add_error(None, "Invalid email or password")
+            if response.data:
+                stored_hash = response.data[0].get("password")
+
+                # ✅ Verify securely
+                if verify_password(password, stored_hash):
+                    return redirect("home")
+
+            form.add_error(None, "Invalid email or password")
 
     return render(request, "login.html", {"form": form})
 
