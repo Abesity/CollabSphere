@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "collabsphere_app"
+    "collabsphere_app",
+    'registration',
 ]
 
 MIDDLEWARE = [
