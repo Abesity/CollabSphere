@@ -6,7 +6,6 @@
   width: 140px;              /* fixed width */
   height: 100%;
   background-color: #f8f9fa;
-  z-index: -1;                
   padding-top: 100px;
   border-right: 1px solid #dee2e6;
   text-wrap: wrap;
@@ -40,10 +39,13 @@ main {
 }
 
 .profile-img {
+    width: fit-content;
     text-align: center;
+    display: block;
 }
 
 .profile-img img {
+
     border-radius: 50%;
     width: 100px;
     height: 100px;
