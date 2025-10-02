@@ -4,20 +4,23 @@
 {% block title %}Profile – CollabSphere{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+<link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=1.1">
+<link rel="stylesheet" href="{% static 'css/profile.css' %}?v=1.1">
 {% endblock %}
 
-{% block content %}
+
+
+{% block content %}  
+
 <div class="container-fluid">
-  <div class="row">
-    <!-- Sidebar -->
-    <nav class="col-md-3 col-lg-2 d-md-block sidebar">
-    <div class="list-group list-group-flush">
+ 
+  <nav id="sidebar-nav" class="sidebar">
+      <div class="list-group list-group-flush">
         <a href="#" class="list-group-item sidebar-link active">Profile</a>
         <a href="#" class="list-group-item sidebar-link">Security</a>
         <a href="#" class="list-group-item sidebar-link">Notifications</a>
         <a href="#" class="list-group-item sidebar-link">Team Members</a>
-    </div>
+      </div>
     </nav>
 
     <!-- Main Content -->
@@ -109,4 +112,8 @@
     </main>
   </div>
 </div>
+{% block extra_js %}
+<script src="{% static 'js/sidebar.js' %}"></script>
 {% endblock %}
+{% endblock %}
+

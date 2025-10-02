@@ -10,6 +10,19 @@
     {% load static %}
     {% block extra_css %}
     <style>
+
+    .navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+    }
+
+    body {
+    padding-top: 70px;
+    }
+
     nav.navbar a.nav-link:not(.btn) {
     color: #333 !important;
     padding: 8px 12px !important;
@@ -28,12 +41,18 @@
 
     nav.navbar a.btn {
     }
+    
+    .page-container {
+        padding: 20px;
+        margin-left: 250px; /* matches sidebar width */
+        min-height: calc(100vh - 70px);
+        background-color: #FAFBFB;
+    }
     </style>
     {% endblock %}
 
 
 </head>
-
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-light bg-light shadow-sm px-4">
@@ -55,7 +74,8 @@
                 <!-- User logo/avatar -->
                 <div class="dropdown">
                     <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
-                        <img src="{% static 'images/user.jpg' %}" alt="User"  width="40" height="40" class="rounded-circle" style="margin-left:20px;">
+                        <img src="{% static 'images/circle-user.png' %}" alt="User"  width="30" height="30" style="margin-left:20px;   filter: brightness(60%) saturate(100%) invert(34%) sepia(68%) saturate(412%) hue-rotate(184deg) brightness(94%) contrast(94%);
+">
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
                         <li><a class="dropdown-item"  href="{% url 'profile' %}">Profile</a></li>
@@ -68,12 +88,13 @@
         </div>
     </nav>
 
-    <!-- Page Content -->
-    <div class="container my-5">
-        {% block content %}{% endblock %}
-    </div>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Page Content -->
+  <div class="page-container">
+    {% block content %}{% endblock %}
+  </div>
 </body>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 </html>

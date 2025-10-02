@@ -1,6 +1,147 @@
-{% extends "base_dashboard.html" %} {% block title %} Home Page {% endblock %}
+{% extends "base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Home – CollabSphere{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/home.css' %}?v=1.0">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/sidebar.js' %}"></script>
+{% endblock %}
+
 {% block content %}
+<div class="container-fluid dashboard-container">
 
-<p> This is the home page </p>
+  <!-- Sidebar -->
+  <aside id="sidebar-nav" class="sidebar">
+    <div class="list-group list-group-flush">
+      <a href="#" class="list-group-item sidebar-link active">Profile</a>
+      <a href="#" class="list-group-item sidebar-link">Security</a>
+      <a href="#" class="list-group-item sidebar-link">Notifications</a>
+      <a href="#" class="list-group-item sidebar-link">Team Members</a>
+    </div>
+  </aside>
 
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    
+    <!-- Welcome Section -->
+    <section class="welcome-text">
+      <h1>Good {{ greeting }}, {{ user_name|default:"User" }}!</h1>
+      <p>{{ team_message|default:"Here’s what’s happening with your team today." }}</p>
+    </section>
+
+    <!-- Summary Cards -->
+    <section class="summary-cards">
+      <div class="card summary">
+        <div class="card-content">
+          <div class="card-text">
+            <h3>Active Tasks</h3>
+            <p class="number">{{ active_tasks|default:"0" }}</p>
+          </div>
+          <div class="card-icon">
+            <img src="{% static 'images/tasks.png' %}" alt="Tasks Icon">
+          </div>
+        </div>
+      </div>
+
+      <div class="card summary">
+        <div class="card-content">
+          <div class="card-text">
+            <h3>Team Members</h3>
+            <p class="number">{{ team_members_count|default:"0" }}</p>
+          </div>
+          <div class="card-icon">
+            <img src="{% static 'images/members.png' %}" alt="Members Icon">
+          </div>
+        </div>
+      </div>
+
+      <div class="card summary">
+        <div class="card-content">
+          <div class="card-text">
+            <h3>Productivity</h3>
+            <p class="number">{{ productivity|default:"0%" }}</p>
+          </div>
+          <div class="card-icon">
+            <img src="{% static 'images/productivity.png' %}" alt="Productivity Icon">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Grid -->
+    <section class="bottom-grid">
+      
+      <!-- Left Column: Tasks -->
+      <div class="column-left">
+        <div class="card tasks">
+          <div class="card-header">
+            <h3>My Tasks</h3>
+            <button class="btn-new">+ New Task</button>
+          </div>
+          <ul class="task-list">
+            {% for task in tasks %}
+            <li class="task-item">
+              <span>{{ task.icon|default:"📄" }} {{ task.title|default:"Untitled Task" }}</span>
+              <span class="task-label {{ task.priority|default:"medium" }}">{{ task.priority|default:"medium" }}</span>
+            </li>
+            {% empty %}
+            <li class="task-item"><em>No tasks assigned yet.</em></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right Column: Side Info -->
+      <div class="column-right">
+
+        <!-- Well-being -->
+        <div class="card wellbeing">
+          <h3>Daily Well-being Check</h3>
+          <p>{{ wellbeing_prompt|default:"How are you feeling today?" }}</p>
+          <ul class="status-list">
+            <li><span class="status good"></span> Feeling Great</li>
+            <li><span class="status okay"></span> Doing Okay</li>
+            <li><span class="status bad"></span> Feeling Stressed</li>
+          </ul>
+        </div>
+
+        <!-- Team Activity -->
+        <div class="card team-activity">
+          <h3>Team Activity</h3>
+          <ul>
+            {% for activity in team_activity %}
+            <li>
+              <strong>{{ activity.user|default:"Unknown User" }}</strong>
+              {{ activity.action|default:"did something" }}
+              <em>{{ activity.item|default:"an item" }}</em>
+              <span class="time">{{ activity.time|default:"just now" }}</span>
+            </li>
+            {% empty %}
+            <li><em>No recent activity.</em></li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card quick-actions">
+          <h3>Quick Actions</h3>
+          <ul>
+            {% for action in quick_actions %}
+            <li>{{ action.icon|default:"⚡" }} {{ action.label|default:"Action" }}</li>
+            {% empty %}
+            <li><em>No quick actions available.</em></li>
+            {% endfor %}
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+</div>
 {% endblock %}
