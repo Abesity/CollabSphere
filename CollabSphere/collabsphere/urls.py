@@ -19,5 +19,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("", include("collabsphere_app.urls")),
+    path("collabsphere_app/", include("collabsphere_app.urls")),
+    path("", include("registration.urls")),
 ]
