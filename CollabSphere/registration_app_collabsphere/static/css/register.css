@@ -1,194 +1,189 @@
-body{
-    margin: 0%;
-    padding: 0%;
-}
-.register-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #f0f0f0; 
-    padding: 2rem 3rem;
-    border-radius: 12px;
-    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
-    margin-left: 40px;
-    margin-right: 40px;
+:root {
+  --primary-color: #2D333A;
+  --secondary-color: #3D74C3;
+  --bg-color: #FAFBFB;
+  --card-border: #c0c6d1;
+  --text-muted: #6c757d;
 }
 
-form {
-    width: 100%;
-    max-width: 800px;
-   
+body {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: var(--bg-color, #f8f8f8);
+  font-family: "Inter", sans-serif;
 }
+
+body::after {
+  content: "";
+  position: fixed;              
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;          
+  background: url("images/bg.png") bottom / cover no-repeat;
+  opacity: 0.60;                
+  z-index: -1;                
+}
+
+/* Register form container */
+.register-container {
+ justify-content: center;
+  align-content: center;
+  display: flex;
+  margin: auto;
+  background: #fff;
+  border: 2px solid var(--card-border);
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(129, 137, 176, 0.18);
+  width: 680px;
+  padding: 50px;
+  text-align: center;
+}
+
+.register-container h1 {
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
 .form-group {
-    display: flex;
-    align-items: center;
-    margin-bottom: 1rem;
-    
+  text-align: left;
+  margin-bottom: 1rem;
 }
 
 label {
-    font-weight: bold;
-    margin-right: 10px;
-    text-align: right;
-    width: 100px; 
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--primary-color);
 }
 
-#emaillabel,
-#passwordlabel, #usernamelabel {
-    text-align: right;
-    margin-left: -20px;
+input[type="email"],
+input[type="password"],
+input[type="text"] {
+  width: 480px;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  border: 1.8px solid var(--card-border);
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  color: var(--primary-color);
 }
 
-
-.register-container input[type="email"],
-.register-container input[type="password"],
-.register-container input[type="text"] {
-    flex: 1;
-    padding: 0.6rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    outline: none;
-    transition: border 0.3s;
-    width: 100%;
-    box-sizing: border-box;
+input:focus {
+  border-color: var(--secondary-color);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(61, 116, 195, 0.2);
 }
 
-.register-container input:focus {
-    border-color: #007bff;
+.btn-register {
+  background: var(--secondary-color);
+  color: white;
+  border: none;
+  width: 100%;
+  padding: 0.7rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: 0.3s ease;
+}
+
+.btn-register:hover {
+  background: #245d8b;
+  color: aliceblue;
 }
 
 .form-options {
-    display: flex;
-    align-items: center;
-    margin-left: 110px; 
-    margin-bottom: 1.2rem;
-    font-size: 0.9rem;
-    width: calc(100% - 110px);
+  margin-top: 1.2rem;
 }
 
-.register-container .btn {
-    padding: 0.7rem;
-    background-color: #007bff;
-    border: none;
-    border-radius: 8px;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    max-width: 177px;
-    transition: background 0.3s;
-    flex: 1;
-    margin-left: -20px;
-    margin-right: 30px;
-    -right: 10px;
+#login-link a {
+  color: var(--secondary-color);
+  font-weight: 500;
+  text-decoration: none;
 }
 
-.register-link {
-    text-align: center;
-    margin-top: 1rem;
-    font-size: 0.9rem;
-}
-
-.checkbox-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
-  text-wrap: nowrap;
-  margin-left: 90px;
-margin-bottom: 20px;
-}
-
-.checkbox-container .left-side label {
-  display: flex;
-  align-items: center;
-}
-
-.checkbox-container input[type="checkbox"] {
-  margin-right: 6px;
-}
-
-.checkbox-container .right-side a {
+#login-link a:hover {
   text-decoration: underline;
-  color: #007bff;
 }
 
-
-#forgot-pass {
-    text-decoration: underline;
-    color: #007bff;
-    
-    transition: color 0.3s;
-}
-.register-container .btn:hover {
-    background-color: #0056b3;
+/* Divider & Social Register */
+.social-container {
+  margin-top: 1.5rem;
 }
 
 .divider {
-    text-align: center;
-    margin: 1.5rem 0;
-    position: relative;
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #ccc;
+}
+
+.divider:not(:empty)::before {
+  margin-right: 0.75em;
+}
+
+.divider:not(:empty)::after {
+  margin-left: 0.75em;
 }
 
 .divider span {
-    background: #f0f0f0;
-    padding: 0 10px;
-    position: relative;
-    z-index: 1;
-    font-size: 0.9rem;
-    color: #555;
-}
-
-.social-container{
-    margin-left: 90px;
-    
-}
-
-.divider::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: #bbb;
-    z-index: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 .social-register {
-    display: flex;
-    justify-content: space-evenly;
-    gap: 10px;
-    width: 100%;
-    margin: auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
 }
-
-
 
 .btn-facebook,
 .btn-google {
-    flex: 1;
-    padding: 0.6rem;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    color: white;
-    text-align: center;
-    text-decoration: none;
+  flex: 1;
+  text-align: center;
+  border-radius: 8px;
+  padding: 0.5rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: white;
 }
 
 .btn-facebook {
-    background: #3b5998;
+  background: #3b5998;
 }
-
 .btn-facebook:hover {
-    background: #2d4373;
+  background: #2e4484;
 }
 
 .btn-google {
-    background: #db4437;
+  background: #db4437;
+}
+.btn-google:hover {
+  background: #b6352b;
 }
 
-.btn-google:hover {
-    background: #a33224;
+/* Errors */
+.errorlist {
+  color: #d0453e;
+  font-size: 0.85rem;
+  list-style: none;
+  padding-left: 0;
+}
+
+.is-invalid {
+  border: 2px solid #d0453e;
+}
+
+.is-valid {
+  border: 2px solid #5bba6f;
 }

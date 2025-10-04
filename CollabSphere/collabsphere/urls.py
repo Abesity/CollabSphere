@@ -16,9 +16,18 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.shortcuts import redirect
+
+def root_redirect(request):
+    # If the user is logged in, go straight to the dashboard (home)
+    if request.user.is_authenticated:
+        return redirect('home')
+    # Otherwise, send them to the login page
+    return redirect('login')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("collabsphere_app/", include("collabsphere_app.urls")),
-    path("", include("registration_app_collabsphere.urls")),
+    path('', root_redirect),  
+    path('home/', include('collabsphere_app.urls')), 
+    path('', include('registration_app_collabsphere.urls')),  
 ]
