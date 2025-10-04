@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "collabsphere_app",
     'registration_app_collabsphere',
+    "tasks_app_collabsphere",
 ]
 
 MIDDLEWARE = [

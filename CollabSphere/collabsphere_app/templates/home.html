@@ -81,8 +81,9 @@
         <div class="card tasks">
           <div class="card-header">
             <h3>My Tasks</h3>
-            <button class="btn-new">+ New Task</button>
+            <button class="btn-new" id="openTaskModal">+ New Task</button>
           </div>
+          <div id="taskModalContainer"></div>  
           <ul class="task-list">
             {% for task in tasks %}
             <li class="task-item">
@@ -144,4 +145,41 @@
 
   </main>
 </div>
+
+<button class="btn btn-primary" id="openTaskModal">+ New Task</button>
+<div id="taskModalContainer"></div>
+{% comment %} show tasks  {% endcomment %}
+<script>
+document.getElementById('openTaskModal').addEventListener('click', function() {
+    
+    fetch("{% url 'tasks' %}")  
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('taskModalContainer').innerHTML = html;
+            
+            const modalElement = document.getElementById('newTaskModal');
+            const modal = new bootstrap.Modal(modalElement);
+            
+       
+            const dateInput = document.getElementById("dateCreated");
+            const today = new Date();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const yyyy = today.getFullYear();
+            dateInput.value = `${yyyy}-${mm}-${dd}`; 
+
+            const completionSlider = document.getElementById("completion");
+            const completionLabel = document.getElementById("completionValue");
+
+            completionLabel.textContent = completionSlider.value;
+
+            completionSlider.addEventListener("input", function() {
+                completionLabel.textContent = this.value;
+            });
+            
+            modal.show();
+        });
+});
+</script>
+
 {% endblock %}
