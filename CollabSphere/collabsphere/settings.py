@@ -51,6 +51,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    "core.middleware.IdleTimeoutMiddleware",
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -131,3 +132,28 @@ LOGIN_REDIRECT_URL = 'dashboard'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Session settings
+
+# Auto-logout after 30 minutes (1800 seconds)
+SESSION_COOKIE_AGE = 30 * 60
+
+# Refresh session expiry time on every request
+SESSION_SAVE_EVERY_REQUEST = True
+
+# End session when the browser closes
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Secure session and CSRF cookies (set True in production with HTTPS)
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = False   # change to True on production
+CSRF_COOKIE_SECURE = False      # change to True on production
+
+# Prevent clickjacking and content sniffing
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "login"
