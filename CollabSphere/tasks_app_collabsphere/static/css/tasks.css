@@ -1,0 +1,177 @@
+:root {
+  /* ====== Theme Colors ====== */
+  --primary-color: #2D333A;          /* Dark gray-blue for text and secondary elements */
+  --secondary-color: #3D74C3;        /* Accent / Brand color */
+  --bg-color: #FAFBFB;               /* Background color */
+  --card-border: #c0c6d1;
+  --text-muted: #6c757d;
+  --radius: 12px;
+
+  /* ====== Bootstrap Overrides ====== */
+  --bs-body-bg: var(--bg-color);
+  --bs-body-color: var(--primary-color);
+  --bs-border-color: var(--card-border);
+
+  --bs-primary: var(--secondary-color);
+  --bs-primary-rgb: 61, 116, 195;
+  --bs-secondary: var(--primary-color);
+  --bs-secondary-rgb: 45, 51, 58;
+
+  --bs-link-color: var(--secondary-color);
+  --bs-link-hover-color: #2e5fa5;
+  --bs-link-underline-offset: 0.25rem;
+
+  --bs-form-check-input-checked-bg-color: var(--secondary-color);
+  --bs-form-check-input-checked-border-color: var(--secondary-color);
+  --bs-form-range-thumb-bg: var(--secondary-color);
+  --bs-progress-bar-bg: var(--secondary-color);
+  --bs-focus-ring-color: rgba(61, 116, 195, 0.25);
+}
+
+/* ====== General Styles ====== */
+body {
+  background-color: var(--bg-color);
+  color: var(--primary-color);
+  font-family: "Inter", sans-serif;
+}
+
+/* ====== Header & Navbar ====== */
+.modal-header{
+  background-color: var(--secondary-color) !important;
+  color: white !important;
+}
+
+
+/* ====== Buttons ====== */
+.btn-primary {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+  color: #fff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: #2e5fa5;
+  border-color: #2e5fa5;
+}
+
+.btn-outline-primary {
+  color: var(--secondary-color);
+  border-color: var(--secondary-color);
+  background-color: transparent;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+  background-color: var(--secondary-color);
+  color: #fff;
+  border-color: var(--secondary-color);
+}
+
+/* ====== Modal Styles ====== */
+.modal-content {
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  border-bottom: none;
+  padding: 1rem 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  background-color: white;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--card-border);
+  padding: 1rem 1.5rem;
+}
+
+/* ====== Forms ====== */
+.form-label {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.form-control, .form-select, .form-range {
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  box-shadow: none;
+}
+
+.form-check-input:checked {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+.form-range::-webkit-slider-thumb {
+  background: var(--secondary-color);
+}
+.form-range::-moz-range-thumb {
+  background: var(--secondary-color);
+}
+
+/* ====== Misc Components ====== */
+.progress-bar {
+  background-color: var(--secondary-color);
+}
+
+a {
+  color: var(--secondary-color);
+  text-decoration: none;
+}
+
+a:hover {
+  color: #2e5fa5;
+  text-decoration: underline;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+/* ====== Custom Buttons ====== */
+.new-task-btn {
+  margin: 2rem;
+  background-color: var(--secondary-color);
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+}
+
+.new-task-btn:hover {
+  background-color: #2e5fa5;
+}
+
+/* ====== Priority / Icons ====== */
+.priority-icon {
+  width: 20px;
+  height: 20px;
+  filter: brightness(0.9) saturate(1.5);
+}
+
+.priority-section input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+
+/* ====== Validation ====== */
+.text-danger {
+  font-size: 0.85rem;
+}
+
+.priority-checkbox {
+  padding-top: 40px;
+}
+.priority-section {
+  padding-top: 20px;
+  font-weight: 600;
+  color: var(--primary-color);
+  user-select: none;
+  cursor: pointer;
+  line-height: 1;
+}

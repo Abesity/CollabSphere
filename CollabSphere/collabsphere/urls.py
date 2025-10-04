@@ -29,5 +29,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', root_redirect),  
     path('home/', include('collabsphere_app.urls')), 
+    path("tasks/", include("tasks_app_collabsphere.urls")),
     path('', include('registration_app_collabsphere.urls')),  
 ]
