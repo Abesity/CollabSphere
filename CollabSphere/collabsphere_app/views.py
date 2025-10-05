@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
-@login_required(login_url='login')
+# @login_required(login_url='login')
 def home(request):
     return render(request, 'home.html')
 

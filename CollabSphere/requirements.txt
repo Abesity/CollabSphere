@@ -1,0 +1,14 @@
+# Django framework
+Django==5.2.6
+
+# Supabase client
+supabase==1.0.1
+
+python-dotenv==1.0.0
+
+# PostgreSQL adapter ( connect to Supabase DB directly)
+psycopg2-binary==2.9.9
+
+# Optional useful dev tools
+djangorestframework==3.20.1
+requests==2.32.0
