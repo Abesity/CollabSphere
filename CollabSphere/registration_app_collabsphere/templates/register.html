@@ -10,6 +10,7 @@
   .is-invalid { border: 2px solid red; }
   .is-valid { border: 2px solid green; }
   .form-error { color: red; margin-bottom: 10px; }
+  small.text-muted { display: block; margin-top: 4px; font-size: 0.85em; color: #6c757d; }
 </style>
 {% endblock %}
 
@@ -25,6 +26,7 @@
       </div>
     {% endif %}
 
+    <!-- Username -->
     <div class="form-group">
       <label id="usernamelabel" for="username">Username</label>
       <input
@@ -49,6 +51,7 @@
       </ul>
     {% endif %}
 
+    <!-- Email -->
     <div class="form-group">
       <label id="emaillabel" for="email">Email</label>
       <input
@@ -73,6 +76,7 @@
       </ul>
     {% endif %}
 
+    <!-- Password -->
     <div class="form-group">
       <label id="passwordlabel" for="password">Password</label>
       <input
@@ -80,6 +84,7 @@
         id="password"
         name="password"
         required
+        minlength="8"
         class="
           {% if form and form.is_bound %}
             {% if form.errors.password %}is-invalid{% else %}is-valid{% endif %}
@@ -87,6 +92,7 @@
         "
         {% if form and not form.errors.username and not form.errors.email and form.errors.password %}autofocus{% endif %}
       >
+      <small class="text-muted">Password must be at least 8 characters long.</small>
     </div>
     {% if form and form.errors.password %}
       <ul class="errorlist">
@@ -96,21 +102,23 @@
       </ul>
     {% endif %}
 
-        <div class="form-options">
-            <button type="submit" class="btn-register">Register</button>
-            <p id="login-link"> Already have an account?
-                <a href="{% url 'login' %}">Login here</a>
-            </p>
-            </div>
+    <!-- Buttons -->
+    <div class="form-options">
+      <button type="submit" class="btn-register">Register</button>
+      <p id="login-link">Already have an account?
+        <a href="{% url 'login' %}">Login here</a>
+      </p>
+    </div>
 
-          <div class="social-container">
-          <div class="divider"><span>OR</span></div>
-          <p class="social-text">Sign up using your account with</p>
-          <div class="social-register">
-            <a href="" class="btn-facebook">Facebook</a>
-            <a href="" class="btn-google">Google</a>
-          </div>
-        </div>
+    <!-- Social Login (Optional) -->
+    <div class="social-container">
+      <div class="divider"><span>OR</span></div>
+      <p class="social-text">Sign up using your account with</p>
+      <div class="social-register">
+        <a href="#" class="btn-facebook">Facebook</a>
+        <a href="#" class="btn-google">Google</a>
+      </div>
+    </div>
   </form>
 </div>
 {% endblock %}
