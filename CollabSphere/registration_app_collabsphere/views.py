@@ -17,17 +17,17 @@ def register(request):
             password = form.cleaned_data["password"]
 
             # Check for duplicates (username or email)
-            existing_user_by_email = supabase.table("users").select("id").eq("email", email).execute()
+            existing_user_by_email = supabase.table("user").select("id").eq("email", email).execute()
             if existing_user_by_email.data:
                 form.add_error("email", "This email is already registered.")
-            existing_user_by_username = supabase.table("users").select("id").eq("username", username).execute()
+            existing_user_by_username = supabase.table("user").select("id").eq("username", username).execute()
             if existing_user_by_username.data:
                 form.add_error("username", "This username is already taken.")
 
             if not form.errors:
                 # NOTE: In real apps, store a password hash instead of plaintext.
                 password_hash = hash_password(password)
-                supabase.table("users").insert({
+                supabase.table("user").insert({
                     "username": username,
                     "email": email,
                     "password": password_hash
@@ -46,7 +46,7 @@ def login(request):
             password = form.cleaned_data["password"]
 
             # Fetch the user by email
-            response = supabase.table("users").select("password").eq("email", email).execute()
+            response = supabase.table("user").select("password").eq("email", email).execute()
 
             # Compare (NOTE: plaintext; recommend hashing in real apps)
             if response.data:
