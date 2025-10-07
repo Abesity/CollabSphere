@@ -30,6 +30,7 @@ ALLOWED_HOSTS = []
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://oafdtoodydpmqryfulvu.supabase.co")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZmR0b29keWRwbXFyeWZ1bHZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4MDQxNTEsImV4cCI6MjA3NDM4MDE1MX0.tLNm5vLBpCtAtiCXSJYIbxOE-T2XySOlsEkD_vCzg8E") #replace with your supabase URL
+SUPABASE_STORAGE_URL = 'https://oafdtoodydpmqryfulvu.storage.supabase.co/storage/v1/s3'
 # Application definition
 
 
