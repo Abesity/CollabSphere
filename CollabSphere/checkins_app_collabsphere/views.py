@@ -7,9 +7,14 @@ from django.utils import timezone
 
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
-
 @login_required(login_url='login')
 def checkins_modal(request):
+    print("🔥 checkins_modal view hit!")
+    print("Request path:", request.path)
+    print("Headers:", request.headers.get("x-requested-with"))
+    print("Template check about to render partials/checkins_modal.html")
+
+ 
     """Return and handle wellbeing modal only (AJAX modal)."""
     user = request.user
 
@@ -20,21 +25,28 @@ def checkins_modal(request):
         notes = request.POST.get("notes")
 
         try:
-            supabase.table("checkins").insert({
-                "user_id": user.id,
-                "mood_rating": mood_rating,
+            # Get Supabase user_ID for the logged-in user
+            res = supabase.table("user").select("user_ID").eq("email", user.email).single().execute()
+            supabase_user_id = res.data["user_ID"]
+
+            # Insert wellbeing check-in
+            supabase.table("wellbeingcheckin").insert({
+                "user_id": supabase_user_id,
+                "mood_rating": int(mood_rating) if mood_rating else None,
                 "status": status,
                 "notes": notes,
-                "date_submitted": timezone.now().isoformat()
+                "date_submitted": timezone.now().date().isoformat()
             }).execute()
+
             return JsonResponse({"success": True, "message": "Check-in submitted successfully!"})
+
         except Exception as e:
             return JsonResponse({"success": False, "message": str(e)})
 
-    # 🧠 Handle GET (display modal)
+    # 🧠 Handle GET (display modal) - ONLY return the modal HTML, no extends or blocks
     try:
         response = (
-            supabase.table("checkins")
+            supabase.table("wellbeingcheckin")
             .select("*")
             .eq("user_id", user.id)
             .order("date_submitted", desc=True)
@@ -42,7 +54,8 @@ def checkins_modal(request):
             .execute()
         )
         recent_checkins = response.data
-    except Exception:
+    except Exception as e:
+        print(f"Error fetching checkins: {e}")
         recent_checkins = []
 
     return render(request, "partials/checkins_modal.html", {
