@@ -1,6 +1,5 @@
+<!-- templates/partials/checkins_modal.html -->
 {% load static %}
-
-<link rel="stylesheet" href="{% static 'css/checkins.css' %}?v=1.0">
 
 <div class="modal fade" id="wellbeingModal" tabindex="-1" aria-labelledby="wellbeingModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -10,9 +9,9 @@
         <div class="d-flex align-items-center justify-content-between w-100">
           <div class="modal-top-info">
             <h3 class="modal-title" id="wellbeingModalLabel">Wellbeing Checkup</h3>
-              <h3 class="modal-title w-100 text-center" id="wellbeingModalLabel">
-          How are you feeling today, <strong>{{ request.user.full_name }}</strong>?
-        </h3>
+            <h3 class="modal-title w-100 text-center">
+              How are you feeling today, <strong>{{ fullname }}</strong>?
+            </h3>
           </div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -24,7 +23,6 @@
           <div class="row">
             
             <div class="col-md-7 border-end pe-4"> 
-
               <input type="hidden" name="user_id" value="{{ request.user.id }}">
 
               <div class="mb-3">
@@ -45,7 +43,7 @@
 
               <div class="mb-3">
                 <label for="notes" class="form-label">Notes / Reflections</label>
-                <textarea id="notes" name="notes" class="form-control" rows="4" placeholder="Anything you’d like to share? (optional)"></textarea>
+                <textarea id="notes" name="notes" class="form-control" rows="4" placeholder="Anything you'd like to share? (optional)"></textarea>
               </div>
             </div>
 
@@ -84,17 +82,40 @@
 </div>
 
 <script>
-  // Update mood rating text
-  const moodInput = document.getElementById('mood_rating');
-  const moodValue = document.getElementById('moodValue');
-  if (moodInput) {
-    moodInput.addEventListener('input', () => moodValue.textContent = moodInput.value);
-  }
+document.addEventListener("DOMContentLoaded", () => {
+  // Re-bind when modal content is inserted dynamically
+  const initWellbeingModal = () => {
+    const moodInput = document.getElementById("mood_rating");
+    const moodValue = document.getElementById("moodValue");
+    const dateInput = document.getElementById("date_submitted");
 
-  // Auto-fill today's date
-  document.addEventListener('DOMContentLoaded', () => {
-    const today = new Date().toISOString().split('T')[0];
-    const dateInput = document.getElementById('date_submitted');
-    if (dateInput) dateInput.value = today;
+    // ✅ Live slider value update
+    if (moodInput && moodValue) {
+      moodValue.textContent = moodInput.value; // Initialize display
+      moodInput.addEventListener("input", () => {
+        moodValue.textContent = moodInput.value;
+      });
+    }
+
+    // ✅ Set today’s date automatically
+    if (dateInput && !dateInput.value) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+  };
+
+  // Initialize when modal is dynamically inserted
+  initWellbeingModal();
+
+  // Also listen for future modal insertions (from AJAX)
+  const observer = new MutationObserver(() => {
+    if (document.getElementById("wellbeingModal")) {
+      initWellbeingModal();
+    }
   });
+  observer.observe(document.body, { childList: true, subtree: true });
+});
 </script>

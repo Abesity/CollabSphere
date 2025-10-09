@@ -99,18 +99,19 @@
 
       <!-- Right Column: Side Info -->
       <div class="column-right">
+      <!-- Wellbeing card that triggers the modal -->
+      <div class="card wellbeing" id="openWellbeingModal" style="cursor:pointer;">
+        <h3>Daily Well-being Check</h3>
+        <p>{{ wellbeing_prompt|default:"How are you feeling today?" }}</p>
+        <ul class="status-list">
+          <li><span class="status good"></span> Feeling Great</li>
+          <li><span class="status okay"></span> Doing Okay</li>
+          <li><span class="status bad"></span> Feeling Stressed</li>
+        </ul>
+      </div>
 
-        <!-- Well-being -->
-        <div class="card wellbeing" id="openWellbeingModal" style="cursor:pointer;">
-          <h3>Daily Well-being Check</h3>
-          <p>{{ wellbeing_prompt|default:"How are you feeling today?" }}</p>
-          <ul class="status-list">
-            <li><span class="status good"></span> Feeling Great</li>
-            <li><span class="status okay"></span> Doing Okay</li>
-            <li><span class="status bad"></span> Feeling Stressed</li>
-          </ul>
-        </div>
-        <div id="wellbeingModalContainer"></div>
+      <!-- Container where modal will be inserted -->
+      <div id="wellbeingModalContainer"></div>
 
         <!-- Team Activity -->
         <div class="card team-activity">
@@ -160,54 +161,76 @@ document.getElementById('openTaskModal').addEventListener('click', function() {
     });
 });
 
-
 // --- WELLBEING MODAL ---
 document.getElementById('openWellbeingModal').addEventListener('click', function() {
   fetch("{% url 'checkins_modal' %}", {
-    method: 'GET',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
     credentials: 'include'
   })
-  .then(response => {
-    if (response.redirected) {
-      window.location.href = response.url;
-      return;
-    }
-    return response.text();
-  })
+  .then(response => response.text())
   .then(html => {
-    if (!html) return;
-    const container = document.getElementById('wellbeingModalContainer');
-    container.innerHTML = html;
-
-    const modalElement = container.querySelector('#wellbeingModal');
+    document.getElementById('wellbeingModalContainer').innerHTML = html;
+    const modalElement = document.getElementById('wellbeingModal');
     const modal = new bootstrap.Modal(modalElement);
     modal.show();
 
-    // --- Handle form submission via AJAX ---
-    const form = modalElement.querySelector('form');
-    form.addEventListener('submit', function(event) {
+    // ✅ Initialize modal behavior (date + slider + submit)
+    initializeWellbeingModal(modal);
+  });
+});
+
+// ✅ Function to reattach modal behaviors when dynamically loaded
+function initializeWellbeingModal(modal) {
+  const moodInput = document.getElementById("mood_rating");
+  const moodValue = document.getElementById("moodValue");
+  const dateInput = document.getElementById("date_submitted");
+  const form = document.getElementById("wellbeingForm");
+
+  // --- Live slider value update ---
+  if (moodInput && moodValue) {
+    moodValue.textContent = moodInput.value;
+    moodInput.addEventListener("input", () => {
+      moodValue.textContent = moodInput.value;
+    });
+  }
+
+  // --- Auto-fill today's date ---
+  if (dateInput && !dateInput.value) {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    dateInput.value = `${yyyy}-${mm}-${dd}`;
+  }
+
+  // --- Handle form submission ---
+  if (form) {
+    form.addEventListener("submit", function(event) {
       event.preventDefault();
       const formData = new FormData(form);
-
       fetch("{% url 'checkins_modal' %}", {
-        method: 'POST',
+        method: "POST",
         body: formData,
-        credentials: 'include',
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        credentials: "include"
       })
-      .then(res => res.json())
+      .then(response => response.json())
       .then(data => {
         if (data.success) {
           alert(data.message);
           modal.hide();
+          location.reload();
         } else {
           alert("Error: " + data.message);
         }
       })
-      .catch(err => console.error(err));
+      .catch(error => {
+        console.error("Error:", error);
+        alert("An error occurred while submitting the check-in.");
+      });
     });
-  })
-  .catch(error => console.error("Error loading wellbeing modal:", error));
-});
+  }
+}
 </script>
 
 {% endblock %}
