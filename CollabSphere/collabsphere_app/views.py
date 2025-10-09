@@ -1,7 +1,6 @@
 from django.shortcuts import render, redirect
 from supabase import create_client
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
 
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 

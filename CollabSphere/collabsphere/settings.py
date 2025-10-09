@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "collabsphere_app",
     'registration_app_collabsphere',
     "tasks_app_collabsphere",
+    "checkins_app_collabsphere",
 ]
 
 MIDDLEWARE = [
@@ -55,6 +56,8 @@ MIDDLEWARE = [
     "collabsphere.core.middleware.IdleTimeoutMiddleware",
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "collabsphere.core.middleware.PreventLoggedInAccessMiddleware",
+
 ]
 
 ROOT_URLCONF = 'collabsphere.urls'
@@ -127,9 +130,9 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",  
 ]
 
-
-LOGOUT_REDIRECT_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard' 
+LOGIN_URL = '/login/'
+LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_REDIRECT_URL = '/home/' 
 
 
 # Default primary key field type

@@ -29,3 +29,14 @@ class IdleTimeoutMiddleware:
 
         response = self.get_response(request)
         return response
+
+
+class PreventLoggedInAccessMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Redirect logged-in users away from login/register
+        if request.path in ["/login/", "/register/"] and request.session.get("user_ID"):
+            return redirect("home")
+        return self.get_response(request)
