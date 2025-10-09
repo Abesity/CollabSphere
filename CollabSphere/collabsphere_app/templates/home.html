@@ -15,23 +15,13 @@
 {% block content %}
 <div class="container-fluid dashboard-container">
 
-  <!-- Sidebar -->
-  <aside id="sidebar-nav" class="sidebar">
-    <div class="list-group list-group-flush">
-      <a href="#" class="list-group-item sidebar-link active">Profile</a>
-      <a href="#" class="list-group-item sidebar-link">Security</a>
-      <a href="#" class="list-group-item sidebar-link">Notifications</a>
-      <a href="#" class="list-group-item sidebar-link">Team Members</a>
-    </div>
-  </aside>
-
   <!-- Main Content -->
   <main class="dashboard-main">
     
     <!-- Welcome Section -->
     <section class="welcome-text">
-      <h1>Good {{ greeting }}, {{ user_name|default:"User" }}!</h1>
-      <p>{{ team_message|default:"Here’s what’s happening with your team today." }}</p>
+      <h1>{{ greeting }}, {{ user_name|default:"User" }}!</h1>
+      <p>{{ team_message|default:"Here's what's happening with your team today." }}</p>
     </section>
 
     <!-- Summary Cards -->
@@ -99,19 +89,31 @@
 
       <!-- Right Column: Side Info -->
       <div class="column-right">
-      <!-- Wellbeing card that triggers the modal -->
-      <div class="card wellbeing" id="openWellbeingModal" style="cursor:pointer;">
-        <h3>Daily Well-being Check</h3>
-        <p>{{ wellbeing_prompt|default:"How are you feeling today?" }}</p>
-        <ul class="status-list">
-          <li><span class="status good"></span> Feeling Great</li>
-          <li><span class="status okay"></span> Doing Okay</li>
-          <li><span class="status bad"></span> Feeling Stressed</li>
-        </ul>
+        <!-- Wellbeing card -->
+       <div class="card wellbeing {% if has_checked_in_today %}completed{% endif %}" 
+             id="wellbeingCard">
+          <div id="wellbeingContent">
+            {% if has_checked_in_today %}
+              <div class="checkin-complete">
+                <div class="complete-icon">✅</div>
+                <p class="complete-text">Today's Check In Complete!</p>
+              </div>
+            {% else %}
+              <p>{{ wellbeing_prompt|default:"How are you feeling today?" }}</p>
+              <ul class="status-list">
+                <li><span class="status good"></span> Feeling Great</li>
+                <li><span class="status okay"></span> Doing Okay</li>
+                <li><span class="status bad"></span> Feeling Stressed</li>
+              </ul>
+              <button class="btn-checkin" id="openWellbeingModal">
+                Start Check In
+              </button>
+            {% endif %}
+        </div>
       </div>
-
-      <!-- Container where modal will be inserted -->
-      <div id="wellbeingModalContainer"></div>
+        
+        <!-- Container where modal will be inserted -->
+        <div id="wellbeingModalContainer"></div>
 
         <!-- Team Activity -->
         <div class="card team-activity">
@@ -136,8 +138,6 @@
           <ul>
             {% for action in quick_actions %}
             <li>{{ action.icon|default:"⚡" }} {{ action.label|default:"Action" }}</li>
-            {% empty %}
-            <li><em>No quick actions available.</em></li>
             {% endfor %}
           </ul>
         </div>
@@ -149,6 +149,40 @@
 </div>
 
 <script>
+// --- IMMEDIATE CHECK-IN STATUS VERIFICATION ---
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, verifying check-in status...');
+    verifyCheckinStatus();
+});
+
+// Function to verify check-in status
+function verifyCheckinStatus() {
+    fetch("{% url 'verify_checkin_status' %}", {
+        method: 'GET',
+        headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Check-in status verification:', data);
+        if (data.has_checked_in_today) {
+            updateWellbeingCardToComplete();
+        }
+        // If hasn't checked in, the card already shows the check-in option
+    })
+    .catch(error => {
+        console.error('Error verifying check-in status:', error);
+    });
+}
+
 // --- TASK MODAL ---
 document.getElementById('openTaskModal').addEventListener('click', function() {
   fetch("{% url 'tasks' %}")  
@@ -162,74 +196,183 @@ document.getElementById('openTaskModal').addEventListener('click', function() {
 });
 
 // --- WELLBEING MODAL ---
-document.getElementById('openWellbeingModal').addEventListener('click', function() {
-  fetch("{% url 'checkins_modal' %}", {
-    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-    credentials: 'include'
-  })
-  .then(response => response.text())
-  .then(html => {
-    document.getElementById('wellbeingModalContainer').innerHTML = html;
-    const modalElement = document.getElementById('wellbeingModal');
-    const modal = new bootstrap.Modal(modalElement);
-    modal.show();
+const wellbeingModalBtn = document.getElementById('openWellbeingModal');
 
-    // ✅ Initialize modal behavior (date + slider + submit)
-    initializeWellbeingModal(modal);
-  });
-});
+if (wellbeingModalBtn) {
+    wellbeingModalBtn.addEventListener('click', function() {
+        // Double-check status before opening modal
+        fetch("{% url 'verify_checkin_status' %}", {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.has_checked_in_today) {
+                updateWellbeingCardToComplete();
+                alert("You've already completed your check-in for today!");
+                return;
+            }
+            
+            // Fetch and show modal only if not already checked in
+            fetch("{% url 'checkins_modal' %}", {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'include'
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('wellbeingModalContainer').innerHTML = html;
+                const modalElement = document.getElementById('wellbeingModal');
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
 
-// ✅ Function to reattach modal behaviors when dynamically loaded
+                // Initialize modal behavior
+                initializeWellbeingModal(modal);
+            });
+        });
+    });
+}
+
+// Function to initialize wellbeing modal
 function initializeWellbeingModal(modal) {
-  const moodInput = document.getElementById("mood_rating");
-  const moodValue = document.getElementById("moodValue");
-  const dateInput = document.getElementById("date_submitted");
-  const form = document.getElementById("wellbeingForm");
+    const moodInput = document.getElementById("mood_rating");
+    const moodValue = document.getElementById("moodValue");
+    const dateInput = document.getElementById("date_submitted");
+    const form = document.getElementById("wellbeingForm");
 
-  // --- Live slider value update ---
-  if (moodInput && moodValue) {
-    moodValue.textContent = moodInput.value;
-    moodInput.addEventListener("input", () => {
-      moodValue.textContent = moodInput.value;
-    });
-  }
+    // Update slider value live
+    if (moodInput && moodValue) {
+        moodValue.textContent = moodInput.value;
+        moodInput.addEventListener("input", () => {
+            moodValue.textContent = moodInput.value;
+        });
+    }
 
-  // --- Auto-fill today's date ---
-  if (dateInput && !dateInput.value) {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0");
-    const dd = String(today.getDate()).padStart(2, "0");
-    dateInput.value = `${yyyy}-${mm}-${dd}`;
-  }
+    // Auto-fill today's date
+    if (dateInput && !dateInput.value) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, "0");
+        const dd = String(today.getDate()).padStart(2, "0");
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
 
-  // --- Handle form submission ---
-  if (form) {
-    form.addEventListener("submit", function(event) {
-      event.preventDefault();
-      const formData = new FormData(form);
-      fetch("{% url 'checkins_modal' %}", {
-        method: "POST",
-        body: formData,
-        headers: { "X-Requested-With": "XMLHttpRequest" },
-        credentials: "include"
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          alert(data.message);
-          modal.hide();
-          location.reload();
-        } else {
-          alert("Error: " + data.message);
+    // Handle form submission with validation
+    if (form) {
+        form.addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            const moodRating = moodInput ? moodInput.value : "";
+            const statusSelect = document.getElementById("status");
+            const status = statusSelect ? statusSelect.value : "";
+            const notesInput = document.getElementById("notes");
+            const notes = notesInput ? notesInput.value.trim() : "";
+
+            // Validation: check required fields
+            if (!moodRating) {
+                alert("Please select a mood rating.");
+                return;
+            }
+            if (!status) {
+                alert("Please select your status from the dropdown.");
+                return;
+            }
+            if (!notes) {
+                alert("Please enter some notes about how you feel.");
+                return;
+            }
+
+            const formData = new FormData(form);
+            fetch("{% url 'checkins_modal' %}", {
+                method: "POST",
+                body: formData,
+                headers: { 
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": getCookie('csrftoken')
+                },
+                credentials: "include"
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI to show completed state
+                    updateWellbeingCardToComplete();
+                    modal.hide();
+                    showNotification(data.message, 'success');
+                } else {
+                    showNotification("Error: " + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                showNotification("An error occurred while submitting the check-in.", 'error');
+            });
+        });
+    }
+}
+
+// Function to update the wellbeing card to completed state
+function updateWellbeingCardToComplete() {
+    const wellbeingCard = document.getElementById('wellbeingCard');
+    const wellbeingContent = document.getElementById('wellbeingContent');
+    
+    if (wellbeingCard && wellbeingContent) {
+        wellbeingCard.classList.add('completed');
+        wellbeingContent.innerHTML = `
+            <div class="checkin-complete">
+                <div class="complete-icon">✅</div>
+                <p class="complete-text">Today's Check In Complete!</p>
+            </div>
+        `;
+        
+        // Remove any existing modal button
+        const existingBtn = document.getElementById('openWellbeingModal');
+        if (existingBtn) {
+            existingBtn.remove();
         }
-      })
-      .catch(error => {
-        console.error("Error:", error);
-        alert("An error occurred while submitting the check-in.");
-      });
-    });
-  }
+    }
+}
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Notification function
+function showNotification(message, type) {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass} alert-dismissible fade show`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+    `;
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
 }
 </script>
 

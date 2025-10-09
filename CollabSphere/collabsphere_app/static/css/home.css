@@ -6,8 +6,14 @@
   --text-muted: #6c757d;
 }
 
+.card.wellbeing.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: not-allowed;
+}
 
   body {
+    width: 100%;
     position: relative;
     margin: 0;
     padding: 0;
@@ -34,7 +40,6 @@
 .dashboard-container {
     overflow-x: hidden;
     padding-top: 70px;
-    padding-left: 250px;
     min-width: 120px;
     min-height: 100vh;
     height: 100%;
@@ -228,4 +233,103 @@
 .quick-actions li:hover {
   text-decoration: underline;
   color:#2D333A;
+}
+
+/* Wellbeing Card Styles */
+.card.wellbeing {
+  transition: all 0.3s ease;
+  border: 2px solid #e9ecef;
+  padding: 20px;
+}
+
+.card.wellbeing.completed {
+  background-color: #f0f9f0;
+  border-color: #28a745;
+}
+
+.card.wellbeing:hover:not(.completed) {
+  border-color: #007bff;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.1);
+}
+
+.card.wellbeing.completed:hover {
+  cursor: default;
+  box-shadow: none;
+}
+
+/* Status List Styles */
+.status-list {
+  list-style: none;
+  padding: 0;
+  margin: 15px 0;
+}
+
+.status-list li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.status {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.status.good {
+  background-color: #28a745;
+}
+
+.status.okay {
+  background-color: #ffc107;
+}
+
+.status.bad {
+  background-color: #dc3545;
+}
+
+/* Check-in Button */
+.btn-checkin {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.btn-checkin:hover {
+  background: linear-gradient(135deg, #0056b3, #004085);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn-checkin:active {
+  transform: translateY(0);
+}
+
+/* Completed State */
+.checkin-complete {
+  text-align: center;
+  padding: 10px 0;
+}
+
+.complete-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.complete-text {
+  color: #28a745;
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin: 0;
 }
