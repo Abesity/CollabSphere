@@ -1,5 +1,6 @@
 # Middleware: Auto-logout users after inactivity
 
+import logging
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.contrib.auth import logout
@@ -70,3 +71,43 @@ class PreventLoggedInAccessMiddleware:
         if request.path in ["/login/", "/register/"] and request.session.get("user_ID"):
             return redirect("home")
         return self.get_response(request)
+
+# Middleware: Attach Supabase user_ID to request.user
+logger = logging.getLogger(__name__)
+
+class SupabaseUserIDMiddleware:
+    """Attaches the Supabase UUID (user_ID) to request.user."""
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            # 1. Try to get the ID from session (fastest) or request.user (if already attached)
+            supabase_id = request.session.get('supabase_user_id') or getattr(request.user, 'user_ID', None)
+            
+            if not supabase_id:
+                # 2. ID is missing: Query Supabase
+                if supabase:
+                    try:
+                        # Use username to find the UUID in the Supabase 'user' table
+                        response = supabase.table('user').select('user_ID').eq('username', request.user.username).single().execute()
+                        
+                        if response.data and 'user_ID' in response.data:
+                            supabase_id = response.data['user_ID']
+                            request.session['supabase_user_id'] = supabase_id
+                            
+                    except Exception as e:
+                        logger.error(f"Supabase fetch error for user {request.user.username}: {e}")
+                
+            # 3. Final check: If ID is present, attach it.
+            if supabase_id:
+                setattr(request.user, 'user_ID', supabase_id)
+            else:
+                # 4. ID is still missing: LOG OUT. This is the only way to stop the 401.
+                logger.warning(f"CRITICAL: Supabase user_ID not found. Logging out user: {request.user.username}.")
+                logout(request)
+                # Redirecting prevents the 401 from being sent to the AJAX call
+                return redirect(f"{settings.LOGIN_URL}?error=missing_id")
+
+        response = self.get_response(request)
+        return response

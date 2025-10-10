@@ -6,7 +6,6 @@ urlpatterns = [
     path("admin_dashboard/", views.admin_dashboard, name="admin_dashboard"),
     path("profile/", views.profile_view, name="profile"),
     path('verify-checkin-status/', views.verify_checkin_status, name='verify_checkin_status'),
-path('debug-checkins/', views.debug_checkins, name='debug_checkins'),
-
+    path('debug-checkins/', views.debug_checkins, name='debug_checkins'),
 ]
 

@@ -74,15 +74,30 @@
             <button class="btn-new" id="openTaskModal">+ New Task</button>
           </div>
           <div id="taskModalContainer"></div>  
-          <ul class="task-list">
-            {% for task in tasks %}
-            <li class="task-item">
-              <span>{{ task.icon|default:"📄" }} {{ task.title|default:"Untitled Task" }}</span>
-              <span class="task-label {{ task.priority|default:"medium" }}">{{ task.priority|default:"medium" }}</span>
-            </li>
-            {% empty %}
-            <li class="task-item"><em>No tasks assigned yet.</em></li>
-            {% endfor %}
+          <ul class="task-list" id="taskList">
+              {% if tasks %}
+                {% for task in tasks %}
+                  <li class="task-item" onclick="openTaskDetail('{{ task.task_id }}')">
+                    <div class="task-title">{{ task.title }}</div>
+
+                    <div class="task-details">
+                      {% if task.priority %}
+                        <span class="priority-circle high" aria-hidden="true"></span>
+                      {% else %}
+                        <span class="priority-circle low" aria-hidden="true"></span>
+                      {% endif %}
+
+                      <div class="task-meta-right">
+                        <span class="status">{{ task.status }}</span>
+                        <span class="due-date">{{ task.due_date }}</span>
+                      </div>
+                    </div>
+                  </li>
+                {% empty %}
+                  <p>No tasks have been assigned yet.</p>
+                {% endfor %}
+              {% endif %}
+            </ul>
           </ul>
         </div>
       </div>
@@ -185,16 +200,65 @@ function verifyCheckinStatus() {
 
 // --- TASK MODAL ---
 document.getElementById('openTaskModal').addEventListener('click', function() {
-  fetch("{% url 'tasks' %}")  
-    .then(response => response.text())
-    .then(html => {
-      document.getElementById('taskModalContainer').innerHTML = html;
-      const modalElement = document.getElementById('newTaskModal');
-      const modal = new bootstrap.Modal(modalElement);
-      modal.show();
-    });
+    
+    fetch("{% url 'tasks' %}")  
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('taskModalContainer').innerHTML = html;
+            
+            const modalElement = document.getElementById('newTaskModal');
+            const modal = new bootstrap.Modal(modalElement);
+            
+       
+            const dateInput = document.getElementById("dateCreated");
+            const today = new Date();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const yyyy = today.getFullYear();
+            dateInput.value = `${yyyy}-${mm}-${dd}`; 
+
+            const completionSlider = document.getElementById("completion");
+            const completionLabel = document.getElementById("completionValue");
+
+            completionLabel.textContent = completionSlider.value;
+
+            completionSlider.addEventListener("input", function() {
+                completionLabel.textContent = this.value;
+            });
+            
+            modal.show();
+        });
 });
 
+// Function to open task detail modal
+function openTaskDetail(taskId) {
+  fetch(`/tasks/${taskId}/detail/`, {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "include"
+  })
+  .then(response => {
+      if (!response.ok) throw new Error("Failed to fetch task detail.");
+      return response.text();
+  })
+  .then(html => {
+      document.getElementById("taskModalContainer").innerHTML = html;
+      const modalElement = document.getElementById("taskDetailModal");
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+      const completionSlider = document.getElementById("completion");
+      const completionValue = document.getElementById("completionValue");
+      if (completionSlider && completionValue) {
+          completionValue.textContent = completionSlider.value;
+          completionSlider.addEventListener("input", () => {
+              completionValue.textContent = completionSlider.value;
+          });
+      }
+  })
+  .catch(error => {
+      console.error("Error loading task detail:", error);
+      alert("Could not load task details. Please try again.");
+  });
+}
 // --- WELLBEING MODAL ---
 const wellbeingModalBtn = document.getElementById('openWellbeingModal');
 

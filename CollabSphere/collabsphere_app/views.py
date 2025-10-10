@@ -65,10 +65,27 @@ def home(request):
     else:
         has_checked_in_today = len(response.data) > 0
 
+    # Fetch tasks belonging to the logged-in user
+    try:
+        tasks_response = (
+            supabase
+            .table("tasks")
+            .select("*")
+            .eq("created_by", user.username)
+            .order("date_created", desc=True)
+            .execute()
+        )
+        user_tasks = tasks_response.data or [] 
+        print(f"Tasks fetched for {user.username}: {len(user_tasks)}") 
+    except Exception as e: 
+        print(f"Error fetching tasks: {e}") 
+        user_tasks = []
+
     context = {
         "greeting": greeting,
         "user_name": user.username,
         "has_checked_in_today": has_checked_in_today,
+        "tasks": user_tasks,
     }
 
     response = render(request, "home.html", context)
@@ -77,6 +94,7 @@ def home(request):
     response['Pragma'] = 'no-cache'
     response['Expires'] = '0'
     return response
+    
 
 
 @require_GET
