@@ -5,107 +5,114 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=1.1">
-<link rel="stylesheet" href="{% static 'css/profile.css' %}?v=1.1">
+<link rel="stylesheet" href="{% static 'css/profile.css' %}?v=1.2">
 {% endblock %}
-
 {% block content %}
 <div class="profile-container">
-  <nav id="sidebar-nav" class="sidebar">
-    <div class="list-group list-group-flush">
-      <a href="#" class="list-group-item sidebar-link active">Profile</a>
-      <a href="#" class="list-group-item sidebar-link">Security</a>
-      <a href="#" class="list-group-item sidebar-link">Notifications</a>
-      <a href="#" class="list-group-item sidebar-link">Team Members</a>
-    </div>
-  </nav>
-
-  <!-- Main Content -->
   <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4">
     <div class="card shadow-sm mb-4">
       <div class="card-body">
-        <!-- Profile Header Row -->
-        <div class="d-flex align-items-center justify-content-between mb-4">
-          <div>
-            <h1 class="card-title mb-1">Profile</h1>
-            <p class="text-muted mb-0">
-              This information will be displayed publicly, so be careful what you share.
-            </p>
-          </div>
-          <div class="profile-img">
-            <img src="{% static './images/circle-user.png' %}" alt="Profile Image"
-                 class="rounded-circle me-3" width="80" height="80">
-            <button class="btn btn-outline-secondary btn-sm">Update Profile Image</button>
-          </div>
-        </div>
-
-        <hr>
-
-        <!-- Info List -->
-        <div class="list-group list-group-flush">
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-bold">Full Name</div>
-              <div class="text-muted small">John Doe</div>
+        
+        <form method="POST" enctype="multipart/form-data" id="profile-form">
+          {% csrf_token %}
+          <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap">
+            <div class="mb-3 mb-md-0">
+              <h1 class="card-title mb-1">Profile</h1>
+              <p class="text-muted mb-0">Update your account details below.</p>
             </div>
-            <button class="btn btn-sm btn-outline-primary">Update</button>
-          </div>
 
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-bold">Email Address</div>
-              <div class="text-muted small">john@example.com</div>
-            </div>
-            <button class="btn btn-sm btn-outline-primary">Update</button>
-          </div>
-
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-bold">Title</div>
-              <div class="text-muted small">Software Engineer</div>
-            </div>
-            <button class="btn btn-sm btn-outline-primary">Update</button>
-          </div>
-        </div>
-
-        <hr>
-
-        <!-- Languages & Dates -->
-        <h3 class="fw-bold mb-3">Languages and Dates</h3>
-        <p class="text-muted small">
-          Choose what language and date format to use throughout your account.
-        </p>
-
-        <div class="list-group list-group-flush">
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-bold">Language</div>
-              <div class="text-muted small">English</div>
-            </div>
-            <button class="btn btn-sm btn-outline-primary">Update</button>
-          </div>
-
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-bold">Date Format</div>
-              <div class="text-muted small">DD-mm-yy</div>
-            </div>
-            <button class="btn btn-sm btn-outline-primary">Update</button>
-          </div>
-
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-bold">Automatic Timezone</div>
-              <div class="text-muted small">Enabled</div>
-            </div>
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" id="timezoneToggle" checked>
-              <label class="form-check-label" for="timezoneToggle"></label>
+            <div class="text-center">
+              <label for="profile-picture-input" class="d-block cursor-pointer">
+                <img id="profile-img"
+                     src="{% if user_data.profile_picture %}{{ user_data.profile_picture }}{% else %}{% static 'images/circle-user.png' %}{% endif %}"
+                     alt="Profile Image"
+                     class="rounded-circle border border-2 border-primary shadow-sm"
+                     width="90" height="90"
+                     style="object-fit: cover; cursor: pointer;">
+              </label>
+              <input type="file"
+                     id="profile-picture-input"
+                     name="profile_picture"
+                     class="form-control form-control-sm mt-2 visually-hidden"
+                     accept="image/*">
+              <small class="text-muted d-block mt-1">Click image to change</small>
+              <div id="file-name" class="small text-info mt-1"></div>
             </div>
           </div>
-        </div>
+
+          <hr>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Full Name</label>
+            <input type="text" name="full_name" value="{{ user_data.full_name }}" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Email</label>
+            <input type="email" name="email" value="{{ user_data.email }}" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Title</label>
+            <input type="text" name="title" value="{{ user_data.title }}" class="form-control">
+          </div>
+
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-save me-1"></i> Save Changes
+            </button>
+          </div>
+        </form>
+
       </div>
     </div>
   </main>
 </div>
-{% endblock %}
 
+<script>
+document.getElementById('profile-form').addEventListener('submit', function(e) {
+    console.log('🔄 Form submitted!');
+    const formData = new FormData(this);
+    for (let [key, value] of formData.entries()) {
+        console.log(`📝 Form field: ${key} = ${value}`);
+    }
+});
+
+document.getElementById("profile-picture-input").addEventListener("change", function (event) {
+  const file = event.target.files[0];
+  if (file) {
+    console.log(`🖼️ Selected file: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
+    
+    // Show file name
+    document.getElementById('file-name').textContent = `Selected: ${file.name}`;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        this.value = '';
+        return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be less than 5MB');
+        this.value = '';
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      document.getElementById("profile-img").src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// Cache busting
+window.onpageshow = function(event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+};
+</script>
+{% endblock %}

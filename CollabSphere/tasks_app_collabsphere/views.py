@@ -9,7 +9,7 @@ SUPABASE_URL = settings.SUPABASE_URL
 SUPABASE_KEY = settings.SUPABASE_KEY
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-
+# Teams yet to be implemented, so team_id is always None
 def fetch_team_members():
     """Return list of dicts: {id, username} from public.user"""
     try:
@@ -20,6 +20,7 @@ def fetch_team_members():
         print("Error fetching team members:", e)
         return []
 
+# Teams yet to be implemented, so team_id is always None
 def tasks(request):
     """
     Renders the Create Task modal (tasks.html)
@@ -33,6 +34,7 @@ def tasks(request):
     }
     return render(request, "tasks.html", context)
 
+# Teams yet to be implemented, so team_id is always None
 def task_create(request):
     """Handle POST to create a new task in Supabase and redirect to home."""
     if request.method != "POST":
@@ -100,6 +102,7 @@ def task_create(request):
 
     return redirect("home")
 
+# Teams yet to be implemented, so team_id is always None
 def task_detail(request, task_id):
     """
     Return the Task Details modal HTML (rendered template), prefilled with task data.
@@ -136,6 +139,7 @@ def task_detail(request, task_id):
     context = {"task": task, "team_members": team_members}
     return render(request, "task_detail.html", context)
 
+# Teams yet to be implemented, so team_id is always None
 def task_update(request, task_id):
     """Handle POST to update task in Supabase then redirect to home."""
     if not request.user.is_authenticated:
@@ -203,6 +207,7 @@ def task_update(request, task_id):
 
     return redirect("home")
 
+# Teams yet to be implemented, so team_id is always None
 def task_delete(request, task_id):
     """Handle POST to delete a task then redirect to home."""
     if not request.user.is_authenticated:
