@@ -20,7 +20,7 @@
       </div>
 
       <div class="modal-body">
-        <form id="taskForm" method="POST">
+        <form id="taskForm" method="POST" action="{% url 'task_create' %}">
           {% csrf_token %}
           <div class="row">
 
@@ -104,4 +104,3 @@
     </div>
   </div>
 </div>
-

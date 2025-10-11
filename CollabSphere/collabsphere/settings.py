@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "collabsphere_app",
     'registration_app_collabsphere',
     "tasks_app_collabsphere",
+    "checkins_app_collabsphere",
 ]
 
 MIDDLEWARE = [
@@ -55,6 +56,8 @@ MIDDLEWARE = [
     "collabsphere.core.middleware.IdleTimeoutMiddleware",
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "collabsphere.core.middleware.PreventLoggedInAccessMiddleware",
+
 ]
 
 ROOT_URLCONF = 'collabsphere.urls'
@@ -112,10 +115,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
-
+TIME_ZONE = 'Asia/Manila'
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -127,9 +128,9 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",  
 ]
 
-
-LOGOUT_REDIRECT_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard' 
+LOGIN_URL = '/login/'
+LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_REDIRECT_URL = '/home/' 
 
 
 # Default primary key field type
@@ -158,6 +159,6 @@ CSRF_COOKIE_SECURE = False      # change to True on production
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
-LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "home"
-LOGOUT_REDIRECT_URL = "login"
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+

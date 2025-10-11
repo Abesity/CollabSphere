@@ -6,8 +6,14 @@
   --text-muted: #6c757d;
 }
 
+.card.wellbeing.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: not-allowed;
+}
 
   body {
+    width: 100%;
     position: relative;
     margin: 0;
     padding: 0;
@@ -34,7 +40,6 @@
 .dashboard-container {
     overflow-x: hidden;
     padding-top: 70px;
-    padding-left: 250px;
     min-width: 120px;
     min-height: 100vh;
     height: 100%;
@@ -142,17 +147,85 @@
   background: #245d8b;
 }
 .task-list {
-  margin-top: 1rem;
   list-style: none;
   padding: 0;
-  min-height: 400px;
-
+  margin: 0;
 }
 .task-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.8rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e6e6e6;
+  transition: all 0.16s ease;
+}
+.task-item:hover {
+  background-color: #f5f8ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.09);
+}
+.task-title {
+  font-weight: 600;
+  color: #2D333A;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap; 
+  margin-right: 12px;
+}
+.task-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto; 
+}
+.task-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap; 
+}
+.priority-circle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.priority-circle.high { background-color: #D0453E; } 
+.priority-circle.low  { background-color: #5BBA6F; } 
+.card.tasks .task-meta-right .status {
+  font-size: 0.92rem;
+  color: #444;
+  text-transform: capitalize;
+}
+.card.tasks .task-meta-right .due-date {
+  font-size: 0.88rem;
+  color: #888;
+}
+@media (max-width: 600px) {
+  .task-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 0.7rem 0.9rem;
+  }
+  .task-title {
+    white-space: normal;
+    overflow: visible;
+  }
+  .task-details {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .task-meta-right {
+    margin-left: 6px;
+  }
 }
 .task-label {
   padding: 2px 8px;
@@ -228,4 +301,103 @@
 .quick-actions li:hover {
   text-decoration: underline;
   color:#2D333A;
+}
+
+/* Wellbeing Card Styles */
+.card.wellbeing {
+  transition: all 0.3s ease;
+  border: 2px solid #e9ecef;
+  padding: 20px;
+}
+
+.card.wellbeing.completed {
+  background-color: #f0f9f0;
+  border-color: #28a745;
+}
+
+.card.wellbeing:hover:not(.completed) {
+  border-color: #007bff;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.1);
+}
+
+.card.wellbeing.completed:hover {
+  cursor: default;
+  box-shadow: none;
+}
+
+/* Status List Styles */
+.status-list {
+  list-style: none;
+  padding: 0;
+  margin: 15px 0;
+}
+
+.status-list li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.status {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 100px;
+}
+
+.status.good {
+  background-color: #28a745;
+}
+
+.status.okay {
+  background-color: #ffc107;
+}
+
+.status.bad {
+  background-color: #dc3545;
+}
+
+/* Check-in Button */
+.btn-checkin {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.btn-checkin:hover {
+  background: linear-gradient(135deg, #0056b3, #004085);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn-checkin:active {
+  transform: translateY(0);
+}
+
+/* Completed State */
+.checkin-complete {
+  text-align: center;
+  padding: 10px 0;
+}
+
+.complete-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.complete-text {
+  color: #28a745;
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin: 0;
 }
