@@ -86,6 +86,15 @@ def task_create(request):
     try:
         res = supabase.table("tasks").insert(payload).execute()
         print("Inserted task:", getattr(res, "data", res))
+
+        count_res = (
+            supabase.table("tasks")
+            .select("task_id", count="exact")
+            .eq("created_by", created_by)
+            .execute()
+        )
+        active_count = count_res.count if hasattr(count_res, "count") else len(count_res.data)
+
     except Exception as e:
         print("Error inserting task into Supabase:", e)
 
@@ -117,7 +126,6 @@ def task_detail(request, task_id):
         print("Error fetching task:", e)
         task = None
 
-    # normalize date strings to YYYY-MM-DD for inputs
     if task:
         for key in ("date_created", "start_date", "due_date"):
             val = task.get(key)
@@ -212,6 +220,15 @@ def task_delete(request, task_id):
     try:
         res = supabase.table("tasks").delete().eq("task_id", task_id).execute()
         print("Deleted task:", getattr(res, "data", res))
+
+        count_res = (
+            supabase.table("tasks")
+            .select("task_id", count="exact")
+            .eq("created_by", username)
+            .execute()
+        )
+        active_count = count_res.count if hasattr(count_res, "count") else len(count_res.data)
+
     except Exception as e:
         print("Error deleting task:", e)
 

@@ -80,12 +80,16 @@ def home(request):
     except Exception as e: 
         print(f"Error fetching tasks: {e}") 
         user_tasks = []
+    
+    # Count active tasks
+    active_tasks_count = len(user_tasks)
 
     context = {
         "greeting": greeting,
         "user_name": user.username,
         "has_checked_in_today": has_checked_in_today,
         "tasks": user_tasks,
+        "active_tasks": active_tasks_count,
     }
 
     response = render(request, "home.html", context)
