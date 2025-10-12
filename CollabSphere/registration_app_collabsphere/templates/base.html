@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}CollabSphere{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap -->
+  <link 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+    rel="stylesheet"
+  >
+
+  {% load static %}
+  
+  <style>
+    /* --- Navbar Links --- */
+    .navbar .nav-link {
+      color: #333; 
+      padding: 8px 12px;
+      transition: color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .navbar .nav-link:hover {
+      color: #3D74C3; 
+      background-color: rgba(0, 0, 0, 0.05);
+      border-radius: 5px;
+    }
+
+    /* --- Auth Buttons --- */
+    .navbar .auth-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      text-decoration: none;
+      display: inline-block;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    /* Outline style */
+    .navbar .auth-btn-outline {
+      color: #3D74C3;
+      border: 1px solid #3D74C3;
+      background-color: transparent;
+    }
+
+    .navbar .auth-btn-outline:hover {
+      color: #fff;
+      background-color: #3D74C3;
+      box-shadow: 0 0 10px rgba(61, 116, 195, 0.4);
+      transform: translateY(-2px);
+    }
+
+    /* Filled style (active / current page) */
+    .navbar .auth-btn-filled {
+      color: #fff !important;
+      background-color: #3D74C3 !important;
+      border: 1px solid #3D74C3 !important;
+      animation: fillPulse 0.4s ease-out;
+    }
+
+    .navbar .auth-btn-filled:hover {
+      background-color: #2F63A6 !important;
+      box-shadow: 0 0 12px rgba(47, 99, 166, 0.5);
+      transform: scale(1.05);
+    }
+
+    /* --- Animations --- */
+    @keyframes fillPulse {
+      0% { transform: scale(0.9); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes slideFadeIn {
+      0% { opacity: 0; transform: translateY(-5px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .navbar a {
+      animation: slideFadeIn 0.5s ease forwards;
+    }
+
+    .navbar a:nth-child(1) { animation-delay: 0.1s; }
+    .navbar a:nth-child(2) { animation-delay: 0.2s; }
+  </style>
+
+  {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-light bg-light shadow-sm px-4">
+    <div class="d-flex align-items-center">
+      <img 
+        src="{% static 'images/logo.png' %}" 
+        alt="CollabSphere Logo" 
+        style="height:40px; margin-right:10px;"
+      >
+      <div style="margin-right: 40px; font-size: 1.5rem; font-weight: bold; color: #245d8b;">
+        CollabSphere
+      </div>
+
+      <!-- Navbar Links -->
+      <a class="nav-link me-3" href="#">About</a>
+      <a class="nav-link me-3" href="#">Help</a>
+    </div>
+
+    <!-- Auth Buttons -->
+    <div class="login-signup-container">
+      <a 
+        href="{% url 'login' %}"
+        class="auth-btn me-2 {% if request.path == '/login/' %}auth-btn-filled{% else %}auth-btn-outline{% endif %}"
+      >
+        Log In
+      </a>
+      <a 
+        href="{% url 'register' %}"
+        class="auth-btn {% if request.path == '/register/' %}auth-btn-filled{% else %}auth-btn-outline{% endif %}"
+      >
+        Register
+      </a>
+    </div>
+  </nav>
+  
+  <!-- Page Content -->
+  <div class="container my-5">
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
