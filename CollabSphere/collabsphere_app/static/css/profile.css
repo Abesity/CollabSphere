@@ -6,32 +6,45 @@
   --text-muted: #6c757d;
 }
 
-body {
-  justify-content: center;
-  position: relative;
-  margin: auto;
-  padding: 0;
-  min-height: 100vh;
-  background-color: var(--bg-color, #f8f8f8);
-  font-family: "Inter", sans-serif;
-
+.card.wellbeing.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
-body::after {
-  content: "";
-  position: fixed;             
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;          
-  background: url("images/bg.png") bottom / cover;
-  opacity: 0.60;                
-  z-index: -1;                
-}
+  body {
+    width: 100%;
+    position: relative;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-color: var(--bg-color, #f8f8f8);
+    font-family: "Inter", sans-serif;
+  }
+
+  body::after {
+    padding: 0;
+    margin: 0;
+    content: "";
+    position: fixed;             
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;          
+    background: url("images/bg.png") bottom / cover;
+    opacity: 0.60;                
+    z-index: -1;                
+  }
+
 
 .profile-container {
-    padding-top: 70px;
-    padding-left: 0;
+    justify-content: center;
+    padding: 20px;
+    overflow-x: hidden;
+    padding-top: 80px;
+    width: 820px;
+    height: 100%;
+    margin: auto;
 }
 
 .profile-img {

@@ -7,11 +7,19 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 from django.contrib import messages
+from .forms import ProfileForm
+
 
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 @login_required(login_url='login')
 def home(request):
+    user_id = request.session.get("user_ID")
+    if not user_id:
+        messages.error(request, "You must log in first.")
+        return redirect("login")
+
+
     user = request.user
     now = timezone.localtime(timezone.now())  
     current_hour = now.hour 
@@ -182,112 +190,78 @@ def admin_dashboard(request):
 
     return render(request, "admin_dashboard.html", {"users": users})
 
-
-@login_required
+@login_required(login_url='login')
 def profile_view(request):
     user_id = request.session.get("user_ID")
     if not user_id:
         messages.error(request, "You must log in first.")
         return redirect("login")
 
-    # Fetch current user data
     try:
         response = supabase.table("user").select("*").eq("user_ID", user_id).execute()
         user_data = response.data[0] if response.data else {}
     except Exception as e:
         messages.error(request, f"Error fetching user data: {e}")
-        return redirect("dashboard")
+        return redirect("home")
+
+    form = ProfileForm(request.POST or None, request.FILES or None)
 
     if request.method == "POST":
-        full_name = request.POST.get("full_name", "").strip()
-        email = request.POST.get("email", "").strip()
-        title = request.POST.get("title", "").strip()
-        profile_picture = request.FILES.get("profile_picture")
+        if form.is_valid():  # ✅ Only update if form passes validation
+            update_data = {}
+            changed_fields = []
 
-        update_data = {}
+            # Only update fields that changed
+            for field in ["username", "full_name", "email", "title"]:
+                value = form.cleaned_data.get(field)
+                if value and value != user_data.get(field):
+                    update_data[field] = value
+                    changed_fields.append(field)
 
-        # Handle profile picture upload
-        if profile_picture:
+            # Handle profile picture
+            profile_pic = form.cleaned_data.get("profile_picture")
+            if profile_pic:
+                file_path = f"profile_pictures/{user_id}_{profile_pic.name}"
+                file_bytes = profile_pic.read()
+                bucket = supabase.storage.from_("profile_pictures")
+                try:
+                    try:
+                        bucket.upload(file_path, file_bytes)
+                    except Exception:
+                        bucket.update(file_path, file_bytes)
+                    public_url = bucket.get_public_url(file_path)
+                    if public_url:
+                        update_data["profile_picture"] = public_url
+                        changed_fields.append("profile_picture")
+                except Exception as e:
+                    messages.error(request, f"Profile picture upload failed: {e}")
+                    return render(request, "profile.html", {"form": form, "user_data": user_data})
+
+            if not update_data:
+                messages.info(request, "No changes were made.")
+                return render(request, "profile.html", {"form": form, "user_data": user_data})
+
+            # Save updates to Supabase
             try:
-                print(f"🖼️ Starting upload for: {profile_picture.name}")
-                
-                # Validate file type
-                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-                if profile_picture.content_type not in allowed_types:
-                    messages.error(request, "Please upload a valid image (JPEG, PNG, GIF, WebP)")
-                    return redirect("profile")
-                
-                # Validate file size (max 5MB)
-                if profile_picture.size > 5 * 1024 * 1024:
-                    messages.error(request, "Image must be smaller than 5MB")
-                    return redirect("profile")
-                
-                # Read file bytes
-                file_bytes = profile_picture.read()
-                
-                # Create unique file path
-                import time
-                import os
-                timestamp = int(time.time())
-                name, ext = os.path.splitext(profile_picture.name)
-                file_path = f"{user_id}/profile_{timestamp}{ext}"
-                
-                print(f"📁 Uploading to: {file_path}")
-                
-                # Upload to Supabase Storage
-                upload_response = supabase.storage.from_("profile_pictures").upload(
-                    file_path,
-                    file_bytes,
-                    {"content-type": profile_picture.content_type}
-                )
-                
-                print(f"📤 Upload response: {upload_response}")
-                
-                # Check if upload was successful
-                if hasattr(upload_response, 'error') and upload_response.error:
-                    error_msg = f"Upload failed: {upload_response.error}"
-                    print(f"❌ {error_msg}")
-                    messages.error(request, error_msg)
+                supabase.table("user").update(update_data).eq("user_ID", int(user_id)).execute()
+                # Custom success messages per field
+                readable = {"username":"Username", "full_name":"Full name", "email":"Email", "title":"Title", "profile_picture":"Profile picture"}
+                if len(changed_fields) == 1:
+                    messages.success(request, f"{readable[changed_fields[0]]} updated successfully!")
+                elif len(changed_fields) == 2:
+                    a, b = [readable[f] for f in changed_fields]
+                    messages.success(request, f"{a} and {b} updated successfully!")
                 else:
-                    # Success! Get the public URL
-                    file_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/profile_pictures/{file_path}"
-                    update_data['profile_picture'] = file_url
-                    print(f"✅ Upload successful! URL: {file_url}")
-                    messages.success(request, "Profile picture uploaded successfully!")
-                    
+                    names = [readable[f] for f in changed_fields]
+                    msg = ", ".join(names[:-1]) + f", and {names[-1]} updated successfully!"
+                    messages.success(request, msg)
             except Exception as e:
-                print(f"💥 Upload exception: {e}")
-                messages.error(request, f"Upload failed: {e}")
+                messages.error(request, f"Update failed: {e}")
 
-        # Handle other profile updates
-        if full_name and full_name != user_data.get('full_name'):
-            update_data['full_name'] = full_name
-            
-        if email and email != user_data.get('email'):
-            update_data['email'] = email
-            
-        if title != user_data.get('title'):
-            update_data['title'] = title
+            return redirect("profile")
 
-        # Update database if there are changes
-        if update_data:
-            try:
-                user_id_int = int(user_id)
-                update_response = supabase.table("user").update(update_data).eq("user_ID", user_id_int).execute()
-                
-                if hasattr(update_response, 'error') and update_response.error:
-                    messages.error(request, f"Database error: {update_response.error}")
-                else:
-                    if 'profile_picture' in update_data:
-                        messages.success(request, "Profile and picture updated successfully!")
-                    else:
-                        messages.success(request, "Profile updated successfully!")
-                    
-            except Exception as e:
-                messages.error(request, f"Update failed: {str(e)}")
         else:
-            messages.info(request, "No changes were made.")
+            # Form invalid → show errors in template/SweetAlert
+            messages.error(request, "Please fix the errors below before saving.")
 
-        return redirect("profile")
-
-    return render(request, "profile.html", {"user_data": user_data})
+    return render(request, "profile.html", {"form": form, "user_data": user_data})

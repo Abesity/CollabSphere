@@ -72,8 +72,16 @@
                 <!-- User logo/avatar -->
                 <div class="dropdown">
                     <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
-                        <img src="{% static 'images/circle-user.png' %}" alt="User"  width="30" height="30" style="margin-left:20px;   filter: brightness(60%) saturate(100%) invert(34%) sepia(68%) saturate(412%) hue-rotate(184deg) brightness(94%) contrast(94%);
-">
+          {% load static %}
+            <img id="profile-img"
+                src="{% if user_data.profile_picture %}{{ user_data.profile_picture }}{% else %}{% static 'images/circle-user.png' %}{% endif %}"
+                alt="Profile Image"
+                class="rounded-circle border border-2 border-primary shadow-sm"
+                width="40" height="40"
+                style="object-fit: cover; cursor: pointer; "
+                onerror="this.onerror=null; this.src='{% static 'images/circle-user.png' %}';">
+
+
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
                         <li><a class="dropdown-item"  href="{% url 'profile' %}">Profile</a></li>

@@ -6,15 +6,18 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=1.1">
 <link rel="stylesheet" href="{% static 'css/profile.css' %}?v=1.2">
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}
+
 {% block content %}
 <div class="profile-container">
-  <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4">
+  <main>
     <div class="card shadow-sm mb-4">
       <div class="card-body">
-        
         <form method="POST" enctype="multipart/form-data" id="profile-form">
           {% csrf_token %}
+
           <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap">
             <div class="mb-3 mb-md-0">
               <h1 class="card-title mb-1">Profile</h1>
@@ -42,19 +45,48 @@
 
           <hr>
 
+          <!-- Username -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">Username</label>
+            <input type="text" name="username" value="{{ user_data.username }}" class="form-control {% if form.username.errors %}is-invalid{% endif %}" required>
+            {% if form.username.errors %}
+              <div class="invalid-feedback">
+                {{ form.username.errors.0 }}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Full Name -->
           <div class="mb-3">
             <label class="form-label fw-bold">Full Name</label>
-            <input type="text" name="full_name" value="{{ user_data.full_name }}" class="form-control" required>
+            <input type="text" name="full_name" value="{{ user_data.full_name }}" class="form-control {% if form.full_name.errors %}is-invalid{% endif %}" required>
+            {% if form.full_name.errors %}
+              <div class="invalid-feedback">
+                {{ form.full_name.errors.0 }}
+              </div>
+            {% endif %}
           </div>
 
+          <!-- Email -->
           <div class="mb-3">
             <label class="form-label fw-bold">Email</label>
-            <input type="email" name="email" value="{{ user_data.email }}" class="form-control" required>
+            <input type="email" name="email" value="{{ user_data.email }}" class="form-control {% if form.email.errors %}is-invalid{% endif %}" required>
+            {% if form.email.errors %}
+              <div class="invalid-feedback">
+                {{ form.email.errors.0 }}
+              </div>
+            {% endif %}
           </div>
 
+          <!-- Title -->
           <div class="mb-3">
             <label class="form-label fw-bold">Title</label>
-            <input type="text" name="title" value="{{ user_data.title }}" class="form-control">
+            <input type="text" name="title" value="{{ user_data.title }}" class="form-control {% if form.title.errors %}is-invalid{% endif %}">
+            {% if form.title.errors %}
+              <div class="invalid-feedback">
+                {{ form.title.errors.0 }}
+              </div>
+            {% endif %}
           </div>
 
           <div class="d-flex justify-content-end">
@@ -63,43 +95,90 @@
             </button>
           </div>
         </form>
-
       </div>
     </div>
   </main>
 </div>
 
+<!-- SweetAlert2 messages -->
+{% if messages %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  {% for message in messages %}
+    Swal.fire({
+      title: "{% if message.tags == 'success' %}Success!{% elif message.tags == 'error' %}Error!{% else %}Notice{% endif %}",
+      text: "{{ message|escapejs }}",
+      icon: "{{ message.tags }}",
+      confirmButtonColor: '#3D74C3'
+    });
+  {% endfor %}
+});
+</script>
+{% endif %}
+
+<!-- Non-field form errors (global validation) -->
+{% if form.non_field_errors %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  Swal.fire({
+    title: "Form Error",
+    text: "{{ form.non_field_errors.0|escapejs }}",
+    icon: "error",
+    confirmButtonColor: '#3D74C3'
+  });
+});
+</script>
+{% endif %}
+
+<!-- Confirmation dialog before saving -->
 <script>
 document.getElementById('profile-form').addEventListener('submit', function(e) {
-    console.log('🔄 Form submitted!');
-    const formData = new FormData(this);
-    for (let [key, value] of formData.entries()) {
-        console.log(`📝 Form field: ${key} = ${value}`);
-    }
-});
+  e.preventDefault();
+  const form = this;
 
+  Swal.fire({
+    title: "Save changes?",
+    text: "Do you want to update your profile with these details?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Yes, save it",
+    cancelButtonText: "Cancel",
+    confirmButtonColor: '#3D74C3',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      Swal.fire({
+        title: "Saving...",
+        text: "Please wait while we update your profile.",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+          form.submit();
+        }
+      });
+    }
+  });
+});
+</script>
+
+<!-- Profile picture preview + validation -->
+<script>
 document.getElementById("profile-picture-input").addEventListener("change", function (event) {
   const file = event.target.files[0];
   if (file) {
-    console.log(`🖼️ Selected file: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
-    
-    // Show file name
     document.getElementById('file-name').textContent = `Selected: ${file.name}`;
     
-    // Validate file type
     if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        Swal.fire('Invalid File', 'Please select an image file.', 'error');
         this.value = '';
         return;
     }
-    
-    // Validate file size (max 5MB)
+
     if (file.size > 5 * 1024 * 1024) {
-        alert('Image must be less than 5MB');
+        Swal.fire('File Too Large', 'Image must be less than 5MB.', 'warning');
         this.value = '';
         return;
     }
-    
+
     const reader = new FileReader();
     reader.onload = function (e) {
       document.getElementById("profile-img").src = e.target.result;
@@ -108,11 +187,11 @@ document.getElementById("profile-picture-input").addEventListener("change", func
   }
 });
 
-// Cache busting
+// Prevent stale cache on back navigation
 window.onpageshow = function(event) {
-    if (event.persisted) {
-        window.location.reload();
-    }
+  if (event.persisted) {
+    window.location.reload();
+  }
 };
 </script>
 {% endblock %}
