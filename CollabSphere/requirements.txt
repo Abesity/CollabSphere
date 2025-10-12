@@ -6,9 +6,12 @@ supabase==1.0.1
 
 python-dotenv==1.0.0
 
-# PostgreSQL adapter ( connect to Supabase DB directly)
+# PostgreSQL adapter (connect to Supabase DB directly)
 psycopg2-binary==2.9.9
 
 # Optional useful dev tools
 djangorestframework==3.20.1
 requests==2.32.0
+
+# Image processing library used by Django's ImageField for profile pictures and uploads
+Pillow==10.4.0
