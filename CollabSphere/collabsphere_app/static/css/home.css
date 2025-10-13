@@ -72,11 +72,9 @@
   box-shadow: 0 4px 12px rgba(129, 137, 176, 0.282);
   padding: 1.2rem;
   margin-bottom: 1.5rem;
-}
-.card {
-  margin-bottom: 0.5rem;
   color:#2D333A;
 }
+
 .summary-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -96,7 +94,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
+
 }
 
 .card-text h3 {
@@ -150,6 +148,8 @@
   list-style: none;
   padding: 0;
   margin: 0;
+  min-height: 450px;
+
 }
 .task-item {
   display: flex;
@@ -309,6 +309,8 @@
   border: 2px solid #e9ecef;
   padding: 20px;
 }
+
+
 
 .card.wellbeing.completed {
   background-color: #f0f9f0;
