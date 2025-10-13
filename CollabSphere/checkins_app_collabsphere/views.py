@@ -5,10 +5,74 @@ from supabase import create_client
 from django.conf import settings
 from django.utils import timezone
 from datetime import datetime
+import json
 
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 @login_required(login_url='login')
+def wellbeing_dashboard(request):
+    user_id = request.session.get("user_ID")
+    if not user_id:
+        return redirect("login")
+
+    # Fetch recent check-ins
+    try:
+        response = (
+            supabase.table("wellbeingcheckin")
+            .select("checkin_id, date_submitted, mood_rating, status, notes")
+            .eq("user_id", int(user_id))
+            .order("date_submitted", desc=True)
+            .limit(10)
+            .execute()
+        )
+        recent_checkins = response.data or []
+        print(f"Fetched check-ins: {recent_checkins}")  # Debug print
+    except Exception as e:
+        print(f"Error fetching check-ins: {e}")
+        recent_checkins = []
+
+    # Prepare chart data (oldest first for proper timeline)
+  # In your wellbeing_dashboard function, update the chart_data preparation:
+    chart_data = []
+    for checkin in reversed(recent_checkins):
+        checkin_date = checkin.get("date_submitted")
+        if isinstance(checkin_date, str):
+            formatted_date = checkin_date
+        else:
+            formatted_date = checkin_date.isoformat() if checkin_date else ""
+        
+        # Handle null status - default to "Okay"
+        status = checkin.get("status")
+        if status is None:
+            status = "Okay"
+        
+        chart_data.append({
+            "date": formatted_date,
+            "mood": status
+        })
+
+    print(f"Chart data: {chart_data}")  # Debug print
+
+    # Convert to JSON for the template
+    chart_data_json = json.dumps(chart_data)
+
+    # Check if user has checked in today
+    today = timezone.now().date()
+    has_checked_in_today = any(
+        checkin.get("date_submitted") == today
+        for checkin in recent_checkins
+    )
+
+    context = {
+        "recent_checkins": recent_checkins,
+        "chart_data": chart_data_json,
+        "greeting": "Hello",
+        "fullname": request.user.username,
+        "has_checked_in_today": has_checked_in_today,
+    }
+
+    return render(request, "wellbeing_dashboard.html", context)
+
 def checkins_modal(request):
     print("🔥 checkins_modal view hit!")
     user = request.user
