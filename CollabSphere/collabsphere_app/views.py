@@ -14,102 +14,82 @@ supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 @login_required(login_url='login')
 def home(request):
-    user_id = request.session.get("user_ID")
-    if not user_id:
-        messages.error(request, "You must log in first.")
-        return redirect("login")
+        user_id = request.session.get("user_ID")
+        if not user_id:
+            messages.error(request, "You must log in first.")
+            return redirect("login")
 
+        user = request.user
 
-    user = request.user
-    now = timezone.localtime(timezone.now())  
-    current_hour = now.hour 
+        # Fetch latest user data from Supabase
+        try:
+            response = supabase.table("user").select("*").eq("user_ID", int(user_id)).execute()
+            user_data = response.data[0] if response.data else {}
+        except Exception as e:
+            messages.error(request, f"Error fetching user data: {e}")
+            user_data = {}
 
-    # Determine greeting 
-    if 5 <= current_hour < 12:
-        greeting = "Good morning"
-    elif 12 <= current_hour < 18:
-        greeting = "Good afternoon"
-    elif 18 <= current_hour < 24:
-        greeting = "Good evening"
-    else:
-        greeting = "Hello"
+        # Determine greeting based on current hour
+        now = timezone.localtime(timezone.now())
+        current_hour = now.hour
+        if 5 <= current_hour < 12:
+            greeting = "Good morning"
+        elif 12 <= current_hour < 18:
+            greeting = "Good afternoon"
+        elif 18 <= current_hour < 24:
+            greeting = "Good evening"
+        else:
+            greeting = "Hello"
 
-    # Get today's date in the correct timezone
-    today_date = timezone.localtime(timezone.now()).date()
-    
-    print(f"DEBUG - User: {user.id}, Today's date: {today_date}")
-    
-    # Query for check-ins - use date comparison only
-    response = (
-        supabase
-        .table("wellbeingcheckin")
-        .select("checkin_id, date_submitted, user_id")
-        .eq("user_id", user.id)
-        .eq("date_submitted", today_date.isoformat())
-        .execute()
-    )
-    
-    # Debug logging
-    print(f"Check-ins found: {len(response.data)}")
-    for checkin in response.data:
-        print(f"Check-in: ID={checkin.get('checkin_id')}, Date={checkin.get('date_submitted')}")
-    
-    # Alternative: Try a more flexible date comparison
-    if len(response.data) == 0:
-        print("Trying alternative date comparison...")
-        # Sometimes the date might be stored differently, try a contains approach
-        all_response = (
-            supabase
-            .table("wellbeingcheckin")
-            .select("checkin_id, date_submitted, user_id")
-            .eq("user_id", user.id)
-            .execute()
-        )
-        
-        today_str = today_date.isoformat()
-        today_checkins = [c for c in all_response.data if c.get('date_submitted', '').startswith(today_str)]
-        print(f"Alternative check found: {len(today_checkins)}")
-        
-        has_checked_in_today = len(today_checkins) > 0
-    else:
-        has_checked_in_today = len(response.data) > 0
+        # Today's date
+        today_date = now.date()
 
-    # Teams yet to be implemented, so team_id is always None
-    # Fetch tasks belonging to the logged-in user
-    try:
-        tasks_response = (
-            supabase
-            .table("tasks")
-            .select("*")
-            .eq("created_by", user.username)
-            .order("date_created", desc=True)
-            .execute()
-        )
-        user_tasks = tasks_response.data or [] 
-        print(f"Tasks fetched for {user.username}: {len(user_tasks)}") 
-    except Exception as e: 
-        print(f"Error fetching tasks: {e}") 
-        user_tasks = []
-    
-    # Count active tasks
-    active_tasks_count = len(user_tasks)
+        # Check-in logic
+        try:
+            response = (
+                supabase.table("wellbeingcheckin")
+                .select("checkin_id, date_submitted, user_id")
+                .eq("user_id", int(user_id))
+                .execute()
+            )
+            # Filter for today's date
+            today_checkins = [c for c in response.data if c.get('date_submitted', '').startswith(today_date.isoformat())]
+            has_checked_in_today = len(today_checkins) > 0
+        except Exception as e:
+            print(f"Error fetching check-ins: {e}")
+            has_checked_in_today = False
 
-    # Teams yet to be implemented, so team_id is always None
-    context = {
-        "greeting": greeting,
-        "user_name": user.username,
-        "has_checked_in_today": has_checked_in_today,
-        "tasks": user_tasks,
-        "active_tasks": active_tasks_count,
-    }
+        # Fetch user tasks
+        try:
+            tasks_response = (
+                supabase.table("tasks")
+                .select("*")
+                .eq("created_by", user.username)
+                .order("date_created", desc=True)
+                .execute()
+            )
+            user_tasks = tasks_response.data or []
+        except Exception as e:
+            print(f"Error fetching tasks: {e}")
+            user_tasks = []
 
-    response = render(request, "home.html", context)
-    # Add headers to prevent caching
-    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
-    response['Pragma'] = 'no-cache'
-    response['Expires'] = '0'
-    return response
-    
+        active_tasks_count = len(user_tasks)
+
+        context = {
+            "greeting": greeting,
+            "user_name": user.username,
+            "user_data": user_data,  # Pass Supabase data for navbar/profile
+            "has_checked_in_today": has_checked_in_today,
+            "tasks": user_tasks,
+            "active_tasks": active_tasks_count,
+        }
+
+        # Render page and prevent caching
+        response = render(request, "home.html", context)
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response
 
 
 @require_GET

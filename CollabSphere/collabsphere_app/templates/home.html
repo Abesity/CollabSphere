@@ -74,31 +74,29 @@
             <button class="btn-new" id="openTaskModal">+ New Task</button>
           </div>
           <div id="taskModalContainer"></div>  
-          <ul class="task-list" id="taskList">
-              {% if tasks %}
+         <ul class="task-list" id="taskList">
+            {% if tasks %}
                 {% for task in tasks %}
-                  <li class="task-item" onclick="openTaskDetail('{{ task.task_id }}')">
-                    <div class="task-title">{{ task.title }}</div>
+                    <li class="task-item" onclick="openTaskDetail('{{ task.task_id }}')">
+                        <div class="task-title">{{ task.title }}</div>
+                        <div class="task-details">
+                            {% if task.priority %}
+                                <span class="priority-circle high" aria-hidden="true"></span>
+                            {% else %}
+                                <span class="priority-circle low" aria-hidden="true"></span>
+                            {% endif %}
 
-                    <div class="task-details">
-                      {% if task.priority %}
-                        <span class="priority-circle high" aria-hidden="true"></span>
-                      {% else %}
-                        <span class="priority-circle low" aria-hidden="true"></span>
-                      {% endif %}
-
-                      <div class="task-meta-right">
-                        <span class="status">{{ task.status }}</span>
-                        <span class="due-date">{{ task.due_date }}</span>
-                      </div>
-                    </div>
-                  </li>
-                {% empty %}
-                  <p>No tasks have been assigned yet.</p>
+                            <div class="task-meta-right">
+                                <span class="status">{{ task.status }}</span>
+                                <span class="due-date">{{ task.due_date }}</span>
+                            </div>
+                        </div>
+                    </li>
                 {% endfor %}
-              {% endif %}
-            </ul>
-          </ul>
+            {% else %}
+                <li class="task-item empty">No tasks yet.</li>
+            {% endif %}
+        </ul>
         </div>
       </div>
 
