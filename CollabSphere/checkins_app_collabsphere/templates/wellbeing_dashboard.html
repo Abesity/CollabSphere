@@ -1,0 +1,240 @@
+{% extends "base_dashboard.html" %} 
+{% load static %}
+
+{% block title %}Well-being Dashboard – CollabSphere{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/wellbeing_dashboard.css' %}?v=1.0">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/sidebar.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid dashboard-container">
+  <main class="dashboard-main">
+
+    <!-- Welcome Section -->
+    <section class="welcome-text">
+      <h1>{{ greeting }}, {{ fullname|default:"User" }}!</h1>
+      <p>{{ team_message|default:"Here's a summary of your recent check-ins." }}</p>
+    </section>
+
+    <!-- Well-being Chart and Previous Check-ins -->
+    <section class="bottom-grid">
+      <div class="column-left">
+        <!-- Line chart -->
+        <div class="card wellbeing-chart mb-4">
+          <div class="card-header">
+            <h3>Well-being Trends</h3>
+          </div>
+          <div class="card-content">
+            <canvas id="wellbeingChart" height="250"></canvas>
+          </div>
+        </div>
+
+        <!-- Previous check-ins -->
+        <div class="card recent-checkins">
+          <div class="card-header">
+            <h3>Previous Check-ins</h3>
+          </div>
+          <div class="card-content">
+            <ul class="list-group">
+              {% for checkin in recent_checkins %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                   {{ checkin.date_submitted }}
+                    <span class="badge 
+                      {% if checkin.status == 'Good' %}bg-success
+                      {% elif checkin.status == 'Okay' %}bg-warning
+                      {% elif checkin.status == 'Needs Support' or checkin.status == None %}bg-danger
+                      {% else %}bg-secondary
+                      {% endif %}">
+                      {{ checkin.status|default:"None" }}
+                  </span>
+                </li>
+              {% empty %}
+                <li class="list-group-item text-muted">No check-ins yet.</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="{% static 'js/chart.min.js' %}"></script>
+
+<script>
+// Track if chart has been created to prevent duplicates
+let chartCreated = false;
+let wellbeingChart = null;
+
+function createWellbeingChart() {
+  // Prevent multiple chart creations
+  if (chartCreated) {
+    console.log('Chart already created, skipping...');
+    return;
+  }
+
+  // Check if Chart.js is loaded
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js not loaded.');
+    return;
+  }
+
+  // Check if canvas element exists
+  const canvas = document.getElementById('wellbeingChart');
+  if (!canvas) {
+    console.error('Canvas element not found');
+    return;
+  }
+
+  // Destroy existing chart if it exists
+  if (wellbeingChart) {
+    wellbeingChart.destroy();
+  }
+
+  const chartData = {{ chart_data|safe }};
+  
+  // If no data, show a message
+  if (!chartData || chartData.length === 0) {
+    canvas.parentElement.innerHTML = 
+      '<p class="text-muted text-center p-4">No check-in data available yet. Submit your first check-in to see trends.</p>';
+    return;
+  }
+
+  // Filter out entries with null mood and prepare data
+  const validData = chartData.filter(item => item.mood !== null);
+  
+  if (validData.length === 0) {
+    canvas.parentElement.innerHTML = 
+      '<p class="text-muted text-center p-4">No valid check-in data available.</p>';
+    return;
+  }
+
+  // Extract labels (dates) and convert status to numerical values
+  const labels = validData.map(c => {
+    const dateStr = c.date;
+    if (!dateStr) return 'Unknown Date';
+    
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch (e) {
+      return dateStr;
+    }
+  });
+  
+  // Convert mood status to numerical values for the chart
+  const moodValues = validData.map(c => {
+    switch(c.mood) {
+      case 'Good': return 2;
+      case 'Okay': return 1;
+      case 'Needs Support': return 0;
+      default: return 1;
+    }
+  });
+
+  // Get mood status for tooltips
+  const moodStatuses = validData.map(c => c.mood);
+
+  try {
+    const ctx = canvas.getContext('2d');
+    wellbeingChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Well-being',
+          data: moodValues,
+          fill: true,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          tension: 0.3,
+          pointBackgroundColor: moodStatuses.map(m => 
+            m === 'Good' ? 'rgba(40, 167, 69, 0.8)' : 
+            m === 'Okay' ? 'rgba(255, 193, 7, 0.8)' : 
+            'rgba(220, 53, 69, 0.8)'
+          ),
+          pointBorderColor: moodStatuses.map(m => 
+            m === 'Good' ? 'rgb(40, 167, 69)' : 
+            m === 'Okay' ? 'rgb(255, 193, 7)' : 
+            'rgb(220, 53, 69)'
+          ),
+          pointRadius: 6,
+          pointHoverRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            min: -0.5,
+            max: 2.5,
+            ticks: {
+              callback: function(value) {
+                const moods = ['Needs Support', 'Okay', 'Good'];
+                return moods[value] || '';
+              },
+              stepSize: 1
+            },
+            title: {
+              display: true,
+              text: 'Mood'
+            },
+            grid: {
+              drawBorder: false
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Date'
+            },
+            grid: {
+              display: false
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const index = context.dataIndex;
+                const mood = moodStatuses[index];
+                return `Mood: ${mood}`;
+              },
+              afterLabel: function(context) {
+                const index = context.dataIndex;
+                const date = validData[index].date;
+                return `Date: ${date}`;
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    chartCreated = true;
+    console.log('Chart created successfully!');
+  } catch (error) {
+    console.error('Error creating chart:', error);
+    canvas.parentElement.innerHTML = 
+      '<p class="text-muted text-center p-4">Error creating chart. Please refresh the page.</p>';
+  }
+}
+
+// Initialize only once when DOM is ready
+document.addEventListener("DOMContentLoaded", function() {
+  console.log('DOM loaded, creating chart...');
+  createWellbeingChart();
+});
+</script>
+
+{% endblock %}
