@@ -31,10 +31,11 @@ git clone https://github.com/Abesity/CollabSphere
 cd CollabSphere
 ```
 
-### 2. Install Django and Supabase
+### 2. Install Requirements
 
 ```bash
 pip install django==5.2.6 supabase
+python -m pip install Pillow
 ```
 
 ### 3. Apply Migrations
