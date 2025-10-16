@@ -95,49 +95,28 @@ def home(request):
 @require_GET
 @login_required
 def verify_checkin_status(request):
-    """API endpoint to verify if user has checked in today"""
     user = request.user
-    today_date = timezone.localtime(timezone.now()).date()
-    
-    print(f"VERIFY - User: {user.id}, Today: {today_date}")
-    
-    # Try exact date match first
-    response = (
-        supabase
-        .table("wellbeingcheckin")
-        .select("checkin_id, date_submitted")
-        .eq("user_id", user.id)
-        .eq("date_submitted", today_date.isoformat())
-        .execute()
-    )
-    
-    has_checked_in_today = len(response.data) > 0
-    
-    # If no exact match, try alternative approach
-    if not has_checked_in_today:
-        all_response = (
-            supabase
-            .table("wellbeingcheckin")
-            .select("checkin_id, date_submitted")
-            .eq("user_id", user.id)
+    today = timezone.now().date()
+
+    try:
+        # Example logic using Supabase or any ORM:
+        res = supabase.table("user").select("user_ID").eq("email", user.email).single().execute()
+        user_id = res.data["user_ID"]
+
+        existing = (
+            supabase.table("wellbeingcheckin")
+            .select("date_submitted")
+            .eq("user_id", user_id)
+            .gte("date_submitted", today.isoformat())
             .execute()
         )
-        
-        today_str = today_date.isoformat()
-        today_checkins = [c for c in all_response.data if c.get('date_submitted', '').startswith(today_str)]
-        has_checked_in_today = len(today_checkins) > 0
-        print(f"Alternative check found: {len(today_checkins)}")
-    
-    print(f"Final result: {has_checked_in_today}")
-    
-    return JsonResponse({
-        'has_checked_in_today': has_checked_in_today,
-        'user_id': user.id,
-        'today_date': today_date.isoformat(),
-        'checkins_found': len(response.data)
-    })
 
-
+        has_checked_in_today = len(existing.data) > 0
+        return JsonResponse({"has_checked_in_today": has_checked_in_today})
+    except Exception as e:
+        print("Error verifying check-in:", e)
+        return JsonResponse({"has_checked_in_today": False})
+    
 @require_GET
 @login_required
 def debug_checkins(request):
