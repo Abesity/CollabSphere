@@ -12,58 +12,57 @@
   cursor: not-allowed;
 }
 
-  body {
-    width: 100%;
-    position: relative;
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
-    background-color: var(--bg-color, #f8f8f8);
-    font-family: "Inter", sans-serif;
-  }
+body {
+  width: 100%;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: var(--bg-color, #f8f8f8);
+  font-family: "Inter", sans-serif;
+}
 
-  body::after {
-    padding: 0;
-    margin: 0;
-    content: "";
-    position: fixed;             
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;          
-    background: url("images/bg.png") bottom / cover;
-    opacity: 0.60;                
-    z-index: -1;                
-  }
-
+body::after {
+  padding: 0;
+  margin: 0;
+  content: "";
+  position: fixed;             
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;          
+  background: url("images/bg.png") bottom / cover;
+  opacity: 0.60;                
+  z-index: -1;                
+}
 
 .dashboard-container {
-    overflow-x: hidden;
-    padding-top: 70px;
-    min-width: 120px;
-    min-height: 100vh;
-    height: 100%;
-    width: 100%;
-    margin: auto;
+  overflow-x: hidden;
+  padding-top: 70px;
+  min-width: 120px;
+  min-height: 100vh;
+  height: 100%;
+  width: 100%;
+  margin: auto;
 }
+
 /* Main content */
 .dashboard-main {
-    justify-content: center;
-    align-items: center;
-    padding: 2rem 3rem;
-    margin: auto;
-   
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 3rem;
+  margin: auto;
 }
+
 .welcome-text h1{
   color:#2D333A;
   font-weight: 600;
 }
+
 .welcome-text p {
   color:#2D333A;
   margin-bottom: 1.5rem;
 }
-
-
 
 .card {
   background: #fff;
@@ -94,7 +93,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-
 }
 
 .card-text h3 {
@@ -115,9 +113,7 @@
   height: 48px;
   object-fit: contain;
   filter: brightness(60%) saturate(100%) invert(34%) sepia(68%) saturate(412%) hue-rotate(184deg) brightness(94%) contrast(94%);
-
 }
-
 
 /* Bottom grid */
 .bottom-grid {
@@ -133,6 +129,7 @@
   align-items: center;
   background-color: transparent;
 }
+
 .btn-new {
   color: white;
   background: #3D74C3;
@@ -141,16 +138,47 @@
   border-radius: 8px;
   cursor: pointer;
 }
+
 .btn-new:hover {
   background: #245d8b;
 }
+
+/* Task List Header Labels */
+.task-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 2px solid #e6e6e6;
+  font-weight: 600;
+  color: #2D333A;
+  font-size: 0.95rem;
+}
+
+.task-list-header .header-task {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.task-list-header .header-status {
+  flex: 0 0 auto;
+  margin-right: 80px;
+}
+
+.task-list-header .header-due-date {
+  flex: 0 0 auto;
+  margin-right: 10px;
+}
+
 .task-list {
   list-style: none;
   padding: 0;
   margin: 0;
   min-height: 450px;
-
 }
+
 .task-item {
   display: flex;
   justify-content: space-between;
@@ -164,11 +192,13 @@
   border: 1px solid #e6e6e6;
   transition: all 0.16s ease;
 }
+
 .task-item:hover {
   background-color: #f5f8ff;
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.09);
 }
+
 .task-title {
   font-weight: 600;
   color: #2D333A;
@@ -179,54 +209,80 @@
   white-space: nowrap; 
   margin-right: 12px;
 }
+
 .task-details {
   display: flex;
   align-items: center;
   gap: 12px;
   flex: 0 0 auto; 
 }
+
 .task-meta-right {
   display: flex;
   align-items: center;
   gap: 12px;
   white-space: nowrap; 
 }
-.priority-circle {
+
+/* Status Circle - Updated Colors */
+.status-circle {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 }
-.priority-circle.high { background-color: #D0453E; } 
-.priority-circle.low  { background-color: #5BBA6F; } 
+
+.status-circle.pending { 
+  background-color: #D0453E; /* Red */
+} 
+
+.status-circle.in-progress { 
+  background-color: #E2A743; /* Orange */
+}
+
+.status-circle.completed { 
+  background-color: #5BBA6F; /* Green */
+}
+
 .card.tasks .task-meta-right .status {
   font-size: 0.92rem;
   color: #444;
   text-transform: capitalize;
 }
+
 .card.tasks .task-meta-right .due-date {
   font-size: 0.88rem;
   color: #888;
 }
+
 @media (max-width: 600px) {
+  .task-list-header {
+    display: none;
+  }
+  
   .task-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
     padding: 0.7rem 0.9rem;
   }
+  
   .task-title {
     white-space: normal;
     overflow: visible;
   }
+  
   .task-details {
     width: 100%;
     justify-content: flex-start;
   }
+  
   .task-meta-right {
     margin-left: 6px;
   }
 }
+
 .task-label {
   padding: 2px 8px;
   border-radius: 8px;
@@ -234,14 +290,17 @@
   text-transform: capitalize;
   font-weight: bold;
 }
+
 .task-label.high {
   background: #D0453E22;
   color: #D0453E;
 }
+
 .task-label.medium {
   background: #E2A74322;
   color: #E2A743;
 }
+
 .task-label.low {
   background: #5BBA6F22;
   color: #5BBA6F;
@@ -251,15 +310,15 @@
 .status-list {
   list-style: none;
   padding: 0;
-
 }
+
 .status-list li {
   display: flex;
   align-items: center;
   margin: 6px 0;
- border-bottom: 1px solid #f0f0f0;
-
+  border-bottom: 1px solid #f0f0f0;
 }
+
 .status {
   width: 12px;
   height: 12px;
@@ -267,6 +326,7 @@
   display: inline-block;
   margin-right: 8px;
 }
+
 .status.good { background: #5BBA6F; }
 .status.okay { background: #E2A743; }
 .status.bad { background: #D0453E; }
@@ -276,12 +336,13 @@
   list-style: none;
   padding: 0;
 }
+
 .team-activity li {
   margin: 0.5rem 0;
   font-size: 0.9rem;
   border-bottom: 1px solid #f0f0f0;
-
 }
+
 .team-activity .time {
   color: #777;
   font-size: 0.8rem;
@@ -293,11 +354,13 @@
   list-style: none;
   padding: 0;
 }
+
 .quick-actions li {
   margin: 0.6rem 0;
   font-weight: 500;
   cursor: pointer;
 }
+
 .quick-actions li:hover {
   text-decoration: underline;
   color:#2D333A;
@@ -309,8 +372,6 @@
   border: 2px solid #e9ecef;
   padding: 20px;
 }
-
-
 
 .card.wellbeing.completed {
   background-color: #f0f9f0;

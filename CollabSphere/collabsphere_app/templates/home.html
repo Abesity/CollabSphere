@@ -73,17 +73,29 @@
             <h3>My Tasks</h3>
             <button class="btn-new" id="openTaskModal">+ New Task</button>
           </div>
-          <div id="taskModalContainer"></div>  
-         <ul class="task-list" id="taskList">
+          <div id="taskModalContainer"></div>
+          
+          <!-- Task List Header Labels -->
+          <div class="task-list-header">
+            <span class="header-task">Task</span>
+            <span class="header-status">Status</span>
+            <span class="header-due-date">Due Date</span>
+          </div>
+          
+          <ul class="task-list" id="taskList">
             {% if tasks %}
                 {% for task in tasks %}
                     <li class="task-item" onclick="openTaskDetail('{{ task.task_id }}')">
                         <div class="task-title">{{ task.title }}</div>
                         <div class="task-details">
-                            {% if task.priority %}
-                                <span class="priority-circle high" aria-hidden="true"></span>
+                            {% if task.status == 'Pending' %}
+                                <span class="status-circle pending" aria-hidden="true"></span>
+                            {% elif task.status == 'In Progress' %}
+                                <span class="status-circle in-progress" aria-hidden="true"></span>
+                            {% elif task.status == 'Completed' %}
+                                <span class="status-circle completed" aria-hidden="true"></span>
                             {% else %}
-                                <span class="priority-circle low" aria-hidden="true"></span>
+                                <span class="status-circle pending" aria-hidden="true"></span>
                             {% endif %}
 
                             <div class="task-meta-right">
