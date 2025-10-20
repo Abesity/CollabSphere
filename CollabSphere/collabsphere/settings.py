@@ -37,6 +37,7 @@ SUPABASE_STORAGE_URL = 'https://oafdtoodydpmqryfulvu.storage.supabase.co/storage
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
+    'django.contrib.humanize',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
