@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'registration_app_collabsphere',
     "tasks_app_collabsphere",
     "checkins_app_collabsphere",
+    'teams_app_collabsphere',
 ]
 
 MIDDLEWARE = [

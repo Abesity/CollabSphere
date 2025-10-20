@@ -32,4 +32,5 @@ urlpatterns = [
     path("tasks/", include("tasks_app_collabsphere.urls")),
     path('', include('registration_app_collabsphere.urls')),  
     path('checkins/', include('checkins_app_collabsphere.urls')),
+    path('teams/', include('teams_app_collabsphere.urls')),
 ]
