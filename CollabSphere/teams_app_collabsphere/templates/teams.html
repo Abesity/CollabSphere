@@ -1,5 +1,5 @@
 {% extends "base_dashboard.html" %}
-{% load static %}
+{% load static humanize %}
 
 {% block title %}Teams – CollabSphere{% endblock %}
 
@@ -13,12 +13,118 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid teams-container">
+<div class="container-fluid dashboard-container">
+  <main class="dashboard-main">
 
-  <!-- Main Content -->
-  <main class="teams-main">
+    <!-- Header Section -->
+    <section class="welcome-text">
+      <h1>Your Teams</h1>
+      <p>Browse and manage your teams across CollabSphere.</p>
+    </section>
+
+    <!-- Search Bar -->
+    <section class="search-section">
+      <form method="get" class="search-row" aria-label="Search teams">
+        <input
+          id="searchInput"
+          name="q"
+          value="{{ request.GET.q|default:'' }}"
+          class="search-input"
+          type="search"
+          placeholder="Search by team name, description, or owner..."
+          autocomplete="off"
+        />
+        <button type="submit" class="search-btn">Search</button>
+        <button type="button" id="clearBtn" class="search-btn btn-clear">Clear</button>
+      </form>
+    </section>
+
+    <!-- Teams Grid -->
+    <section class="teams-grid-section">
+      {% if teams %}
+        <div id="teamsGrid" class="grid">
+          {% for team in teams %}
+          <article class="card team-card" 
+                   data-name="{{ team.team_name|lower }}" 
+                   data-desc="{{ team.description|default:''|lower }}" 
+                   data-owner="{% if team.owner.username %}{{ team.owner.username|lower }}{% else %}owner-{{ team.user_id_owner }}{% endif %}">
+            
+            <div class="card-header">
+              <h3 class="team-name">{{ team.team_name }}</h3>
+              <span class="team-id">#{{ team.team_ID }}</span>
+            </div>
+
+            <div class="card-body">
+              <p class="team-desc">
+                {% if team.description %}
+                  {{ team.description }}
+                {% else %}
+                  <em>No description provided.</em>
+                {% endif %}
+              </p>
+            </div>
+
+            <div class="card-footer team-meta">
+              <span>Joined: {{ team.joined_at|naturaltime }}</span>
+              <span>Owner: 
+                {% if team.owner %}
+                  <a href="{% url 'profile' team.owner.username %}" class="owner-link">{{ team.owner.username }}</a>
+                {% else %}
+                  <a href="#" class="owner-link">User {{ team.user_id_owner }}</a>
+                {% endif %}
+              </span>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="card no-results">
+          <p>No teams found.</p>
+        </div>
+      {% endif %}
+    </section>
 
   </main>
 </div>
 
+<script>
+(function() {
+  const input = document.getElementById('searchInput');
+  const clearBtn = document.getElementById('clearBtn');
+  const grid = document.getElementById('teamsGrid');
+  if (!grid) return;
+  const cards = Array.from(grid.querySelectorAll('.team-card'));
+
+  function filterCards(q) {
+    const qLower = q.trim().toLowerCase();
+    let anyVisible = false;
+    cards.forEach(card => {
+      const visible = !qLower ||
+        card.dataset.name.includes(qLower) ||
+        card.dataset.desc.includes(qLower) ||
+        card.dataset.owner.includes(qLower);
+      card.style.display = visible ? '' : 'none';
+      anyVisible = anyVisible || visible;
+    });
+
+    let no = grid.querySelector('.no-results');
+    if (!anyVisible && !no) {
+      no = document.createElement('div');
+      no.className = 'no-results';
+      no.innerHTML = '<p>No teams match your search.</p>';
+      grid.appendChild(no);
+    } else if (anyVisible && no) {
+      no.remove();
+    }
+  }
+
+  input.addEventListener('input', e => filterCards(e.target.value));
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    filterCards('');
+  });
+
+  document.addEventListener('DOMContentLoaded', () => filterCards(input.value));
+})();
+</script>
 {% endblock %}
