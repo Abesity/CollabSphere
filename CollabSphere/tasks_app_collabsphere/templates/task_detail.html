@@ -97,6 +97,35 @@
           </div>
         </form>
 
+        <!-- Comments Section -->
+        <div class="comments-section mt-4 border-top pt-4">
+          <h5 class="mb-3">Comments</h5>
+          
+          <!-- Comments List -->
+          <div class="comments-list mb-4" style="max-height: 200px; overflow-y: auto;">
+            {% for comment in comments %}
+            <div class="comment-item mb-3 p-3 border rounded">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <strong class="text-primary">{{ comment.username }}</strong>
+                <small class="text-muted">{{ comment.created_at|date:"M j, Y g:i A" }}</small>
+              </div>
+              <p class="mb-0">{{ comment.content }}</p>
+            </div>
+            {% empty %}
+            <p class="text-muted text-center">No comments yet.</p>
+            {% endfor %}
+          </div>
+
+          <!-- Add Comment Form -->
+        <form id="addCommentForm" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">            {% csrf_token %}
+            <div class="mb-3">
+                <label for="commentContent" class="form-label">Add Comment</label>
+                <textarea id="commentContent" name="content" class="form-control" rows="3" placeholder="Write a comment..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-outline-primary btn-sm">Post Comment</button>
+        </form>
+        </div>
+
         <!-- Delete form -->
         <form id="taskDeleteForm" method="POST" action="{% url 'task_delete' task_id=task.task_id %}" onsubmit="return confirm('Delete this task?');">
           {% csrf_token %}
@@ -116,3 +145,98 @@
     </div>
   </div>
 </div>
+{% comment %} JAVASCRIPT FOR TASK COMMENTS {% endcomment %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Task detail modal loaded - looking for comment form...');
+    const commentForm = document.getElementById('addCommentForm');
+    console.log('Comment form found:', commentForm);
+
+    if (commentForm) {
+        commentForm.addEventListener('submit', function(e) {
+            console.log('Comment form submit event caught!');
+            e.preventDefault();
+            console.log('Default prevented, proceeding with AJAX...');
+            e.stopPropagation(); // Important: prevent event bubbling
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Posting...';
+            
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+                
+                if (data.success) {
+                    // Add the new comment to the list
+                    const commentsList = document.querySelector('.comments-list');
+                    const noCommentsMsg = commentsList.querySelector('.text-muted.text-center');
+                    
+                    if (noCommentsMsg) {
+                        noCommentsMsg.remove();
+                    }
+                    
+                    const newComment = document.createElement('div');
+                    newComment.className = 'comment-item mb-3 p-3 border rounded';
+                    newComment.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <strong class="text-primary">${data.username}</strong>
+                            <small class="text-muted">${new Date(data.created_at).toLocaleString()}</small>
+                        </div>
+                        <p class="mb-0">${data.content}</p>
+                    `;
+                    
+                    commentsList.appendChild(newComment);
+                    
+                    // Clear the form
+                    this.reset();
+                    
+                    // Scroll to show new comment
+                    commentsList.scrollTop = commentsList.scrollHeight;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                alert('Something went wrong. Please try again.');
+            });
+        });
+    }
+});
+
+// CSRF token function
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+

@@ -1,9 +1,8 @@
 from django.shortcuts import render, redirect
 from django.conf import settings
+from django.http import JsonResponse
 from supabase import create_client, Client
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
-from django.views.decorators.http import require_GET
+from datetime import datetime
 
 SUPABASE_URL = settings.SUPABASE_URL
 SUPABASE_KEY = settings.SUPABASE_KEY
@@ -18,6 +17,16 @@ def fetch_team_members():
         return [{"id": m["user_ID"], "username": m["username"]} for m in members]
     except Exception as e:
         print("Error fetching team members:", e)
+        return []
+
+def fetch_comments(task_id):
+    """Return list of comments for a task"""
+    try:
+        resp = supabase.table("task_comments").select("*").eq("task_id", task_id).order("created_at").execute()
+        comments = getattr(resp, "data", resp) or []
+        return comments
+    except Exception as e:
+        print("Error fetching comments:", e)
         return []
 
 # Teams yet to be implemented, so team_id is always None
@@ -136,7 +145,8 @@ def task_detail(request, task_id):
                 task[key] = val.split("T")[0]
 
     team_members = fetch_team_members()
-    context = {"task": task, "team_members": team_members}
+    comments = fetch_comments(task_id)
+    context = {"task": task, "team_members": team_members, "comments": comments}
     return render(request, "task_detail.html", context)
 
 # Teams yet to be implemented, so team_id is always None
@@ -223,6 +233,10 @@ def task_delete(request, task_id):
         return redirect("home")
 
     try:
+        # First delete comments associated with the task
+        supabase.table("task_comments").delete().eq("task_id", task_id).execute()
+        
+        # Then delete the task
         res = supabase.table("tasks").delete().eq("task_id", task_id).execute()
         print("Deleted task:", getattr(res, "data", res))
 
@@ -238,3 +252,47 @@ def task_delete(request, task_id):
         print("Error deleting task:", e)
 
     return redirect("home")
+
+#na add na nako huhu wako kabantay
+# pls naalng ko improve or edit if kuwang - nina
+
+#For adding comments
+def add_comment(request, task_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    username = request.user.username
+
+    # Ensure this is user's task
+    task_check = supabase.table("tasks").select("created_by").eq("task_id", task_id).execute()
+    if not task_check.data or task_check.data[0].get("created_by") != username:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
+
+    content = request.POST.get("content", "").strip()
+    if not content:
+        return JsonResponse({"error": "Content required"}, status=400)
+
+    created_at = datetime.now().isoformat()
+
+    payload = {
+        "task_id": task_id,
+        "username": username,
+        "content": content,
+        "created_at": created_at
+    }
+
+    try:
+        supabase.table("task_comments").insert(payload).execute()
+    except Exception as e:
+        print("Error adding comment:", e)
+        return JsonResponse({"error": "DB failure"}, status=500)
+
+    return JsonResponse({
+        "success": True,
+        "username": username,
+        "content": content,
+        "created_at": created_at
+    })
