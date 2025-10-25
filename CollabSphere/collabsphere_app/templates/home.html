@@ -175,6 +175,80 @@
 <script src="{% static 'js/daily_checkin_reminder.js' %}"></script>
 
 <script>
+
+// -- Comments 
+// Add this to your home.html JavaScript (replace the handleCommentForm approach)
+document.addEventListener('submit', function(e) {
+    // Check if the submitted form is a comment form
+    if (e.target && e.target.id === 'addCommentForm') {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Comment form submission intercepted via event delegation');
+        
+        const form = e.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Posting...';
+        
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            
+            if (data.error) {
+                alert('Error: ' + data.error);
+                return;
+            }
+            
+            if (data.success) {
+                // Add the new comment to the list
+                const commentsList = document.querySelector('.comments-list');
+                const noCommentsMsg = commentsList.querySelector('.text-muted.text-center');
+                
+                if (noCommentsMsg) {
+                    noCommentsMsg.remove();
+                }
+                
+                const newComment = document.createElement('div');
+                newComment.className = 'comment-item mb-3 p-3 border rounded';
+                newComment.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <strong class="text-primary">${data.username}</strong>
+                        <small class="text-muted">${new Date(data.created_at).toLocaleString()}</small>
+                    </div>
+                    <p class="mb-0">${data.content}</p>
+                `;
+                
+                commentsList.appendChild(newComment);
+                
+                // Clear the form
+                form.reset();
+                
+                // Scroll to show new comment
+                commentsList.scrollTop = commentsList.scrollHeight;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            alert('Something went wrong. Please try again.');
+        });
+    }
+});
+  
 // --- IMMEDIATE CHECK-IN STATUS VERIFICATION ---
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Page loaded, verifying check-in status...');
