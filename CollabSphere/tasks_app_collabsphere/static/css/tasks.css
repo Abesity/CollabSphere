@@ -33,6 +33,7 @@ body {
   background-color: var(--bg-color);
   color: var(--primary-color);
   font-family: "Inter", sans-serif;
+  margin-top: 20px;
 }
 
 /* ====== Header & Navbar ====== */
@@ -81,6 +82,7 @@ body {
 }
 
 .modal-body {
+  margin-top: 20px;
   padding: 1.5rem;
   background-color: white;
 }
@@ -171,7 +173,15 @@ a:hover {
   padding-top: 20px;
   font-weight: 600;
   color: var(--primary-color);
-  user-select: none;
   cursor: pointer;
   line-height: 1;
+}
+.new-comment {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all 0.25s ease-in-out;
+}
+.new-comment:not(.new-comment) {
+    opacity: 1;
+    transform: translateY(0);
 }
