@@ -118,16 +118,33 @@ def task_detail(request, task_id):
     This view is fetched (via fetch) by clicking a task item on the dashboard.
     """
     # fetch task
-    # Security: only allow access to the user's own task
+    # Security: allow access to tasks created by OR assigned to the user
     if not request.user.is_authenticated:
         return redirect("login")
 
     username = request.user.username
+    user_id = request.session.get("user_ID")
 
-    # Check if task belongs to this user
-    task_check = supabase.table("tasks").select("created_by").eq("task_id", task_id).execute()
-    if not task_check.data or task_check.data[0].get("created_by") != username:
-        return redirect("home")  # or return 403
+    # Check if task belongs to this user (either created by OR assigned to)
+    task_check = supabase.table("tasks").select("created_by, assigned_to, assigned_to_username").eq("task_id", task_id).execute()
+    if not task_check.data:
+        return redirect("home")  # Task doesn't exist
+    
+    task_data = task_check.data[0]
+    created_by = task_data.get("created_by")
+    assigned_to = task_data.get("assigned_to")
+    assigned_to_username = task_data.get("assigned_to_username")
+    
+    # Allow access if user created the task OR is assigned to it
+    user_can_access = (
+        created_by == username or 
+        assigned_to == user_id or 
+        assigned_to_username == username
+    )
+    
+    if not user_can_access:
+        return redirect("home")  # User doesn't have permission
+
     try:
         resp = supabase.table("tasks").select("*").eq("task_id", task_id).execute()
         rows = getattr(resp, "data", resp) or []
@@ -225,13 +242,11 @@ def task_delete(request, task_id):
 
     username = request.user.username
 
-    # Check if task belongs to this user
+    # Only allow deletion by the task creator (not assigned users)
     task_check = supabase.table("tasks").select("created_by").eq("task_id", task_id).execute()
     if not task_check.data or task_check.data[0].get("created_by") != username:
-        return redirect("home")  # or return 403
-    if request.method != "POST":
-        return redirect("home")
-
+        return redirect("home")  # Only creator can delete
+    
     try:
         # First delete comments associated with the task
         supabase.table("task_comments").delete().eq("task_id", task_id).execute()
@@ -253,21 +268,34 @@ def task_delete(request, task_id):
 
     return redirect("home")
 
-#na add na nako huhu wako kabantay
-# pls naalng ko improve or edit if kuwang - nina
-
 #For adding comments
 def add_comment(request, task_id):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Unauthorized"}, status=401)
-
+   
     username = request.user.username
+    user_id = request.session.get("user_ID")
 
-    # Ensure this is user's task
-    task_check = supabase.table("tasks").select("created_by").eq("task_id", task_id).execute()
-    if not task_check.data or task_check.data[0].get("created_by") != username:
+    # Check if task belongs to this user (either created by OR assigned to)
+    task_check = supabase.table("tasks").select("created_by, assigned_to, assigned_to_username").eq("task_id", task_id).execute()
+    if not task_check.data:
+        return JsonResponse({"error": "Task not found"}, status=404)
+    
+    task_data = task_check.data[0]
+    created_by = task_data.get("created_by")
+    assigned_to = task_data.get("assigned_to")
+    assigned_to_username = task_data.get("assigned_to_username")
+    
+    # Allow access if user created the task OR is assigned to it
+    user_can_access = (
+        created_by == username or 
+        assigned_to == user_id or 
+        assigned_to_username == username
+    )
+    
+    if not user_can_access:
         return JsonResponse({"error": "Forbidden"}, status=403)
-
+        
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
 

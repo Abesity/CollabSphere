@@ -29,14 +29,17 @@
             <div class="col-md-7 border-end pe-4">
               <div class="mb-3">
                 <label for="taskName" class="form-label">Task Name</label>
-                <input type="text" id="taskName" name="taskName" class="form-control" required value="{{ task.title|default:'' }}">
+                <input type="text" id="taskName" name="taskName" class="form-control"
+                       required value="{{ task.title|default:'' }}"
+                       {% if task.created_by != request.user.username %}disabled{% endif %}>
                 <div class="text-danger small mt-1" id="nameError" style="display:none;">Task name is required.</div>
               </div>
-              <!-- Teams yet to be implemented, so team_id is always None -->
+
               <div class="mb-3 d-flex align-items-center justify-content-between">
                 <div class="w-75 me-3">
                   <label for="assignTo" class="form-label">Assign To</label>
-                  <select id="assignTo" name="assignTo" class="form-select">
+                  <select id="assignTo" name="assignTo" class="form-select"
+                          {% if task.created_by != request.user.username %}disabled{% endif %}>
                     <option disabled {% if not task.assigned_to %}selected{% endif %}>Select member</option>
                     {% for member in team_members %}
                       <option value="{{ member.id }}" {% if member.id == task.assigned_to %}selected{% endif %}>{{ member.username }}</option>
@@ -45,7 +48,9 @@
                 </div>
 
                 <div class="priority-section">
-                  <input type="checkbox" id="priority" name="priority" class="priority-checkbox" {% if task.priority %}checked{% endif %}>
+                  <input type="checkbox" id="priority" name="priority" class="priority-checkbox"
+                         {% if task.priority %}checked{% endif %}
+                         {% if task.created_by != request.user.username %}disabled{% endif %}>
                   <label for="priority" class="priority-label">Priority</label>
                 </div>
               </div>
@@ -53,24 +58,31 @@
               <div class="row mb-3">
                 <div class="col">
                   <label for="createdBy" class="form-label">Created By</label>
-                  <input type="text" id="createdBy" name="createdBy" class="form-control" value="{{ task.created_by|default:request.user.username }}" readonly style="background-color: #e9ecef;">
+                  <input type="text" id="createdBy" name="createdBy" class="form-control"
+                         value="{{ task.created_by|default:request.user.username }}" readonly style="background-color: #e9ecef;">
                 </div>
                 <div class="col">
                   <label for="dateCreated" class="form-label">Date</label>
-                  <input type="date" id="dateCreated" name="dateCreated" class="form-control" value="{{ task.date_created|default:'' }}" readonly style="background-color: #e9ecef;">
+                  <input type="date" id="dateCreated" name="dateCreated" class="form-control"
+                         value="{{ task.date_created|default:'' }}" readonly style="background-color: #e9ecef;">
                 </div>
               </div>
 
               <div class="mb-3">
                 <label for="description" class="form-label">Description</label>
-                <textarea id="description" name="description" class="form-control" rows="4" placeholder="Enter task details...">{{ task.description|default:'' }}</textarea>
+                <textarea id="description" name="description" class="form-control" rows="4"
+                          placeholder="Enter task details..."
+                          {% if task.created_by != request.user.username %}disabled{% endif %}>
+{{ task.description|default:'' }}
+                </textarea>
               </div>
             </div>
 
             <div class="col-md-5 ps-4">
               <div class="mb-3">
                 <label for="status" class="form-label">Task Status</label>
-                <select id="status" name="status" class="form-select">
+                <select id="status" name="status" class="form-select"
+                        {% if task.created_by != request.user.username %}disabled{% endif %}>
                   <option value="Pending" {% if task.status == "Pending" %}selected{% endif %}>Pending</option>
                   <option value="In Progress" {% if task.status == "In Progress" %}selected{% endif %}>In Progress</option>
                   <option value="Completed" {% if task.status == "Completed" %}selected{% endif %}>Completed</option>
@@ -79,18 +91,23 @@
 
               <div class="mb-3">
                 <label for="completion" class="form-label">Completion (%)</label>
-                <input type="range" id="completion" name="completion" min="0" max="100" step="1" class="form-range" value="{{ task.completion|default:0 }}">
+                <input type="range" id="completion" name="completion" min="0" max="100" step="1"
+                       class="form-range" value="{{ task.completion|default:0 }}">
                 <div class="text-end"><span id="completionValue">{{ task.completion|default:0 }}</span>%</div>
               </div>
 
               <div class="mb-3">
                 <label for="startDate" class="form-label">Start Date</label>
-                <input type="date" id="startDate" name="startDate" class="form-control" value="{{ task.start_date|default:'' }}">
+                <input type="date" id="startDate" name="startDate" class="form-control"
+                       value="{{ task.start_date|default:'' }}"
+                       {% if task.created_by != request.user.username %}disabled{% endif %}>
               </div>
 
               <div class="mb-3">
                 <label for="dueDate" class="form-label">Due Date</label>
-                <input type="date" id="dueDate" name="dueDate" class="form-control" value="{{ task.due_date|default:'' }}">
+                <input type="date" id="dueDate" name="dueDate" class="form-control"
+                       value="{{ task.due_date|default:'' }}"
+                       {% if task.created_by != request.user.username %}disabled{% endif %}>
               </div>
             </div>
 
@@ -101,7 +118,6 @@
         <div class="comments-section mt-4 border-top pt-4">
           <h5 class="mb-3">Comments</h5>
           
-          <!-- Comments List -->
           <div class="comments-list mb-4" style="max-height: 200px; overflow-y: auto;">
             {% for comment in comments %}
             <div class="comment-item mb-3 p-3 border rounded">
@@ -116,17 +132,17 @@
             {% endfor %}
           </div>
 
-          <!-- Add Comment Form -->
-        <form id="addCommentForm" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">            {% csrf_token %}
+          <!-- Comment Form Always Enabled -->
+          <form id="addCommentForm" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">
+            {% csrf_token %}
             <div class="mb-3">
                 <label for="commentContent" class="form-label">Add Comment</label>
                 <textarea id="commentContent" name="content" class="form-control" rows="3" placeholder="Write a comment..." required></textarea>
             </div>
             <button type="submit" class="btn btn-outline-primary btn-sm">Post Comment</button>
-        </form>
+          </form>
         </div>
 
-        <!-- Delete form -->
         <form id="taskDeleteForm" method="POST" action="{% url 'task_delete' task_id=task.task_id %}" onsubmit="return confirm('Delete this task?');">
           {% csrf_token %}
         </form>
@@ -137,14 +153,17 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         {% if task %}
-        <button type="submit" form="taskDetailForm" class="btn btn-primary">Save Changes</button>
-        <button type="submit" form="taskDeleteForm" class="btn btn-danger">Delete</button>
+        <button type="submit" form="taskDetailForm" class="btn btn-primary"
+                {% if task.created_by != request.user.username %}disabled{% endif %}>Save Changes</button>
+        <button type="submit" form="taskDeleteForm" class="btn btn-danger"
+                {% if task.created_by != request.user.username %}disabled{% endif %}>Delete</button>
         {% endif %}
       </div>
 
     </div>
   </div>
 </div>
+
 {% comment %} JAVASCRIPT FOR TASK COMMENTS {% endcomment %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
