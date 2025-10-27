@@ -49,6 +49,10 @@ INSTALLED_APPS = [
     'teams_app_collabsphere',
 ]
 
+#Models
+AUTH_USER_MODEL = "registration_app_collabsphere.CustomUser"
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

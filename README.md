@@ -50,8 +50,13 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Access the application at:
-[http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+## Deployment
+
+CollabSphere is deployed on Render:
+
+Live Demo: https://collabsphere-munx.onrender.com/
+Hosting Provider: Render (Web Service)
+
 
 
 ## Team Members
