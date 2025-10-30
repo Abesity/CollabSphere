@@ -1,11 +1,11 @@
 {% extends "base_dashboard.html" %}
 {% load static humanize %}
+{% load math_filters %}
 
 {% block title %}Teams – CollabSphere{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=1.0">
-<link rel="stylesheet" href="{% static 'css/teams.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/teams.css' %}?v=1.1">
 {% endblock %}
 
 {% block extra_js %}
@@ -41,19 +41,30 @@
 
     <!-- Teams Grid -->
     <section class="teams-grid-section">
+      <div class="teams-header">
+        <button id="addTeamBtn" class="add-team-btn" title="Create New Team">+</button>
+      </div>
+
       {% if teams %}
         <div id="teamsGrid" class="grid">
           {% for team in teams %}
-          <article class="card team-card" 
-                   data-name="{{ team.team_name|lower }}" 
-                   data-desc="{{ team.description|default:''|lower }}" 
+          <article class="card team-card"
+                   data-name="{{ team.team_name|lower }}"
+                   data-desc="{{ team.description|default:''|lower }}"
                    data-owner="{% if team.owner.username %}{{ team.owner.username|lower }}{% else %}owner-{{ team.user_id_owner }}{% endif %}">
-            
+
+            <!-- Team Icon -->
+            <div class="team-icon-container">
+              <img src="{{ team.icon_url }}" alt="{{ team.team_name }} icon" class="team-icon">
+            </div>
+
+            <!-- Team Header -->
             <div class="card-header">
               <h3 class="team-name">{{ team.team_name }}</h3>
               <span class="team-id">#{{ team.team_ID }}</span>
             </div>
 
+            <!-- Team Body -->
             <div class="card-body">
               <p class="team-desc">
                 {% if team.description %}
@@ -62,17 +73,26 @@
                   <em>No description provided.</em>
                 {% endif %}
               </p>
+
+              <!-- Team Members -->
+              <div class="team-members">
+                {% with team.user_team_set.all as members %}
+                  {% for membership in members|slice:":5" %}
+                    <img src="{{ membership.user.avatar_url|default:'/static/img/default-avatar.png' }}"
+                         alt="{{ membership.user.username }}"
+                         class="member-avatar"
+                         style="left: {{ forloop.counter0|add:5|mul:-8 }}px;">
+                  {% endfor %}
+                  {% if members|length > 5 %}
+                    <div class="member-avatar more">+{{ members|length|add:-5 }}</div>
+                  {% endif %}
+                {% endwith %}
+              </div>
             </div>
 
-            <div class="card-footer team-meta">
-              <span>Joined: {{ team.joined_at|naturaltime }}</span>
-              <span>Owner: 
-                {% if team.owner %}
-                  <a href="{% url 'profile' team.owner.username %}" class="owner-link">{{ team.owner.username }}</a>
-                {% else %}
-                  <a href="#" class="owner-link">User {{ team.user_id_owner }}</a>
-                {% endif %}
-              </span>
+            <!-- Footer -->
+            <div class="card-footer footer-actions">
+              <button class="switch-team-btn" data-team-id="{{ team.team_ID }}">Switch</button>
             </div>
           </article>
           {% endfor %}
@@ -83,10 +103,21 @@
         </div>
       {% endif %}
     </section>
-
   </main>
 </div>
 
+<!-- ============================= -->
+<!-- Hidden Modal (starts closed) -->
+<!-- ============================= -->
+<div id="createTeamModal" class="modal-overlay" style="display:none;">
+  <div class="modal-content" id="createTeamModalContent">
+    <!-- The create_team.html content will be injected here -->
+  </div>
+</div>
+
+<!-- ============================= -->
+<!-- JS for Search, Switch, and Modal -->
+<!-- ============================= -->
 <script>
 (function() {
   const input = document.getElementById('searchInput');
@@ -126,5 +157,65 @@
 
   document.addEventListener('DOMContentLoaded', () => filterCards(input.value));
 })();
+
+document.addEventListener('DOMContentLoaded', function() {
+  const addBtn = document.getElementById('addTeamBtn');
+  const modal = document.getElementById("createTeamModal");
+  const modalContent = document.getElementById("createTeamModalContent");
+  const switchButtons = document.querySelectorAll('.switch-team-btn');
+
+  // ===== Open Modal ONLY when + is clicked =====
+  addBtn.addEventListener("click", () => {
+    fetch("{% url 'create_team' %}")
+      .then(response => response.text())
+      .then(html => {
+        modalContent.innerHTML = html; // inject form
+        modal.style.display = "flex"; // show modal
+        document.body.style.overflow = "hidden"; // prevent scrolling
+
+        // Now wire up close buttons inside loaded content
+        const closeBtn = modalContent.querySelector("#closeModalBtn");
+        const cancelBtn = modalContent.querySelector("#cancelModalBtn");
+        const iconInput = modalContent.querySelector("#icon_url");
+        const iconPreview = modalContent.querySelector("#iconPreview");
+
+        const closeModal = () => {
+          modal.style.display = "none";
+          document.body.style.overflow = "auto";
+        };
+
+        [closeBtn, cancelBtn].forEach(btn => btn?.addEventListener("click", closeModal));
+
+        modal.addEventListener("click", e => {
+          if (e.target === modal) closeModal();
+        });
+
+        // Image preview logic (for dynamically loaded form)
+        iconInput?.addEventListener("change", e => {
+          const file = e.target.files[0];
+          if (file) iconPreview.src = URL.createObjectURL(file);
+        });
+      });
+  });
+
+  // ===== Switch Team =====
+  switchButtons.forEach(btn => {
+    btn.addEventListener('click', e => {
+      const teamId = e.target.dataset.teamId;
+      fetch(`/teams/switch/${teamId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json'
+        },
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) location.reload();
+        else alert('Error switching teams.');
+      });
+    });
+  });
+});
 </script>
 {% endblock %}
