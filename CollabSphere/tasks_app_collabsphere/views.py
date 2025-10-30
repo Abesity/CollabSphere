@@ -1,41 +1,18 @@
 from django.shortcuts import render, redirect
-from django.conf import settings
 from django.http import JsonResponse
-from supabase import create_client, Client
+from django.contrib.auth.decorators import login_required
 from datetime import datetime
 
-SUPABASE_URL = settings.SUPABASE_URL
-SUPABASE_KEY = settings.SUPABASE_KEY
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+from .models import Task, Comment, TaskPermissions
 
-# Teams yet to be implemented, so team_id is always None
-def fetch_team_members():
-    """Return list of dicts: {id, username} from public.user"""
-    try:
-        resp = supabase.table("user").select("user_ID, username").execute()
-        members = getattr(resp, "data", resp) or []
-        return [{"id": m["user_ID"], "username": m["username"]} for m in members]
-    except Exception as e:
-        print("Error fetching team members:", e)
-        return []
 
-def fetch_comments(task_id):
-    """Return list of comments for a task"""
-    try:
-        resp = supabase.table("task_comments").select("*").eq("task_id", task_id).order("created_at").execute()
-        comments = getattr(resp, "data", resp) or []
-        return comments
-    except Exception as e:
-        print("Error fetching comments:", e)
-        return []
-
-# Teams yet to be implemented, so team_id is always None
+# TASKS VIEW (Modal
+@login_required
 def tasks(request):
     """
     Renders the Create Task modal (tasks.html)
-    This is the same view your openTaskModal fetch() calls.
     """
-    team_members = fetch_team_members()
+    team_members = Task.fetch_team_members()
     context = {
         "task_id": 1,
         "team_id": 101,
@@ -43,16 +20,18 @@ def tasks(request):
     }
     return render(request, "tasks.html", context)
 
-# Teams yet to be implemented, so team_id is always None
+
+# CREATE TASK
+@login_required
 def task_create(request):
-    """Handle POST to create a new task in Supabase and redirect to home."""
+    """Handle POST to create a new task and redirect to home."""
     if request.method != "POST":
         return redirect("home")
 
     title = request.POST.get("taskName", "").strip()
     description = request.POST.get("description") or None
-
     assign_to_raw = request.POST.get("assignTo")
+
     try:
         assigned_to = int(assign_to_raw) if assign_to_raw else None
     except ValueError:
@@ -60,130 +39,68 @@ def task_create(request):
 
     assigned_to_username = None
     if assigned_to:
-        try:
-            r = supabase.table("user").select("username").eq("user_ID", assigned_to).execute()
-            if getattr(r, "data", None):
-                assigned_to_username = r.data[0].get("username")
-        except Exception:
-            assigned_to_username = None
-
-    priority = True if request.POST.get("priority") in ["on", "true", "True"] else False
-    created_by = request.POST.get("createdBy") or (request.user.username if request.user.is_authenticated else None)
-    date_created = request.POST.get("dateCreated") or None
-    status = request.POST.get("status") or "Pending"
-    completion_raw = request.POST.get("completion") or 0
-    try:
-        completion = int(completion_raw)
-    except ValueError:
-        completion = 0
-    start_date = request.POST.get("startDate") or None
-    due_date = request.POST.get("dueDate") or None
+        members = Task.fetch_team_members()
+        match = next((m for m in members if m["id"] == assigned_to), None)
+        if match:
+            assigned_to_username = match["username"]
 
     payload = {
         "title": title,
         "description": description,
         "assigned_to": assigned_to,
         "assigned_to_username": assigned_to_username,
-        "created_by": created_by,
-        "date_created": date_created,
-        "status": status,
-        "completion": completion,
-        "start_date": start_date,
-        "due_date": due_date,
-        "priority": priority,
+        "created_by": request.user.username,
+        "date_created": datetime.now().isoformat(),
+        "status": request.POST.get("status") or "Pending",
+        "completion": int(request.POST.get("completion") or 0),
+        "start_date": request.POST.get("startDate") or None,
+        "due_date": request.POST.get("dueDate") or None,
+        "priority": request.POST.get("priority") in ["on", "true", "True"],
         "team_id": None,
     }
 
-    try:
-        res = supabase.table("tasks").insert(payload).execute()
-        print("Inserted task:", getattr(res, "data", res))
-
-        count_res = (
-            supabase.table("tasks")
-            .select("task_id", count="exact")
-            .eq("created_by", created_by)
-            .execute()
-        )
-        active_count = count_res.count if hasattr(count_res, "count") else len(count_res.data)
-
-    except Exception as e:
-        print("Error inserting task into Supabase:", e)
-
+    Task.create(payload)
     return redirect("home")
 
-# Teams yet to be implemented, so team_id is always None
-def task_detail(request, task_id):
-    """
-    Return the Task Details modal HTML (rendered template), prefilled with task data.
-    This view is fetched (via fetch) by clicking a task item on the dashboard.
-    """
-    # fetch task
-    # Security: allow access to tasks created by OR assigned to the user
-    if not request.user.is_authenticated:
-        return redirect("login")
 
+# TASK DETAIL
+@login_required
+def task_detail(request, task_id):
+    """Display a single task's details (read-only modal)."""
     username = request.user.username
     user_id = request.session.get("user_ID")
 
-    # Check if task belongs to this user (either created by OR assigned to)
-    task_check = supabase.table("tasks").select("created_by, assigned_to, assigned_to_username").eq("task_id", task_id).execute()
-    if not task_check.data:
-        return redirect("home")  # Task doesn't exist
-    
-    task_data = task_check.data[0]
-    created_by = task_data.get("created_by")
-    assigned_to = task_data.get("assigned_to")
-    assigned_to_username = task_data.get("assigned_to_username")
-    
-    # Allow access if user created the task OR is assigned to it
-    user_can_access = (
-        created_by == username or 
-        assigned_to == user_id or 
-        assigned_to_username == username
-    )
-    
-    if not user_can_access:
-        return redirect("home")  # User doesn't have permission
+    task_data = Task.get(task_id)
+    if not task_data:
+        return redirect("home")
 
-    try:
-        resp = supabase.table("tasks").select("*").eq("task_id", task_id).execute()
-        rows = getattr(resp, "data", resp) or []
-        if not rows:
-            return render(request, "task_detail.html", {"task": None, "team_members": fetch_team_members()})
-        task = rows[0]
-    except Exception as e:
-        print("Error fetching task:", e)
-        task = None
+    if not TaskPermissions.user_can_access(task_data, username, user_id):
+        return redirect("home")
 
-    if task:
-        for key in ("date_created", "start_date", "due_date"):
-            val = task.get(key)
-            if val and isinstance(val, str) and "T" in val:
-                task[key] = val.split("T")[0]
+    for key in ("date_created", "start_date", "due_date"):
+        val = task_data.get(key)
+        if val and isinstance(val, str) and "T" in val:
+            task_data[key] = val.split("T")[0]
 
-    team_members = fetch_team_members()
-    comments = fetch_comments(task_id)
-    context = {"task": task, "team_members": team_members, "comments": comments}
+    context = {
+        "task": task_data,
+        "team_members": Task.fetch_team_members(),
+        "comments": Task.fetch_comments(task_id),
+    }
     return render(request, "task_detail.html", context)
 
-# Teams yet to be implemented, so team_id is always None
+
+
+# UPDATE TASK
+@login_required
 def task_update(request, task_id):
-    """Handle POST to update task in Supabase then redirect to home."""
-    if not request.user.is_authenticated:
-        return redirect("login")
-
-    username = request.user.username
-
-    # Check if task belongs to this user
-    task_check = supabase.table("tasks").select("created_by").eq("task_id", task_id).execute()
-    if not task_check.data or task_check.data[0].get("created_by") != username:
-        return redirect("home")  # or return 403
-
+    """Handle POST to update a task."""
     if request.method != "POST":
         return redirect("home")
 
-    title = request.POST.get("taskName", "").strip()
-    description = request.POST.get("description") or None
+    task_data = Task.get(task_id)
+    if not task_data or task_data.get("created_by") != request.user.username:
+        return redirect("home")
 
     assign_to_raw = request.POST.get("assignTo")
     try:
@@ -193,109 +110,44 @@ def task_update(request, task_id):
 
     assigned_to_username = None
     if assigned_to:
-        try:
-            r = supabase.table("user").select("username").eq("user_ID", assigned_to).execute()
-            if getattr(r, "data", None):
-                assigned_to_username = r.data[0].get("username")
-        except Exception:
-            assigned_to_username = None
-
-    priority = True if request.POST.get("priority") in ["on", "true", "True"] else False
-    created_by = request.POST.get("createdBy") or (request.user.username if request.user.is_authenticated else None)
-    date_created = request.POST.get("dateCreated") or None
-    status = request.POST.get("status") or "Pending"
-    completion_raw = request.POST.get("completion") or 0
-    try:
-        completion = int(completion_raw)
-    except ValueError:
-        completion = 0
-    start_date = request.POST.get("startDate") or None
-    due_date = request.POST.get("dueDate") or None
+        members = Task.fetch_team_members()
+        match = next((m for m in members if m["id"] == assigned_to), None)
+        if match:
+            assigned_to_username = match["username"]
 
     payload = {
-        "title": title,
-        "description": description,
+        "title": request.POST.get("taskName", "").strip(),
+        "description": request.POST.get("description") or None,
         "assigned_to": assigned_to,
         "assigned_to_username": assigned_to_username,
-        "created_by": created_by,
-        "date_created": date_created,
-        "status": status,
-        "completion": completion,
-        "start_date": start_date,
-        "due_date": due_date,
-        "priority": priority,
+        "status": request.POST.get("status") or "Pending",
+        "completion": int(request.POST.get("completion") or 0),
+        "start_date": request.POST.get("startDate") or None,
+        "due_date": request.POST.get("dueDate") or None,
+        "priority": request.POST.get("priority") in ["on", "true", "True"],
     }
-    
-    try:
-        res = supabase.table("tasks").update(payload).eq("task_id", task_id).execute()
-        print("Updated task:", getattr(res, "data", res))
-    except Exception as e:
-        print("Error updating task:", e)
 
+    Task.update(task_id, payload)
     return redirect("home")
 
-# Teams yet to be implemented, so team_id is always None
+
+# DELETE TASK
+
+@login_required
 def task_delete(request, task_id):
-    """Handle POST to delete a task then redirect to home."""
-    if not request.user.is_authenticated:
-        return redirect("login")
+    """Handle POST to delete a task."""
+    task_data = Task.get(task_id)
+    if not task_data or task_data.get("created_by") != request.user.username:
+        return redirect("home")
 
-    username = request.user.username
-
-    # Only allow deletion by the task creator (not assigned users)
-    task_check = supabase.table("tasks").select("created_by").eq("task_id", task_id).execute()
-    if not task_check.data or task_check.data[0].get("created_by") != username:
-        return redirect("home")  # Only creator can delete
-    
-    try:
-        # First delete comments associated with the task
-        supabase.table("task_comments").delete().eq("task_id", task_id).execute()
-        
-        # Then delete the task
-        res = supabase.table("tasks").delete().eq("task_id", task_id).execute()
-        print("Deleted task:", getattr(res, "data", res))
-
-        count_res = (
-            supabase.table("tasks")
-            .select("task_id", count="exact")
-            .eq("created_by", username)
-            .execute()
-        )
-        active_count = count_res.count if hasattr(count_res, "count") else len(count_res.data)
-
-    except Exception as e:
-        print("Error deleting task:", e)
-
+    Task.delete(task_id)
     return redirect("home")
 
-#For adding comments
-def add_comment(request, task_id):
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "Unauthorized"}, status=401)
-   
-    username = request.user.username
-    user_id = request.session.get("user_ID")
 
-    # Check if task belongs to this user (either created by OR assigned to)
-    task_check = supabase.table("tasks").select("created_by, assigned_to, assigned_to_username").eq("task_id", task_id).execute()
-    if not task_check.data:
-        return JsonResponse({"error": "Task not found"}, status=404)
-    
-    task_data = task_check.data[0]
-    created_by = task_data.get("created_by")
-    assigned_to = task_data.get("assigned_to")
-    assigned_to_username = task_data.get("assigned_to_username")
-    
-    # Allow access if user created the task OR is assigned to it
-    user_can_access = (
-        created_by == username or 
-        assigned_to == user_id or 
-        assigned_to_username == username
-    )
-    
-    if not user_can_access:
-        return JsonResponse({"error": "Forbidden"}, status=403)
-        
+# ADD COMMENT
+@login_required
+def add_comment(request, task_id):
+    """AJAX endpoint to add a comment to a task."""
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
 
@@ -303,24 +155,16 @@ def add_comment(request, task_id):
     if not content:
         return JsonResponse({"error": "Content required"}, status=400)
 
-    created_at = datetime.now().isoformat()
+    task_data = Task.get(task_id)
+    if not task_data:
+        return JsonResponse({"error": "Task not found"}, status=404)
 
-    payload = {
-        "task_id": task_id,
-        "username": username,
-        "content": content,
-        "created_at": created_at
-    }
+    if not TaskPermissions.user_can_access(task_data, request.user.username, request.session.get("user_ID")):
+        return JsonResponse({"error": "Forbidden"}, status=403)
 
-    try:
-        supabase.table("task_comments").insert(payload).execute()
-    except Exception as e:
-        print("Error adding comment:", e)
-        return JsonResponse({"error": "DB failure"}, status=500)
+    result = Comment.add(task_id, request.user.username, content)
 
-    return JsonResponse({
-        "success": True,
-        "username": username,
-        "content": content,
-        "created_at": created_at
-    })
+    if "error" in result:
+        return JsonResponse(result, status=500)
+
+    return JsonResponse(result)
