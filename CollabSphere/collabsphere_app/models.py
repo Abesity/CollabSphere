@@ -3,7 +3,7 @@ from supabase import create_client
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-User = get_user_model()  # Use CustomUser from registration_app_collabsphere
+User = get_user_model()  # CustomUser from registration_app_collabsphere
 
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 

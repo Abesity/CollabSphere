@@ -1,13 +1,12 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from supabase import create_client
-from django.conf import settings
 from django.utils import timezone
 from datetime import datetime
 import json
 
-supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+from .models import WellbeingService
+
 
 @login_required(login_url='login')
 def wellbeing_dashboard(request):
@@ -15,53 +14,30 @@ def wellbeing_dashboard(request):
     if not user_id:
         return redirect("login")
 
-    # Fetch recent check-ins
+    # Fetch recent check-ins from service
     try:
-        response = (
-            supabase.table("wellbeingcheckin")
-            .select("checkin_id, date_submitted, mood_rating, status, notes")
-            .eq("user_id", int(user_id))
-            .order("date_submitted", desc=True)
-            .limit(10)
-            .execute()
-        )
-        recent_checkins = response.data or []
-        print(f"Fetched check-ins: {recent_checkins}")  # Debug print
+        recent_checkins = WellbeingService.get_recent_checkins(user_id)
     except Exception as e:
         print(f"Error fetching check-ins: {e}")
         recent_checkins = []
 
-    # Prepare chart data (oldest first for proper timeline)
-  # In your wellbeing_dashboard function, update the chart_data preparation:
+    # Prepare chart data (oldest first)
     chart_data = []
     for checkin in reversed(recent_checkins):
-        checkin_date = checkin.get("date_submitted")
-        if isinstance(checkin_date, str):
-            formatted_date = checkin_date
-        else:
-            formatted_date = checkin_date.isoformat() if checkin_date else ""
-        
-        # Handle null status - default to "Okay"
-        status = checkin.get("status")
-        if status is None:
-            status = "Okay"
-        
+        date_val = checkin.get("date_submitted")
+        formatted_date = date_val if isinstance(date_val, str) else date_val.isoformat() if date_val else ""
+
+        status = checkin.get("status") or "Okay"
+
         chart_data.append({
             "date": formatted_date,
-            "mood": status
+            "mood": status,
         })
 
-    print(f"Chart data: {chart_data}")  # Debug print
-
-    # Convert to JSON for the template
     chart_data_json = json.dumps(chart_data)
 
     # Check if user has checked in today
-    today = timezone.now().date()
-    has_checked_in_today = any(
-        checkin.get("date_submitted") == today
-        for checkin in recent_checkins
-    )
+    has_checked_in_today = WellbeingService.has_checked_in_today(user_id)
 
     context = {
         "recent_checkins": recent_checkins,
@@ -73,70 +49,48 @@ def wellbeing_dashboard(request):
 
     return render(request, "wellbeing_dashboard.html", context)
 
+
+@login_required(login_url='login')
 def checkins_modal(request):
     print("🔥 checkins_modal view hit!")
     user = request.user
 
-    # Get Supabase user_ID for the logged-in user
+    # Get Supabase user ID for logged-in user
     try:
-        res = supabase.table("user").select("user_ID").eq("email", user.email).single().execute()
-        supabase_user_id = res.data["user_ID"]
+        supabase_user_id = WellbeingService.get_supabase_user_id(user.email)
     except Exception as e:
         return JsonResponse({"success": False, "message": f"Failed to fetch user ID: {e}"})
 
-    today = timezone.now().date()
-    today_start = datetime.combine(today, datetime.min.time())
-    today_end = datetime.combine(today, datetime.max.time())
+    # Check today's submission
+    already_checked_in = WellbeingService.has_checked_in_today(supabase_user_id)
 
-    # Check if user already submitted today
-    existing = supabase.table("wellbeingcheckin") \
-        .select("*") \
-        .eq("user_id", supabase_user_id) \
-        .gte("date_submitted", today_start.isoformat()) \
-        .lte("date_submitted", today_end.isoformat()) \
-        .execute()
-
-    # 🧠 Handle POST (form submission)
+    # Handle POST (submission)
     if request.method == "POST":
-        if existing.data:  # already submitted today
-            return JsonResponse({"success": False, "message": "You have already submitted your check-in today."})
+        if already_checked_in:
+            return JsonResponse({
+                "success": False,
+                "message": "You have already submitted your check-in today."
+            })
 
         mood_rating = request.POST.get("mood_rating")
         status = request.POST.get("status")
         notes = request.POST.get("notes")
 
         try:
-            # Insert wellbeing check-in
-            supabase.table("wellbeingcheckin").insert({
-                "user_id": supabase_user_id,
-                "mood_rating": int(mood_rating) if mood_rating else None,
-                "status": status,
-                "notes": notes,
-                "date_submitted": timezone.now().isoformat()
-            }).execute()
-
+            WellbeingService.submit_checkin(supabase_user_id, mood_rating, status, notes)
             return JsonResponse({"success": True, "message": "Check-in submitted successfully!"})
-
         except Exception as e:
             return JsonResponse({"success": False, "message": str(e)})
 
-    # 🧠 Handle GET (display modal) - return only modal HTML
+    # Handle GET (display modal)
     try:
-        response = (
-            supabase.table("wellbeingcheckin")
-            .select("*")
-            .eq("user_id", supabase_user_id)
-            .order("date_submitted", desc=True)
-            .limit(5)
-            .execute()
-        )
-        recent_checkins = response.data
+        recent_checkins = WellbeingService.get_recent_checkins_modal(supabase_user_id)
     except Exception as e:
-        print(f"Error fetching checkins: {e}")
+        print(f"Error fetching check-ins: {e}")
         recent_checkins = []
 
     return render(request, "partials/checkins_modal.html", {
         "fullname": f"{user.first_name} {user.last_name}".strip() or user.username,
         "recent_checkins": recent_checkins,
-        "has_checked_in_today": bool(existing.data),  # pass to template for JS
+        "has_checked_in_today": already_checked_in,
     })
