@@ -1,0 +1,39 @@
+{% load static %}
+
+<div>
+  <button class="modal-close" id="closeModalBtn">&times;</button>
+  <h2 style="text-align:center;">Create a New Team</h2>
+
+  <form id="createTeamForm" method="post" enctype="multipart/form-data" action="{% url 'create_team' %}">
+    {% csrf_token %}
+
+    <!-- Team Icon first -->
+    <div class="icon-upload-section" style="text-align:center; margin-bottom: 1.25rem;">
+      <div class="icon-preview" id="iconPreviewContainer" style="margin-bottom:0.75rem;">
+        <img
+          id="iconPreview"
+          src="{% static 'images/default-team-icon.png' %}"
+          alt="Team icon preview"
+          style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #e5e7eb;"
+        >
+      </div>
+      <label for="icon_url" style="display:block; font-weight:600; margin-bottom:0.4rem;">Team Icon (optional)</label>
+      <input type="file" name="icon_url" id="icon_url" accept="image/*">
+    </div>
+
+    <div class="form-group">
+      <label for="team_name">Team Name <span style="color:#dc2626">*</span></label>
+      <input type="text" name="team_name" id="team_name" placeholder="Enter team name..." required>
+    </div>
+
+    <div class="form-group">
+      <label for="description">Description</label>
+      <textarea name="description" id="description" placeholder="Briefly describe your team..."></textarea>
+    </div>
+
+    <div class="modal-buttons" style="text-align:right;">
+      <button type="submit" class="btn-primary">Create Team</button>
+      <button type="button" class="btn-secondary" id="cancelModalBtn">Cancel</button>
+    </div>
+  </form>
+</div>
