@@ -40,23 +40,20 @@
     </section>
 
     <!-- Teams Grid -->
-    <section class="teams-grid-section">
-      <div class="teams-header">
-        <button id="addTeamBtn" class="add-team-btn" title="Create New Team">+</button>
-      </div>
-
+  <section class="teams-grid-section">
+    <div id="teamsGrid" class="grid">
+      <!-- Add New Team Card -->
+      <button id="addTeamBtn" class="add-team-btn" title="Create New Team">
+        +
+      </button>
+      
       {% if teams %}
-        <div id="teamsGrid" class="grid">
-          {% for team in teams %}
-            {% include "team_card.html" with team=team %}
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="card no-results">
-          <p>No teams found.</p>
-        </div>
+        {% for team in teams %}
+          {% include "team_card.html" with team=team %}
+        {% endfor %}
       {% endif %}
-    </section>
+    </div>
+  </section>
   </main>
 </div>
 
