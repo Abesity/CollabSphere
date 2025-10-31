@@ -136,6 +136,10 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
+    BASE_DIR / "teams_app_collabsphere" / "static",
+    BASE_DIR / "tasks_app_collabsphere" / "static",
+    BASE_DIR / "registration_app_collabsphere" / "static",
+    BASE_DIR / "collabsphere_app" / "static",
 ]
 
 LOGIN_URL = '/login/'

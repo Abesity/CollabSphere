@@ -1,0 +1,56 @@
+{% load static humanize %}
+{% load math_filters %}
+
+<article class="card team-card"
+         data-name="{{ team.team_name|lower }}"
+         data-desc="{{ team.description|default:''|lower }}"
+         data-owner="{% if team.owner.username %}{{ team.owner.username|lower }}{% else %}owner-{{ team.user_id_owner }}{% endif %}">
+
+  <!-- Team Icon -->
+  <div class="team-icon-container">
+    <img src="{{ team.icon_url|default:'/static/images/default-team-icon.png' }}"
+         alt="{{ team.team_name }} icon"
+         class="team-icon"
+         onerror="this.src='{% static 'images/default-team-icon.png' %}'">
+  </div>
+
+  <!-- Team Header -->
+  <div class="card-header">
+    <!-- ADD TEAM NAME HERE -->
+    <h3 class="team-name">{{ team.team_name }}</h3>
+  </div>
+
+  <!-- Team Body -->
+  <div class="card-body">
+    <p class="team-desc">
+      {% if team.description %}
+        {{ team.description }}
+      {% else %}
+        <em>No description provided.</em>
+      {% endif %}
+    </p>
+
+    <!-- Team Members -->
+    <div class="team-members">
+      {% with team.members as members %}
+        {% for member in members|slice:":5" %}
+          <img src="{{ member.user.profile_picture|default:'/static/images/default-avatar.png' }}"
+               alt="{{ member.user.username }}"
+               class="member-avatar"
+               title="{{ member.user.username }}"
+               onerror="this.src='{% static 'images/default-avatar.png' %}'">
+        {% endfor %}
+        {% if members|length > 5 %}
+          <div class="member-avatar more" title="And {{ members|length|add:-5 }} more">
+            +{{ members|length|add:-5 }}
+          </div>
+        {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="card-footer footer-actions">
+    <button class="edit-team-btn" data-team-id="{{ team.team_ID }}">Edit</button>
+  </div>
+</article>
