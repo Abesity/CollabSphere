@@ -110,7 +110,7 @@ body::after {
   margin-bottom: 0.5rem;
 }
 
-.add-team-btn {
+.add-team-btn  {
   font-size: 1.5rem;
   background: var(--secondary-color);
   border: none;
@@ -191,21 +191,24 @@ body::after {
 
 /* Team Members (Overlapping Avatars) */
 .team-members {
-  position: relative;
-  height: 35px;
-  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  flex-wrap: wrap; /* prevents icons from bunching if space is tight */
 }
 
 .member-avatar {
-  width: 35px;
-  height: 35px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  border: 2px solid white;
-  position: absolute;
-  top: 0;
-  transition: transform 0.2s;
-  background: #f2f2f2;
+  border: 2px solid #fff;
   object-fit: cover;
+  margin-left: -8px; /* controls how much they overlap */
+  transition: transform 0.2s ease, z-index 0.2s ease;
+}
+
+.member-avatar:first-child {
+  margin-left: 0; /* don't offset the first avatar */
 }
 
 .member-avatar:hover {
@@ -214,12 +217,15 @@ body::after {
 }
 
 .member-avatar.more {
-  background: #eee;
-  color: #555;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  background-color: #ddd;
+  color: #333;
+  font-weight: 600;
   font-size: 0.8rem;
+  border: 2px solid #fff;
+  cursor: pointer;
 }
 
 /* Footer */
@@ -229,7 +235,7 @@ body::after {
   margin-top: 0.8rem;
 }
 
-.switch-team-btn {
+.switch-team-btn, .edit-team-btn{
   background: var(--secondary-color);
   border: none;
   padding: 6px 12px;
@@ -418,4 +424,264 @@ body::after {
 @keyframes slideUp {
   from { transform: translateY(30px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+/* Add Member Button */
+.add-member-btn {
+  background: none;
+  border: none;
+  color: var(--secondary-color);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.add-member-btn:hover {
+  background-color: rgba(61, 116, 195, 0.1);
+}
+
+/* Manage Members Button */
+.manage-members-btn {
+  background: #6c757d;
+  border: none;
+  padding: 6px 12px;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 0.9rem;
+}
+
+.manage-members-btn:hover {
+  background: #5a6268;
+}
+
+/* User selection styles */
+.user-item:hover {
+  background-color: #f8f9fa;
+}
+
+.user-item.selected {
+  background-color: #e3f2fd;
+}
+
+/* Selected users display */
+.selected-user-tag {
+  display: inline-flex;
+  align-items: center;
+  background: #e3f2fd;
+  padding: 4px 8px;
+  border-radius: 16px;
+  margin: 2px;
+  font-size: 0.8rem;
+}
+
+.selected-user-tag button {
+  background: none;
+  border: none;
+  margin-left: 4px;
+  cursor: pointer;
+  color: #666;
+}
+
+/* Members Selection Styles */
+.members-container {
+  background: white;
+}
+
+.user-option {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.user-option:hover {
+  background-color: #f8f9fa;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  margin-right: 12px;
+  object-fit: cover;
+  border: 2px solid #e5e7eb;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-info .username {
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 2px;
+}
+
+.user-info .email {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.add-user-btn {
+  background: var(--secondary-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.add-user-btn:hover {
+  background: #245d8b;
+}
+
+/* Selected Members Tags */
+.selected-members-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-height: 50px;
+}
+
+.selected-member-tag {
+  display: inline-flex;
+  align-items: center;
+  background: var(--secondary-color);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  gap: 6px;
+}
+
+.remove-member-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 1.1rem;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.remove-member-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.no-selected-members {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Search input for members */
+#membersSearch {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.8px solid var(--card-border);
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+#membersSearch:focus {
+  border-color: var(--secondary-color);
+  outline: none;
+}
+
+.team-members {
+  display: flex;
+  align-items: center;
+}
+
+.member-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  object-fit: cover;
+  background-color: #eee;
+  margin-left: -10px; /* overlapping effect */
+  box-shadow: 0 0 0 1px #ccc;
+  transition: transform 0.2s ease;
+}
+
+.member-avatar:first-child {
+  margin-left: 0;
+}
+
+.member-avatar:hover {
+  transform: scale(1.1);
+  z-index: 2;
+}
+
+.member-avatar.more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #888;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.8rem;
+  cursor: default;
+}
+
+.current-member-tag {
+    display: inline-flex;
+    align-items: center;
+    background: #e5e7eb;
+    padding: 4px 8px;
+    border-radius: 16px;
+    margin: 2px;
+    font-size: 14px;
+}
+
+.member-avatar-small {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.member-avatar {
+  margin-left: 4px;
+}
+
+.owner-badge {
+    background: #dc2626;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 12px;
+    margin-left: 6px;
+}
+
+.btn-danger {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
 }

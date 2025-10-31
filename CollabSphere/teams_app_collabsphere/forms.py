@@ -132,35 +132,35 @@ class EditTeamForm(forms.Form):
             except ValueError:
                 raise forms.ValidationError('Invalid member IDs format for removal')
         return []
-def save(self, django_user, team_ID):
-    """Update existing team in Supabase"""
-    from .models import Team  # lazy import to avoid circular imports
+    def save(self, django_user, team_ID):
+        """Update existing team in Supabase"""
+        from .models import Team  # lazy import to avoid circular imports
 
-    try:
-        if not self.is_valid():
-            raise ValueError("Cannot save invalid form")
+        try:
+            if not self.is_valid():
+                raise ValueError("Cannot save invalid form")
 
-        team_name = self.cleaned_data['team_name']
-        description = self.cleaned_data['description']
-        icon_file = self.files.get('icon_url')
-        remove_icon = self.cleaned_data.get('remove_icon', False)
-        team_members = self.cleaned_data['team_members']
-        members_to_remove = self.cleaned_data['members_to_remove']
+            team_name = self.cleaned_data['team_name']
+            description = self.cleaned_data['description']
+            icon_file = self.files.get('icon_url')
+            remove_icon = self.cleaned_data.get('remove_icon', False)
+            team_members = self.cleaned_data['team_members']
+            members_to_remove = self.cleaned_data['members_to_remove']
 
-        # Use the Team model's update_team method with correct parameter name
-        result = Team.update_team(
-            team_ID=team_ID,  # FIXED: Use correct parameter name
-            team_name=team_name,
-            description=description,
-            icon_file=icon_file,
-            remove_icon=remove_icon,
-            team_members=team_members,
-            members_to_remove=members_to_remove,
-            django_user=django_user
-        )
-        
-        return result
+            # Use the Team model's update_team method with correct parameter name
+            result = Team.update_team(
+                team_ID=team_ID,  # FIXED: Use correct parameter name
+                team_name=team_name,
+                description=description,
+                icon_file=icon_file,
+                remove_icon=remove_icon,
+                team_members=team_members,
+                members_to_remove=members_to_remove,
+                django_user=django_user
+            )
+            
+            return result
 
-    except Exception as e:
-        print(f"Error updating team: {e}")
-        return {'success': False, 'error': str(e)}
+        except Exception as e:
+            print(f"Error updating team: {e}")
+            return {'success': False, 'error': str(e)}
