@@ -16,6 +16,8 @@
 
   <!-- Team Header -->
   <div class="card-header">
+    <!-- ADD TEAM NAME HERE -->
+    <h3 class="team-name">{{ team.team_name }}</h3>
   </div>
 
   <!-- Team Body -->
@@ -30,7 +32,6 @@
 
     <!-- Team Members -->
     <div class="team-members">
-
       {% with team.members as members %}
         {% for member in members|slice:":5" %}
           <img src="{{ member.user.profile_picture|default:'/static/images/default-avatar.png' }}"
