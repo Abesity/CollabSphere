@@ -1,0 +1,78 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div class="notifications-container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Inbox</h2>
+        <div>
+            <button class="btn btn-outline-primary btn-sm me-2" id="mark-all-btn">Mark All Read</button>
+            <button class="btn btn-outline-danger btn-sm" id="clear-inbox-btn">Clear Inbox</button>
+        </div>
+    </div>
+
+    {% if notifications %}
+        <div class="notifications-list">
+            {% for n in notifications %}
+                <div class="notification-item {% if not n.read %}unread{% endif %}" data-id="{{ n.id }}">
+                    <div class="notification-content" data-bs-toggle="modal" data-bs-target="#notifModal{{ n.id }}">
+                        <h5>{{ n.title }}</h5>
+                        <p><small>Created by {{ n.sender.username|default:"System" }}</small></p>
+                        <p class="text-muted">{{ n.message }}</p>
+                    </div>
+                </div>
+
+                <!-- Modal -->
+                <div class="modal fade" id="notifModal{{ n.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">{{ n.title }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p><strong>Created by:</strong> {{ n.sender.username|default:"System" }}</p>
+                                <p><strong>Description:</strong> {{ n.description|default:"No description" }}</p>
+                                {% if n.deadline %}
+                                <p><strong>Deadline:</strong> {{ n.deadline|date:"F j, Y" }}</p>
+                                {% endif %}
+                                <p><strong>Received:</strong> {{ n.created_at|date:"F j, Y, g:i A" }}</p>
+                            </div>
+                            <div class="modal-footer">
+                                {% if n.related_object_url %}
+                                    <a href="{{ n.related_object_url }}" class="btn btn-primary">View Details</a>
+                                {% endif %}
+                                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">Your inbox is empty.</p>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mark All as Read
+    document.getElementById('mark-all-btn').addEventListener('click', function() {
+        fetch('{% url "notifications:mark_all_read" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(res => res.json()).then(data => location.reload());
+    });
+
+    // Clear Inbox
+    document.getElementById('clear-inbox-btn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear your inbox?')) {
+            fetch('{% url "notifications:clear_inbox" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            }).then(res => res.json()).then(data => location.reload());
+        }
+    });
+});
+</script>
+{% endblock %}
