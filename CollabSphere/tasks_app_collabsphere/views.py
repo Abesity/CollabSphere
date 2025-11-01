@@ -4,9 +4,10 @@ from django.contrib.auth.decorators import login_required
 from datetime import datetime
 
 from .models import Task, Comment, TaskPermissions
+from .notification_triggers import TaskNotificationTriggers
 
 
-# TASKS VIEW (Modal
+# TASKS VIEW (Modal)
 @login_required
 def tasks(request):
     """
@@ -73,8 +74,35 @@ def task_create(request):
             'task_id': task_result[0]['task_id'] if task_result and len(task_result) > 0 else None
         }
         
-    from notifications_app_collabsphere.views import create_task_notification
-    create_task_notification(notification_data, sender_user=request.user)
+        from notifications_app_collabsphere.views import create_task_notification
+        create_task_notification(notification_data, sender_user=request.user)
+    
+    # Evaluate notification triggers for task creation
+    if task_result and len(task_result) > 0:
+        task_data = {
+            'task_id': task_result[0]['task_id'],
+            'title': title,
+            'assigned_to': assigned_to,
+            'due_date': payload['due_date'],
+            'status': payload['status'],
+            'priority': payload['priority']
+        }
+        
+        trigger_context = {
+            'action': 'create'
+        }
+        
+        try:
+            triggered_notifications = TaskNotificationTriggers.evaluate_all_triggers(
+                task_data,
+                trigger_context
+            )
+            
+            # Log triggered notifications
+            for trigger in triggered_notifications:
+                print(f"🔔 TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+        except Exception as e:
+            print(f"⚠️ Error evaluating task triggers: {e}")
     
     return redirect("home")
 
@@ -106,7 +134,6 @@ def task_detail(request, task_id):
     return render(request, "task_detail.html", context)
 
 
-
 # UPDATE TASK
 @login_required
 def task_update(request, task_id):
@@ -117,6 +144,14 @@ def task_update(request, task_id):
     task_data = Task.get(task_id)
     if not task_data or task_data.get("created_by") != request.user.username:
         return redirect("home")
+
+    # Store old values for comparison
+    old_status = task_data.get("status")
+    old_title = task_data.get("title")
+    old_description = task_data.get("description")
+    old_due_date = task_data.get("due_date")
+    old_priority = task_data.get("priority")
+    old_assigned_to = task_data.get("assigned_to")
 
     assign_to_raw = request.POST.get("assignTo")
     try:
@@ -131,24 +166,77 @@ def task_update(request, task_id):
         if match:
             assigned_to_username = match["username"]
 
+    new_status = request.POST.get("status") or "Pending"
+    new_title = request.POST.get("taskName", "").strip()
+    new_description = request.POST.get("description") or None
+    new_due_date = request.POST.get("dueDate") or None
+    new_priority = request.POST.get("priority") in ["on", "true", "True"]
+
     payload = {
-        "title": request.POST.get("taskName", "").strip(),
-        "description": request.POST.get("description") or None,
+        "title": new_title,
+        "description": new_description,
         "assigned_to": assigned_to,
         "assigned_to_username": assigned_to_username,
-        "status": request.POST.get("status") or "Pending",
+        "status": new_status,
         "completion": int(request.POST.get("completion") or 0),
         "start_date": request.POST.get("startDate") or None,
-        "due_date": request.POST.get("dueDate") or None,
-        "priority": request.POST.get("priority") in ["on", "true", "True"],
+        "due_date": new_due_date,
+        "priority": new_priority,
     }
 
     Task.update(task_id, payload)
+    
+    # Evaluate notification triggers for task update
+    try:
+        # Detect what changed
+        changed_fields = []
+        if old_title != new_title:
+            changed_fields.append('title')
+        if old_description != new_description:
+            changed_fields.append('description')
+        if old_due_date != new_due_date:
+            changed_fields.append('due_date')
+        if old_priority != new_priority:
+            changed_fields.append('priority')
+        if old_assigned_to != assigned_to:
+            changed_fields.append('assigned_to')
+        if old_status != new_status:
+            changed_fields.append('status')
+        
+        # Prepare task data for trigger evaluation
+        updated_task_data = {
+            'task_id': task_id,
+            'title': new_title,
+            'assigned_to': assigned_to,
+            'due_date': new_due_date,
+            'status': new_status,
+            'priority': new_priority
+        }
+        
+        # Determine action type
+        action = 'complete' if old_status != 'completed' and new_status == 'completed' else 'update'
+        
+        trigger_context = {
+            'action': action,
+            'old_status': old_status,
+            'changed_fields': changed_fields
+        }
+        
+        triggered_notifications = TaskNotificationTriggers.evaluate_all_triggers(
+            updated_task_data,
+            trigger_context
+        )
+        
+        # Log triggered notifications
+        for trigger in triggered_notifications:
+            print(f"🔔 TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+    except Exception as e:
+        print(f"⚠️ Error evaluating task triggers: {e}")
+    
     return redirect("home")
 
 
 # DELETE TASK
-
 @login_required
 def task_delete(request, task_id):
     """Handle POST to delete a task."""
@@ -182,6 +270,32 @@ def add_comment(request, task_id):
 
     if "error" in result:
         return JsonResponse(result, status=500)
+    
+    # Evaluate notification triggers for comment
+    try:
+        # Get user_id from session or fetch from username
+        comment_author_id = request.session.get("user_ID")
+        
+        trigger_context = {
+            'action': 'comment',
+            'comment_author_id': comment_author_id
+        }
+        
+        comment_task_data = {
+            'task_id': task_id,
+            'title': task_data.get('title', 'Task')
+        }
+        
+        triggered_notifications = TaskNotificationTriggers.evaluate_all_triggers(
+            comment_task_data,
+            trigger_context
+        )
+        
+        # Log triggered notifications
+        for trigger in triggered_notifications:
+            print(f"🔔 TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+    except Exception as e:
+        print(f"⚠️ Error evaluating comment triggers: {e}")
 
     return JsonResponse(result)
 
