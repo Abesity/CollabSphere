@@ -6,6 +6,7 @@ from datetime import datetime
 import json
 
 from .models import WellbeingService
+from .notification_triggers import CheckinNotificationTriggers
 
 
 @login_required(login_url='login')
@@ -77,7 +78,25 @@ def checkins_modal(request):
         notes = request.POST.get("notes")
 
         try:
+            # Submit the check-in
             WellbeingService.submit_checkin(supabase_user_id, mood_rating, status, notes)
+            
+            # Evaluate notification triggers
+            checkin_data = {
+                'mood_rating': mood_rating,
+                'status': status,
+                'notes': notes
+            }
+            
+            triggered_notifications = CheckinNotificationTriggers.evaluate_all_triggers(
+                supabase_user_id,
+                checkin_data
+            )
+            
+            # Log triggered notifications
+            for trigger in triggered_notifications:
+                print(f"🔔 TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+            
             return JsonResponse({"success": True, "message": "Check-in submitted successfully!"})
         except Exception as e:
             return JsonResponse({"success": False, "message": str(e)})
