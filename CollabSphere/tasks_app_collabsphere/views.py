@@ -59,7 +59,23 @@ def task_create(request):
         "team_id": None,
     }
 
-    Task.create(payload)
+    task_result = Task.create(payload)
+    
+    # Create notification if task was created and has an assignee
+    if task_result and assigned_to:
+        notification_data = {
+            'title': title,
+            'description': description,
+            'assigned_to': assigned_to,
+            'assigned_to_username': assigned_to_username,
+            'created_by': request.user.username,
+            'due_date': payload['due_date'],
+            'task_id': task_result[0]['task_id'] if task_result and len(task_result) > 0 else None
+        }
+        
+    from notifications_app_collabsphere.views import create_task_notification
+    create_task_notification(notification_data, sender_user=request.user)
+    
     return redirect("home")
 
 

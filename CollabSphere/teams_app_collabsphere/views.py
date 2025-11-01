@@ -62,6 +62,12 @@ def create_team(request):
                 result = form.save(request.user)
                 
                 if result.get('success'):
+                    # Create notifications for team members
+                    team = Team.objects.get(id=result['team_ID'])
+                    for member in team.members.all():
+                        from notifications_app_collabsphere.views import create_team_notification
+                        create_team_notification(team, member)
+                    
                     return JsonResponse({'success': True, 'team_ID': result['team_ID']})
                 else:
                     return JsonResponse({'success': False, 'error': result.get('error', 'Failed to create team')})
