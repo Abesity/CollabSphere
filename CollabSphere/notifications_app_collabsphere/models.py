@@ -1,5 +1,3 @@
-# C:\Users\quinn\CollabSphere\CollabSphere\notifications_app_collabsphere\models.py
-
 from django.db import models
 from django.contrib.auth import get_user_model
 
@@ -22,6 +20,7 @@ class Notification(models.Model):
     deadline = models.DateTimeField(null=True, blank=True)
     related_object_id = models.IntegerField(null=True)
     related_object_url = models.CharField(max_length=255, null=True, blank=True) # Added blank=True
+    supabase_id = models.IntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']
