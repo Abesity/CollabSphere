@@ -1,10 +1,246 @@
 {% extends "base_dashboard.html" %}
 {% load static %}
 
-{% block title %}Events{% endblock %}
+{% block title %}Events – CollabSphere{% endblock %}
 
 {% block extra_css %}
-<main>
-    <p>This is events calendar</p>
-</main>
+<link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/events_calendar.css' %}?v=1.0">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/sidebar.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid calendar-container">
+  <main class="calendar-main">
+    
+    <!-- Header Section -->
+    <section class="calendar-header">
+      <h1>Events Calendar</h1>
+      <p>Manage your team's schedule and upcoming events</p>
+      
+      <div class="calendar-controls">
+        <div class="calendar-nav">
+          <button class="btn-calendar" id="prevMonth">
+            ‹ Previous
+          </button>
+          <div class="current-month" id="currentMonth">June 2023</div>
+          <button class="btn-calendar" id="nextMonth">
+            Next ›
+          </button>
+        </div>
+        <button class="btn-new" id="addEvent">
+          + New Event
+        </button>
+      </div>
+    </section>
+
+    <!-- Calendar Grid -->
+    <section class="calendar-grid">
+      <!-- Weekday Headers -->
+      <div class="weekdays">
+        <div class="weekday">Sunday</div>
+        <div class="weekday">Monday</div>
+        <div class="weekday">Tuesday</div>
+        <div class="weekday">Wednesday</div>
+        <div class="weekday">Thursday</div>
+        <div class="weekday">Friday</div>
+        <div class="weekday">Saturday</div>
+      </div>
+      
+      <!-- Calendar Days -->
+      <div class="calendar-days">
+        <!-- Previous month days -->
+        <div class="calendar-day other-month">
+          <div class="day-number">28</div>
+          <div class="empty-day">No events</div>
+        </div>
+        <div class="calendar-day other-month">
+          <div class="day-number">29</div>
+          <div class="empty-day">No events</div>
+        </div>
+        <div class="calendar-day other-month">
+          <div class="day-number">30</div>
+          <div class="empty-day">No events</div>
+        </div>
+        <div class="calendar-day other-month">
+          <div class="day-number">31</div>
+          <div class="empty-day">No events</div>
+        </div>
+        
+        <!-- Current month days with sample events -->
+        <div class="calendar-day">
+          <div class="day-number">1</div>
+          <div class="events-container">
+            <div class="event-item team-meeting">
+              <span class="event-time">10:00 AM</span>
+              <span class="event-title">Team Stand-up</span>
+            </div>
+            <div class="event-item deadline">
+              <span class="event-time">3:00 PM</span>
+              <span class="event-title">Project Deadline</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="calendar-day">
+          <div class="day-number">2</div>
+          <div class="empty-day">+ Add event</div>
+        </div>
+        
+        <div class="calendar-day">
+          <div class="day-number">3</div>
+          <div class="empty-day">+ Add event</div>
+        </div>
+        
+        <div class="calendar-day">
+          <div class="day-number">4</div>
+          <div class="events-container">
+            <div class="event-item personal">
+              <span class="event-time">All Day</span>
+              <span class="event-title">Vacation Day</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- More days with mixed content -->
+        <div class="calendar-day">
+          <div class="day-number">5</div>
+          <div class="empty-day">+ Add event</div>
+        </div>
+        
+        <div class="calendar-day">
+          <div class="day-number">6</div>
+          <div class="empty-day">+ Add event</div>
+        </div>
+        
+        <div class="calendar-day">
+          <div class="day-number">7</div>
+          <div class="events-container">
+            <div class="event-item team-event">
+              <span class="event-time">2:00 PM</span>
+              <span class="event-title">Client Presentation</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Continue with more sample days -->
+        <div class="calendar-day today">
+          <div class="day-number">15</div>
+          <div class="events-container">
+            <div class="event-item deadline">
+              <span class="event-time">9:00 AM</span>
+              <span class="event-title">Sprint Review</span>
+            </div>
+            <div class="event-item team-meeting">
+              <span class="event-time">1:30 PM</span>
+              <span class="event-title">Planning Session</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Add more empty days for demonstration -->
+        {% for day in "123456789" %}
+        <div class="calendar-day">
+          <div class="day-number">{{ day|add:16 }}</div>
+          <div class="empty-day">+ Add event</div>
+        </div>
+        {% endfor %}
+        
+        <!-- Next month days -->
+        <div class="calendar-day other-month">
+          <div class="day-number">1</div>
+          <div class="empty-day">No events</div>
+        </div>
+        <div class="calendar-day other-month">
+          <div class="day-number">2</div>
+          <div class="empty-day">No events</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Upcoming Events Sidebar -->
+    <section class="upcoming-events">
+      <div class="card">
+        <h3>Upcoming Events</h3>
+        <ul class="upcoming-list">
+          <li class="upcoming-item">
+            <div class="upcoming-date">
+              <div class="upcoming-day">15</div>
+              <div class="upcoming-month">Jun</div>
+            </div>
+            <div class="upcoming-details">
+              <div class="upcoming-title">Sprint Review Meeting</div>
+              <div class="upcoming-time">9:00 AM - 10:30 AM</div>
+            </div>
+            <div class="upcoming-type team">Team</div>
+          </li>
+          <li class="upcoming-item">
+            <div class="upcoming-date">
+              <div class="upcoming-day">16</div>
+              <div class="upcoming-month">Jun</div>
+            </div>
+            <div class="upcoming-details">
+              <div class="upcoming-title">Project Deadline</div>
+              <div class="upcoming-time">5:00 PM</div>
+            </div>
+            <div class="upcoming-type team">Work</div>
+          </li>
+          <li class="upcoming-item">
+            <div class="upcoming-date">
+              <div class="upcoming-day">18</div>
+              <div class="upcoming-month">Jun</div>
+            </div>
+            <div class="upcoming-details">
+              <div class="upcoming-title">Team Lunch</div>
+              <div class="upcoming-time">12:00 PM - 1:30 PM</div>
+            </div>
+            <div class="upcoming-type personal">Social</div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Simple navigation for demo
+    document.getElementById('prevMonth').addEventListener('click', function() {
+        alert('Previous month - functionality to be implemented');
+    });
+    
+    document.getElementById('nextMonth').addEventListener('click', function() {
+        alert('Next month - functionality to be implemented');
+    });
+    
+    document.getElementById('addEvent').addEventListener('click', function() {
+        alert('Add new event - functionality to be implemented');
+    });
+    
+    // Click handlers for empty slots
+    document.querySelectorAll('.empty-day').forEach(slot => {
+        slot.addEventListener('click', function() {
+            alert('Add event to this day - functionality to be implemented');
+        });
+    });
+    
+    // Click handlers for events
+    document.querySelectorAll('.event-item').forEach(event => {
+        event.addEventListener('click', function() {
+            alert('View event details - functionality to be implemented');
+        });
+    });
+    
+    // Click handlers for upcoming events
+    document.querySelectorAll('.upcoming-item').forEach(item => {
+        item.addEventListener('click', function() {
+            alert('View upcoming event - functionality to be implemented');
+        });
+    });
+});
+</script>
 {% endblock %}
