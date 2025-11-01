@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "tasks_app_collabsphere",
     "checkins_app_collabsphere",
     'teams_app_collabsphere',
+    "events_app_collabsphere"
 ]
 
 #Models
