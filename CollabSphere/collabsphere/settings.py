@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "tasks_app_collabsphere",
     "checkins_app_collabsphere",
     'teams_app_collabsphere',
+    'events_app_collabsphere',
     'notifications_app_collabsphere',
 ]
 
@@ -141,7 +142,6 @@ STATICFILES_DIRS = [
     BASE_DIR / "tasks_app_collabsphere" / "static",
     BASE_DIR / "registration_app_collabsphere" / "static",
     BASE_DIR / "collabsphere_app" / "static",
-    BASE_DIR / "notifications_app_collabsphere" / "static",
 ]
 
 LOGIN_URL = '/login/'

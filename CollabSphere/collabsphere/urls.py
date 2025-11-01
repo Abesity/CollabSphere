@@ -34,4 +34,5 @@ urlpatterns = [
     path('checkins/', include('checkins_app_collabsphere.urls')),
     path('teams/', include('teams_app_collabsphere.urls')),
     path('notifications/', include('notifications_app_collabsphere.urls')),
+    path('events/', include('events_app_collabsphere.urls')),
 ]
