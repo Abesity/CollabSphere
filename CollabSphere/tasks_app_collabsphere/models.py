@@ -118,16 +118,44 @@ class Comment:
         }
 
         try:
-            supabase.table("task_comments").insert(payload).execute()
+            res = supabase.table("task_comments").insert(payload).execute()
+            data = getattr(res, "data", None)
+            comment_id = None
+            if data and isinstance(data, list) and len(data) > 0:
+                # Supabase may return the inserted row with its generated comment_id
+                comment_id = data[0].get("comment_id") or data[0].get("id")
+
             return {
                 "success": True,
                 "username": username,
                 "content": content,
                 "created_at": created_at,
+                "comment_id": comment_id,
             }
         except Exception as e:
             print("Error adding comment:", e)
             return {"error": "DB failure"}
+
+    @staticmethod
+    def get(comment_id):
+        """Retrieve a single comment by its comment_id."""
+        try:
+            res = supabase.table("task_comments").select("*").eq("comment_id", comment_id).execute()
+            rows = getattr(res, "data", res) or []
+            return rows[0] if rows else None
+        except Exception as e:
+            print("Error fetching comment:", e)
+            return None
+
+    @staticmethod
+    def delete(comment_id):
+        """Delete a comment by its comment_id."""
+        try:
+            supabase.table("task_comments").delete().eq("comment_id", comment_id).execute()
+            return True
+        except Exception as e:
+            print("Error deleting comment:", e)
+            return False
 
 
 class TaskPermissions:

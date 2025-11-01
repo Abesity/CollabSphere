@@ -184,3 +184,38 @@ def add_comment(request, task_id):
         return JsonResponse(result, status=500)
 
     return JsonResponse(result)
+
+
+# DELETE COMMENT
+@login_required
+def delete_comment(request, comment_id):
+    """AJAX endpoint to delete a comment. Only the comment owner may delete their comment."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
+
+    # Debug logging to help verify requests from the client
+    try:
+        print(f"delete_comment called for comment_id={comment_id} by user={request.user.username}")
+    except Exception:
+        print("delete_comment called (could not read user)")
+
+    # Fetch the comment and verify ownership
+    comment = Comment.get(comment_id)
+    if not comment:
+        return JsonResponse({"error": "Comment not found"}, status=404)
+
+    if comment.get("username") != request.user.username:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    success = Comment.delete(comment_id)
+    if not success:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({"error": "Failed to delete comment"}, status=500)
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    # If this is an AJAX request, return JSON so the client can update the UI without a reload.
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({"success": True, "comment_id": comment_id})
+
+    # Otherwise (regular form POST), redirect back to the page that submitted the form.
+    return redirect(request.META.get('HTTP_REFERER', '/'))

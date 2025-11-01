@@ -120,10 +120,18 @@
           
           <div class="comments-list mb-4" style="max-height: 200px; overflow-y: auto;">
             {% for comment in comments %}
-            <div class="comment-item mb-3 p-3 border rounded">
+            <div class="comment-item mb-3 p-3 border rounded" data-comment-id="{{ comment.comment_id }}">
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <strong class="text-primary">{{ comment.username }}</strong>
-                <small class="text-muted">{{ comment.created_at|date:"M j, Y g:i A" }}</small>
+                <div>
+                  <small class="text-muted me-2">{{ comment.created_at|date:"M j, Y g:i A" }}</small>
+                  {% if comment.username == request.user.username %}
+                    <form class="delete-comment-form d-inline" method="POST" action="{% url 'delete_comment' comment_id=comment.comment_id %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-link text-danger">Delete</button>
+                    </form>
+                  {% endif %}
+                </div>
               </div>
               <p class="mb-0">{{ comment.content }}</p>
             </div>
@@ -223,7 +231,38 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p class="mb-0">${data.content}</p>
                     `;
                     
-                    commentsList.appendChild(newComment);
+          commentsList.appendChild(newComment);
+
+          // If the new comment belongs to the current user, add a delete button
+          try {
+            if (data.username && data.username === currentUser) {
+              // attach data-comment-id if provided
+              if (data.comment_id) {
+                newComment.setAttribute('data-comment-id', data.comment_id);
+              }
+              const headerDiv = newComment.querySelector('.d-flex');
+              if (headerDiv) {
+                const metaDiv = headerDiv.querySelector('div') || headerDiv;
+                // Create a delete form that will be intercepted by JS; includes a submit button
+                if (data.comment_id) {
+                  const delForm = document.createElement('form');
+                  delForm.className = 'delete-comment-form d-inline';
+                  delForm.method = 'POST';
+                  delForm.action = `/tasks/comment/${data.comment_id}/delete/`;
+
+                  const delBtn = document.createElement('button');
+                  delBtn.type = 'submit';
+                  delBtn.className = 'btn btn-sm btn-link text-danger';
+                  delBtn.textContent = 'Delete';
+
+                  delForm.appendChild(delBtn);
+                  metaDiv.appendChild(delForm);
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Error attaching delete form to new comment', err);
+          }
                     
                     // Clear the form
                     this.reset();
@@ -240,6 +279,62 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+  // Current logged-in username for client-side checks
+  const currentUser = "{{ request.user.username|escapejs }}";
+
+  // Event delegation for delete forms inside comments list
+  const commentsList = document.querySelector('.comments-list');
+  if (commentsList) {
+    commentsList.addEventListener('submit', function(e) {
+      const form = e.target.closest('.delete-comment-form');
+      if (!form) return;
+      e.preventDefault();
+      const submitBtn = form.querySelector('button[type="submit"]');
+      // derive commentId from form action
+      const action = form.getAttribute('action') || '';
+      const match = action.match(/\/tasks\/comment\/(\d+)\/delete\//);
+      const commentId = match ? match[1] : form.closest('.comment-item')?.getAttribute('data-comment-id');
+      if (!commentId) {
+        console.error('Could not determine comment id for delete form', form);
+        return;
+      }
+
+      if (!confirm('Delete this comment?')) return;
+
+      if (submitBtn) submitBtn.disabled = true;
+
+      const formData = new FormData(form);
+      // Ensure CSRF token header is present
+      fetch(action, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: formData
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          alert('Error: ' + data.error);
+          if (submitBtn) submitBtn.disabled = false;
+          return;
+        }
+        if (data.success) {
+          // Ensure server-side deletion persisted and refresh the page to show canonical state
+          window.location.reload();
+          return;
+        }
+      })
+      .catch(err => {
+        console.error('Delete comment error', err);
+        if (submitBtn) submitBtn.disabled = false;
+        alert('Failed to delete comment.');
+      });
+    });
+  }
 });
 
 // CSRF token function
