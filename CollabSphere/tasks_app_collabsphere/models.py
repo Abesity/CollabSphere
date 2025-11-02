@@ -3,13 +3,12 @@ from supabase import create_client, Client
 from datetime import datetime
 from django.contrib.auth import get_user_model
 
-User = get_user_model()  # Use the user model from registration_app_collabsphere
+User = get_user_model()
 
 # Initialize Supabase client
 SUPABASE_URL = settings.SUPABASE_URL
 SUPABASE_KEY = settings.SUPABASE_KEY
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 
 
 class Task:
@@ -28,7 +27,7 @@ class Task:
 
     @staticmethod
     def fetch_comments(task_id):
-        """Return list of comments for a given task."""
+        """Return list of comments for a given task, organized by thread."""
         try:
             resp = (
                 supabase.table("task_comments")
@@ -37,10 +36,28 @@ class Task:
                 .order("created_at")
                 .execute()
             )
-            return getattr(resp, "data", resp) or []
+            comments = getattr(resp, "data", resp) or []
+            
+            # Organize comments into threads
+            return Task._organize_comments_threaded(comments)
         except Exception as e:
             print("Error fetching comments:", e)
             return []
+
+    @staticmethod
+    def _organize_comments_threaded(comments):
+        """Organize flat comment list into threaded structure."""
+        comment_dict = {c['comment_id']: {**c, 'replies': []} for c in comments}
+        root_comments = []
+        
+        for comment in comments:
+            parent_id = comment.get('parent_id')
+            if parent_id and parent_id in comment_dict:
+                comment_dict[parent_id]['replies'].append(comment_dict[comment['comment_id']])
+            else:
+                root_comments.append(comment_dict[comment['comment_id']])
+        
+        return root_comments
 
     @staticmethod
     def get(task_id):
@@ -107,14 +124,15 @@ class Comment:
     """Wrapper for Supabase 'task_comments' table operations."""
 
     @staticmethod
-    def add(task_id, username, content):
-        """Add a new comment to a task."""
+    def add(task_id, username, content, parent_id=None):
+        """Add a new comment or reply to a task."""
         created_at = datetime.now().isoformat()
         payload = {
             "task_id": task_id,
             "username": username,
             "content": content,
             "created_at": created_at,
+            "parent_id": parent_id,
         }
 
         try:
@@ -122,7 +140,6 @@ class Comment:
             data = getattr(res, "data", None)
             comment_id = None
             if data and isinstance(data, list) and len(data) > 0:
-                # Supabase may return the inserted row with its generated comment_id
                 comment_id = data[0].get("comment_id") or data[0].get("id")
 
             return {
@@ -131,6 +148,7 @@ class Comment:
                 "content": content,
                 "created_at": created_at,
                 "comment_id": comment_id,
+                "parent_id": parent_id,
             }
         except Exception as e:
             print("Error adding comment:", e)
@@ -149,7 +167,7 @@ class Comment:
 
     @staticmethod
     def delete(comment_id):
-        """Delete a comment by its comment_id."""
+        """Delete a comment by its comment_id (cascade will delete replies)."""
         try:
             supabase.table("task_comments").delete().eq("comment_id", comment_id).execute()
             return True

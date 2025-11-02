@@ -1,5 +1,5 @@
 {% load static %}
-<link rel="stylesheet" href="{% static 'css/tasks.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/tasks.css' %}?v=1.3">
 
 <div class="modal fade" id="taskDetailModal" tabindex="-1" aria-labelledby="taskDetailModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -15,7 +15,7 @@
             </div>
           </div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
       <div class="modal-body">
@@ -72,9 +72,7 @@
                 <label for="description" class="form-label">Description</label>
                 <textarea id="description" name="description" class="form-control" rows="4"
                           placeholder="Enter task details..."
-                          {% if task.created_by != request.user.username %}disabled{% endif %}>
-{{ task.description|default:'' }}
-                </textarea>
+                          {% if task.created_by != request.user.username %}disabled{% endif %}>{{ task.description|default:'' }}</textarea>
               </div>
             </div>
 
@@ -114,34 +112,149 @@
           </div>
         </form>
 
-        <!-- Comments Section -->
+        <!-- Comments Section with Threaded Replies -->
         <div class="comments-section mt-4 border-top pt-4">
-          <h5 class="mb-3">Comments</h5>
+          <h5 class="mb-3 comments-heading">Comments</h5>
           
-          <div class="comments-list mb-4" style="max-height: 200px; overflow-y: auto;">
-            {% for comment in comments %}
-            <div class="comment-item mb-3 p-3 border rounded" data-comment-id="{{ comment.comment_id }}">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <strong class="text-primary">{{ comment.username }}</strong>
-                <div>
-                  <small class="text-muted me-2">{{ comment.created_at|date:"M j, Y g:i A" }}</small>
-                  {% if comment.username == request.user.username %}
-                    <form class="delete-comment-form d-inline" method="POST" action="{% url 'delete_comment' comment_id=comment.comment_id %}">
+          <div class="comments-list mb-4" id="commentsList">
+            {% if comments %}
+              {% for comment in comments %}
+                <!-- Top-level comment -->
+                <div class="comment-item mb-3 p-3 border rounded" data-comment-id="{{ comment.comment_id }}">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <strong class="comment-author">{{ comment.username }}</strong>
+                    <div>
+                      <small class="text-muted me-2">{{ comment.created_at|date:"M j, Y g:i A" }}</small>
+                      {% if comment.username == request.user.username %}
+                        <form class="delete-comment-form d-inline" method="POST" action="{% url 'delete_comment' comment_id=comment.comment_id %}">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-sm btn-link text-danger p-0 delete-btn">Delete</button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  </div>
+                  
+                  <p class="mb-0 comment-content">{{ comment.content }}</p>
+                  
+                  <div class="comment-actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-reply" data-comment-id="{{ comment.comment_id }}">
+                      Reply
+                    </button>
+                  </div>
+                  
+                  <!-- Reply Form -->
+                  <div id="reply-form-{{ comment.comment_id }}" class="reply-form" style="display: none;">
+                    <form class="reply-comment-form" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">
                       {% csrf_token %}
-                      <button type="submit" class="btn btn-sm btn-link text-danger">Delete</button>
+                      <input type="hidden" name="parent_id" value="{{ comment.comment_id }}">
+                      <div class="mb-2">
+                        <textarea name="content" class="form-control form-control-sm" rows="2" placeholder="Write a reply..." required></textarea>
+                      </div>
+                      <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">Post Reply</button>
+                        <button type="button" class="btn btn-secondary btn-sm cancel-reply-btn">Cancel</button>
+                      </div>
                     </form>
+                  </div>
+                  
+                  <!-- Level 1 Replies -->
+                  {% if comment.replies %}
+                    <div class="replies mt-3">
+                      {% for reply in comment.replies %}
+                        <div class="comment-item mb-3 p-3 border rounded reply-section" data-comment-id="{{ reply.comment_id }}">
+                          <div class="d-flex justify-content-between align-items-start mb-2">
+                            <strong class="comment-author">{{ reply.username }}</strong>
+                            <div>
+                              <small class="text-muted me-2">{{ reply.created_at|date:"M j, Y g:i A" }}</small>
+                              {% if reply.username == request.user.username %}
+                                <form class="delete-comment-form d-inline" method="POST" action="{% url 'delete_comment' comment_id=reply.comment_id %}">
+                                  {% csrf_token %}
+                                  <button type="submit" class="btn btn-sm btn-link text-danger p-0 delete-btn">Delete</button>
+                                </form>
+                              {% endif %}
+                            </div>
+                          </div>
+                          
+                          <p class="mb-0 comment-content">{{ reply.content }}</p>
+                          
+                          <div class="comment-actions">
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-reply" data-comment-id="{{ reply.comment_id }}">
+                              Reply
+                            </button>
+                          </div>
+                          
+                          <!-- Reply Form -->
+                          <div id="reply-form-{{ reply.comment_id }}" class="reply-form" style="display: none;">
+                            <form class="reply-comment-form" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">
+                              {% csrf_token %}
+                              <input type="hidden" name="parent_id" value="{{ reply.comment_id }}">
+                              <div class="mb-2">
+                                <textarea name="content" class="form-control form-control-sm" rows="2" placeholder="Write a reply..." required></textarea>
+                              </div>
+                              <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Post Reply</button>
+                                <button type="button" class="btn btn-secondary btn-sm cancel-reply-btn">Cancel</button>
+                              </div>
+                            </form>
+                          </div>
+                          
+                          <!-- Level 2 Replies -->
+                          {% if reply.replies %}
+                            <div class="replies mt-3">
+                              {% for reply2 in reply.replies %}
+                                <div class="comment-item mb-3 p-3 border rounded reply-section" data-comment-id="{{ reply2.comment_id }}">
+                                  <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <strong class="comment-author">{{ reply2.username }}</strong>
+                                    <div>
+                                      <small class="text-muted me-2">{{ reply2.created_at|date:"M j, Y g:i A" }}</small>
+                                      {% if reply2.username == request.user.username %}
+                                        <form class="delete-comment-form d-inline" method="POST" action="{% url 'delete_comment' comment_id=reply2.comment_id %}">
+                                          {% csrf_token %}
+                                          <button type="submit" class="btn btn-sm btn-link text-danger p-0 delete-btn">Delete</button>
+                                        </form>
+                                      {% endif %}
+                                    </div>
+                                  </div>
+                                  
+                                  <p class="mb-0 comment-content">{{ reply2.content }}</p>
+                                  
+                                  <div class="comment-actions">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-reply" data-comment-id="{{ reply2.comment_id }}">
+                                      Reply
+                                    </button>
+                                  </div>
+                                  
+                                  <!-- Reply Form -->
+                                  <div id="reply-form-{{ reply2.comment_id }}" class="reply-form" style="display: none;">
+                                    <form class="reply-comment-form" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">
+                                      {% csrf_token %}
+                                      <input type="hidden" name="parent_id" value="{{ reply2.comment_id }}">
+                                      <div class="mb-2">
+                                        <textarea name="content" class="form-control form-control-sm" rows="2" placeholder="Write a reply..." required></textarea>
+                                      </div>
+                                      <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary btn-sm">Post Reply</button>
+                                        <button type="button" class="btn btn-secondary btn-sm cancel-reply-btn">Cancel</button>
+                                      </div>
+                                    </form>
+                                  </div>
+                                </div>
+                              {% endfor %}
+                            </div>
+                          {% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
                   {% endif %}
                 </div>
-              </div>
-              <p class="mb-0">{{ comment.content }}</p>
-            </div>
-            {% empty %}
-            <p class="text-muted text-center">No comments yet.</p>
-            {% endfor %}
+              {% endfor %}
+            {% else %}
+              <p class="text-muted text-center no-comments-msg">No comments yet. Be the first to comment!</p>
+            {% endif %}
           </div>
 
-          <!-- Comment Form Always Enabled -->
-          <form id="addCommentForm" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">
+          <!-- Main Comment Form -->
+          <form id="addCommentForm" class="main-comment-form" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">
             {% csrf_token %}
             <div class="mb-3">
                 <label for="commentContent" class="form-label">Add Comment</label>
@@ -172,19 +285,21 @@
   </div>
 </div>
 
-{% comment %} JAVASCRIPT FOR TASK COMMENTS {% endcomment %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Task detail modal loaded - looking for comment form...');
-    const commentForm = document.getElementById('addCommentForm');
-    console.log('Comment form found:', commentForm);
+    console.log('✅ Task detail modal script loaded');
+    const currentUser = "{{ request.user.username|escapejs }}";
+    const commentsList = document.getElementById('commentsList');
 
+    // Handle main comment form
+    const commentForm = document.getElementById('addCommentForm');
     if (commentForm) {
+        console.log('✅ Main comment form found');
         commentForm.addEventListener('submit', function(e) {
-            console.log('Comment form submit event caught!');
             e.preventDefault();
-            console.log('Default prevented, proceeding with AJAX...');
-            e.stopPropagation(); // Important: prevent event bubbling
+            e.stopPropagation();
+            
+            console.log('📤 Submitting main comment...');
             
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
@@ -193,6 +308,10 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = 'Posting...';
             
             const formData = new FormData(this);
+            console.log('Form data:', {
+                content: formData.get('content'),
+                action: this.action
+            });
             
             fetch(this.action, {
                 method: 'POST',
@@ -202,142 +321,192 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRFToken': getCookie('csrftoken')
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('📥 Server response:', data);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
                 
                 if (data.error) {
+                    console.error('❌ Error from server:', data.error);
                     alert('Error: ' + data.error);
                     return;
                 }
                 
                 if (data.success) {
-                    // Add the new comment to the list
-                    const commentsList = document.querySelector('.comments-list');
-                    const noCommentsMsg = commentsList.querySelector('.text-muted.text-center');
-                    
-                    if (noCommentsMsg) {
-                        noCommentsMsg.remove();
-                    }
-                    
-                    const newComment = document.createElement('div');
-                    newComment.className = 'comment-item mb-3 p-3 border rounded';
-                    newComment.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <strong class="text-primary">${data.username}</strong>
-                            <small class="text-muted">${new Date(data.created_at).toLocaleString()}</small>
-                        </div>
-                        <p class="mb-0">${data.content}</p>
-                    `;
-                    
-          commentsList.appendChild(newComment);
-
-          // If the new comment belongs to the current user, add a delete button
-          try {
-            if (data.username && data.username === currentUser) {
-              // attach data-comment-id if provided
-              if (data.comment_id) {
-                newComment.setAttribute('data-comment-id', data.comment_id);
-              }
-              const headerDiv = newComment.querySelector('.d-flex');
-              if (headerDiv) {
-                const metaDiv = headerDiv.querySelector('div') || headerDiv;
-                // Create a delete form that will be intercepted by JS; includes a submit button
-                if (data.comment_id) {
-                  const delForm = document.createElement('form');
-                  delForm.className = 'delete-comment-form d-inline';
-                  delForm.method = 'POST';
-                  delForm.action = `/tasks/comment/${data.comment_id}/delete/`;
-
-                  const delBtn = document.createElement('button');
-                  delBtn.type = 'submit';
-                  delBtn.className = 'btn btn-sm btn-link text-danger';
-                  delBtn.textContent = 'Delete';
-
-                  delForm.appendChild(delBtn);
-                  metaDiv.appendChild(delForm);
-                }
-              }
-            }
-          } catch (err) {
-            console.error('Error attaching delete form to new comment', err);
-          }
-                    
-                    // Clear the form
-                    this.reset();
-                    
-                    // Scroll to show new comment
-                    commentsList.scrollTop = commentsList.scrollHeight;
+                    console.log('✅ Comment posted successfully, reloading...');
+                    window.location.reload();
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('❌ Fetch error:', error);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
-                alert('Something went wrong. Please try again.');
+                alert('Error details: ' + error.message + '\nCheck console for more info.');
+            });
+        });
+    } else {
+        console.error('❌ Comment form not found!');
+    }
+
+    // Handle reply buttons - Simple show/hide
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-reply')) {
+            e.preventDefault();
+            const commentId = e.target.dataset.commentId;
+            console.log('💬 Reply button clicked for comment:', commentId);
+            
+            const replyForm = document.getElementById(`reply-form-${commentId}`);
+            
+            if (!replyForm) {
+                console.error('❌ Reply form not found for comment:', commentId);
+                alert('Error: Reply form not found. Comment ID: ' + commentId);
+                return;
+            }
+            
+            console.log('✅ Found reply form:', replyForm);
+            
+            // Hide all other reply forms
+            document.querySelectorAll('.reply-form').forEach(form => {
+                if (form.id !== `reply-form-${commentId}`) {
+                    form.style.display = 'none';
+                }
+            });
+            
+            // Toggle this reply form
+            if (replyForm.style.display === 'none' || replyForm.style.display === '') {
+                replyForm.style.display = 'block';
+                console.log('✅ Reply form shown');
+                const textarea = replyForm.querySelector('textarea');
+                if (textarea) {
+                    setTimeout(() => textarea.focus(), 100);
+                    console.log('✅ Textarea focused');
+                }
+            } else {
+                replyForm.style.display = 'none';
+                console.log('❌ Reply form hidden');
+            }
+        }
+        
+        // Handle cancel button
+        if (e.target.classList.contains('cancel-reply-btn')) {
+            e.preventDefault();
+            const replyForm = e.target.closest('.reply-form');
+            if (replyForm) {
+                replyForm.style.display = 'none';
+                const textarea = replyForm.querySelector('textarea');
+                if (textarea) textarea.value = '';
+                console.log('❌ Reply form cancelled');
+            }
+        }
+    });
+
+    // Handle reply form submissions
+    document.addEventListener('submit', function(e) {
+        if (e.target.classList.contains('reply-comment-form')) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('📤 Submitting reply...');
+            
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Posting...';
+            
+            const formData = new FormData(form);
+            console.log('Reply form data:', {
+                content: formData.get('content'),
+                parent_id: formData.get('parent_id'),
+                action: form.action
+            });
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                console.log('Reply response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('📥 Reply server response:', data);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                
+                if (data.error) {
+                    console.error('❌ Reply error:', data.error);
+                    alert('Error: ' + data.error);
+                    return;
+                }
+                
+                if (data.success) {
+                    console.log('✅ Reply posted successfully, reloading...');
+                    window.location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('❌ Reply fetch error:', error);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                alert('Error details: ' + error.message + '\nCheck console for more info.');
+            });
+        }
+    });
+
+    // Event delegation for delete forms
+    if (commentsList) {
+        commentsList.addEventListener('submit', function(e) {
+            const form = e.target.closest('.delete-comment-form');
+            if (!form) return;
+            
+            e.preventDefault();
+            
+            if (!confirm('Delete this comment? (This will also delete all replies)')) return;
+            
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            
+            const formData = new FormData(form);
+            
+            fetch(form.action, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    if (submitBtn) submitBtn.disabled = false;
+                    return;
+                }
+                if (data.success) {
+                    window.location.reload();
+                }
+            })
+            .catch(err => {
+                console.error('Delete comment error', err);
+                if (submitBtn) submitBtn.disabled = false;
+                alert('Failed to delete comment.');
             });
         });
     }
-
-  // Current logged-in username for client-side checks
-  const currentUser = "{{ request.user.username|escapejs }}";
-
-  // Event delegation for delete forms inside comments list
-  const commentsList = document.querySelector('.comments-list');
-  if (commentsList) {
-    commentsList.addEventListener('submit', function(e) {
-      const form = e.target.closest('.delete-comment-form');
-      if (!form) return;
-      e.preventDefault();
-      const submitBtn = form.querySelector('button[type="submit"]');
-      // derive commentId from form action
-      const action = form.getAttribute('action') || '';
-      const match = action.match(/\/tasks\/comment\/(\d+)\/delete\//);
-      const commentId = match ? match[1] : form.closest('.comment-item')?.getAttribute('data-comment-id');
-      if (!commentId) {
-        console.error('Could not determine comment id for delete form', form);
-        return;
-      }
-
-      if (!confirm('Delete this comment?')) return;
-
-      if (submitBtn) submitBtn.disabled = true;
-
-      const formData = new FormData(form);
-      // Ensure CSRF token header is present
-      fetch(action, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: formData
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) {
-          alert('Error: ' + data.error);
-          if (submitBtn) submitBtn.disabled = false;
-          return;
-        }
-        if (data.success) {
-          // Ensure server-side deletion persisted and refresh the page to show canonical state
-          window.location.reload();
-          return;
-        }
-      })
-      .catch(err => {
-        console.error('Delete comment error', err);
-        if (submitBtn) submitBtn.disabled = false;
-        alert('Failed to delete comment.');
-      });
-    });
-  }
 });
 
-// CSRF token function
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
