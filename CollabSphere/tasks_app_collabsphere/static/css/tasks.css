@@ -312,25 +312,26 @@ a:hover {
 }
 
 /* ====== Reply Form Styles ====== */
-.reply-form {
+.reply-form-container {
   margin-top: 0.75rem;
-  padding: 1rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid var(--card-border);
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
-  padding-top: 0;
-  padding-bottom: 0;
 }
 
-.reply-form.active {
-  max-height: 500px;
-  opacity: 1;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+.reply-form-box {
+  background-color: #f8f9fa;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 8px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideDown {
