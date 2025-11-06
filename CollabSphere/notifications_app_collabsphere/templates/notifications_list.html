@@ -39,9 +39,6 @@
                                 <p><strong>Received:</strong> {{ n.created_at|date:"F j, Y, g:i A" }}</p>
                             </div>
                             <div class="modal-footer">
-                                {% if n.related_object_url %}
-                                    <a href="{{ n.related_object_url }}" class="btn btn-primary">View Details</a>
-                                {% endif %}
                                 <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                             </div>
                         </div>

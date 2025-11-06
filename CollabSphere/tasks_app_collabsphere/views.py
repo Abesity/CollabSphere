@@ -1,12 +1,15 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
 from datetime import datetime
+import traceback
 
 from .models import Task, Comment, TaskPermissions
+from .notification_triggers import TaskNotificationTriggers
 
 
-# TASKS VIEW (Modal
+# TASKS VIEW (Modal)
 @login_required
 def tasks(request):
     """
@@ -73,8 +76,37 @@ def task_create(request):
             'task_id': task_result[0]['task_id'] if task_result and len(task_result) > 0 else None
         }
         
-    from notifications_app_collabsphere.views import create_task_notification
-    create_task_notification(notification_data, sender_user=request.user)
+        try:
+            from notifications_app_collabsphere.views import create_task_notification
+            create_task_notification(notification_data, sender_user=request.user)
+        except:
+            pass
+    
+    # Evaluate notification triggers for task creation
+    if task_result and len(task_result) > 0:
+        task_data = {
+            'task_id': task_result[0]['task_id'],
+            'title': title,
+            'assigned_to': assigned_to,
+            'due_date': payload['due_date'],
+            'status': payload['status'],
+            'priority': payload['priority']
+        }
+        
+        trigger_context = {
+            'action': 'create'
+        }
+        
+        try:
+            triggered_notifications = TaskNotificationTriggers.evaluate_all_triggers(
+                task_data,
+                trigger_context
+            )
+            
+            for trigger in triggered_notifications:
+                print(f"🔔 TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+        except Exception as e:
+            print(f"⚠️ Error evaluating task triggers: {e}")
     
     return redirect("home")
 
@@ -106,7 +138,6 @@ def task_detail(request, task_id):
     return render(request, "task_detail.html", context)
 
 
-
 # UPDATE TASK
 @login_required
 def task_update(request, task_id):
@@ -117,6 +148,14 @@ def task_update(request, task_id):
     task_data = Task.get(task_id)
     if not task_data or task_data.get("created_by") != request.user.username:
         return redirect("home")
+
+    # Store old values for comparison
+    old_status = task_data.get("status")
+    old_title = task_data.get("title")
+    old_description = task_data.get("description")
+    old_due_date = task_data.get("due_date")
+    old_priority = task_data.get("priority")
+    old_assigned_to = task_data.get("assigned_to")
 
     assign_to_raw = request.POST.get("assignTo")
     try:
@@ -131,24 +170,73 @@ def task_update(request, task_id):
         if match:
             assigned_to_username = match["username"]
 
+    new_status = request.POST.get("status") or "Pending"
+    new_title = request.POST.get("taskName", "").strip()
+    new_description = request.POST.get("description") or None
+    new_due_date = request.POST.get("dueDate") or None
+    new_priority = request.POST.get("priority") in ["on", "true", "True"]
+
     payload = {
-        "title": request.POST.get("taskName", "").strip(),
-        "description": request.POST.get("description") or None,
+        "title": new_title,
+        "description": new_description,
         "assigned_to": assigned_to,
         "assigned_to_username": assigned_to_username,
-        "status": request.POST.get("status") or "Pending",
+        "status": new_status,
         "completion": int(request.POST.get("completion") or 0),
         "start_date": request.POST.get("startDate") or None,
-        "due_date": request.POST.get("dueDate") or None,
-        "priority": request.POST.get("priority") in ["on", "true", "True"],
+        "due_date": new_due_date,
+        "priority": new_priority,
     }
 
     Task.update(task_id, payload)
+    
+    # Evaluate notification triggers for task update
+    try:
+        changed_fields = []
+        if old_title != new_title:
+            changed_fields.append('title')
+        if old_description != new_description:
+            changed_fields.append('description')
+        if old_due_date != new_due_date:
+            changed_fields.append('due_date')
+        if old_priority != new_priority:
+            changed_fields.append('priority')
+        if old_assigned_to != assigned_to:
+            changed_fields.append('assigned_to')
+        if old_status != new_status:
+            changed_fields.append('status')
+        
+        updated_task_data = {
+            'task_id': task_id,
+            'title': new_title,
+            'assigned_to': assigned_to,
+            'due_date': new_due_date,
+            'status': new_status,
+            'priority': new_priority
+        }
+        
+        action = 'complete' if old_status != 'completed' and new_status == 'completed' else 'update'
+        
+        trigger_context = {
+            'action': action,
+            'old_status': old_status,
+            'changed_fields': changed_fields
+        }
+        
+        triggered_notifications = TaskNotificationTriggers.evaluate_all_triggers(
+            updated_task_data,
+            trigger_context
+        )
+        
+        for trigger in triggered_notifications:
+            print(f"🔔 TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+    except Exception as e:
+        print(f"⚠️ Error evaluating task triggers: {e}")
+    
     return redirect("home")
 
 
 # DELETE TASK
-
 @login_required
 def task_delete(request, task_id):
     """Handle POST to delete a task."""
@@ -160,62 +248,118 @@ def task_delete(request, task_id):
     return redirect("home")
 
 
-# ADD COMMENT
+# ADD COMMENT OR REPLY
 @login_required
+@require_http_methods(["POST"])
 def add_comment(request, task_id):
-    """AJAX endpoint to add a comment to a task."""
-    if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)
+    """AJAX endpoint to add a comment or reply to a task."""
+    try:
+        print(f"🔵 add_comment called for task_id={task_id}")
+        print(f"🔵 Request method: {request.method}")
+        print(f"🔵 Is AJAX: {request.headers.get('X-Requested-With') == 'XMLHttpRequest'}")
+        
+        content = request.POST.get("content", "").strip()
+        parent_id = request.POST.get("parent_id")
+        
+        print(f"🔵 Content: {content[:50] if content else 'None'}")
+        print(f"🔵 Parent ID: {parent_id}")
+        
+        if not content:
+            print("❌ No content provided")
+            return JsonResponse({"success": False, "error": "Content required"}, status=400)
 
-    content = request.POST.get("content", "").strip()
-    if not content:
-        return JsonResponse({"error": "Content required"}, status=400)
+        # Convert parent_id to int if provided
+        try:
+            parent_id = int(parent_id) if parent_id else None
+            print(f"🔵 Converted parent_id: {parent_id}")
+        except (ValueError, TypeError):
+            parent_id = None
+            print(f"⚠️ Could not convert parent_id, setting to None")
 
-    task_data = Task.get(task_id)
-    if not task_data:
-        return JsonResponse({"error": "Task not found"}, status=404)
+        task_data = Task.get(task_id)
+        if not task_data:
+            print(f"❌ Task not found: {task_id}")
+            return JsonResponse({"success": False, "error": "Task not found"}, status=404)
 
-    if not TaskPermissions.user_can_access(task_data, request.user.username, request.session.get("user_ID")):
-        return JsonResponse({"error": "Forbidden"}, status=403)
+        if not TaskPermissions.user_can_access(task_data, request.user.username, request.session.get("user_ID")):
+            print(f"❌ User not authorized")
+            return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
 
-    result = Comment.add(task_id, request.user.username, content)
+        print(f"🔵 Adding comment to database...")
+        result = Comment.add(task_id, request.user.username, content, parent_id)
 
-    if "error" in result:
-        return JsonResponse(result, status=500)
+        if "error" in result:
+            print(f"❌ Database error: {result['error']}")
+            return JsonResponse({"success": False, "error": result["error"]}, status=500)
+        
+        print(f"✅ Comment added successfully: {result}")
+        
+        # Evaluate notification triggers for comment
+        try:
+            comment_author_id = request.session.get("user_ID")
+            
+            trigger_context = {
+                'action': 'comment',
+                'comment_author_id': comment_author_id
+            }
+            
+            comment_task_data = {
+                'task_id': task_id,
+                'title': task_data.get('title', 'Task')
+            }
+            
+            triggered_notifications = TaskNotificationTriggers.evaluate_all_triggers(
+                comment_task_data,
+                trigger_context
+            )
+            
+            for trigger in triggered_notifications:
+                print(f"🔔 TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+        except Exception as e:
+            print(f"⚠️ Error evaluating comment triggers: {e}")
 
-    return JsonResponse(result)
+        return JsonResponse({
+            "success": True,
+            "username": result.get("username"),
+            "content": result.get("content"),
+            "created_at": result.get("created_at"),
+            "comment_id": result.get("comment_id"),
+            "parent_id": result.get("parent_id")
+        })
+        
+    except Exception as e:
+        print(f"❌ EXCEPTION in add_comment: {str(e)}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        return JsonResponse({"success": False, "error": f"Server error: {str(e)}"}, status=500)
 
 
 # DELETE COMMENT
 @login_required
+@require_http_methods(["POST"])
 def delete_comment(request, comment_id):
     """AJAX endpoint to delete a comment. Only the comment owner may delete their comment."""
-    if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)
-
-    # Debug logging to help verify requests from the client
     try:
         print(f"delete_comment called for comment_id={comment_id} by user={request.user.username}")
-    except Exception:
-        print("delete_comment called (could not read user)")
+        
+        comment = Comment.get(comment_id)
+        if not comment:
+            return JsonResponse({"success": False, "error": "Comment not found"}, status=404)
 
-    # Fetch the comment and verify ownership
-    comment = Comment.get(comment_id)
-    if not comment:
-        return JsonResponse({"error": "Comment not found"}, status=404)
+        if comment.get("username") != request.user.username:
+            return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
 
-    if comment.get("username") != request.user.username:
-        return JsonResponse({"error": "Forbidden"}, status=403)
+        success = Comment.delete(comment_id)
+        if not success:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({"success": False, "error": "Failed to delete comment"}, status=500)
+            return redirect(request.META.get('HTTP_REFERER', '/'))
 
-    success = Comment.delete(comment_id)
-    if not success:
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({"error": "Failed to delete comment"}, status=500)
+            return JsonResponse({"success": True, "comment_id": comment_id})
+
         return redirect(request.META.get('HTTP_REFERER', '/'))
-
-    # If this is an AJAX request, return JSON so the client can update the UI without a reload.
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({"success": True, "comment_id": comment_id})
-
-    # Otherwise (regular form POST), redirect back to the page that submitted the form.
-    return redirect(request.META.get('HTTP_REFERER', '/'))
+        
+    except Exception as e:
+        print(f"❌ EXCEPTION in delete_comment: {str(e)}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
