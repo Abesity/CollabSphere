@@ -1,0 +1,64 @@
+{% load static %}
+
+<div>
+  <button class="modal-close" id="closeViewModalBtn">&times;</button>
+  <h2 style="text-align:center;">Team Details</h2>
+
+  <!-- Team Icon -->
+  <div class="icon-upload-section" style="text-align:center; margin-bottom: 1.25rem;">
+    <div class="icon-preview" id="iconPreviewContainer" style="margin-bottom:0.75rem;">
+      <img
+        id="iconPreview"
+        src="{{ team.icon_url|default:'/static/images/default-team-icon.png' }}"
+        alt="Team icon preview"
+        style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #e5e7eb;"
+      >
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="team_name">Team Name</label>
+    <input type="text" id="team_name" value="{{ team.team_name }}" readonly class="readonly-input">
+  </div>
+
+  <div class="form-group">
+    <label for="description">Description</label>
+    <textarea id="description" readonly class="readonly-input">{{ team.description|default:'' }}</textarea>
+  </div>
+
+  <!-- Current Team Members Section -->
+  <div class="form-group">
+    <label>Team Members</label>
+    <div id="currentMembersContainer" class="current-members-container" style="min-height: 50px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #f9fafb;">
+      {% for member in current_members %}
+        <div class="current-member-tag" data-user-id="{{ member.user_ID }}">
+          <img src="{{ member.profile_picture|default:'/static/images/default-avatar.png' }}" 
+               alt="{{ member.username }}" 
+               class="member-avatar-small">
+          <span>{{ member.username }}</span>
+          {% if member.user_ID == team.user_id_owner %}
+            <span class="owner-badge">Owner</span>
+          {% endif %}
+        </div>
+      {% empty %}
+        <div class="no-current-members" style="color: var(--text-muted); text-align: center;">No members in team</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="modal-buttons" style="text-align:right; margin-top: 20px;">
+    {% if not is_owner %}
+      <button type="button" class="btn-danger" id="leaveTeamBtn" style="margin-right: auto;">Leave Team</button>
+    {% endif %}
+    <button type="button" class="btn-secondary" id="closeViewBtn">Close</button>
+  </div>
+</div>
+
+<style>
+.readonly-input {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+</style>

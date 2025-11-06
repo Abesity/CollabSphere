@@ -280,20 +280,43 @@ body {
   border-radius: 8px;
   padding: 6px 12px;
   cursor: pointer;
-  transition: background 0.2s ease;
-  font-size: 0.9rem;
+
 }
 
 .switch-team-btn,
 .edit-team-btn,
-.btn-primary {
+.btn-primary, .view-team-btn,
+.leave-team-btn {
   background: var(--secondary-color);
   color: #fff;
+  margin-left: 5px;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.leave-team-btn {
+  background: #b2332e;
+  color: #fff;
+  margin-left: 5px;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.leave-team-btn:hover {
+  background: #992c28;
 }
 
 .switch-team-btn:hover,
 .edit-team-btn:hover,
-.btn-primary:hover {
+.btn-primary:hover , .view-team-btn:hover {
   background: #245d8b;
 }
 

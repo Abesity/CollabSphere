@@ -116,6 +116,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const editModal = document.getElementById("editTeamModal");
   const editModalContent = document.getElementById("editTeamModalContent");
   const editButtons = document.querySelectorAll('.edit-team-btn');
+  const viewButtons = document.querySelectorAll('.view-team-btn');
+  const leaveButtons = document.querySelectorAll('.leave-team-btn');
 
   // ===== Open Create Modal =====
   addBtn.addEventListener("click", () => {
@@ -203,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   });
 
-  // ===== Edit Team =====
+  // ===== Edit Team (Owner only) =====
   editButtons.forEach(btn => {
     btn.addEventListener('click', e => {
       const teamId = e.target.dataset.teamId;
@@ -277,12 +279,137 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
   });
+
+// ===== View Team (Non-owners) =====
+viewButtons.forEach(btn => {
+  btn.addEventListener('click', e => {
+    const teamId = e.target.dataset.teamId;
+    fetch(`/teams/view/${teamId}/`)  // ← CORRECT: This calls view
+      .then(response => response.text())
+      .then(html => {
+        editModalContent.innerHTML = html;
+        editModal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+
+        // Wire up close buttons for view modal
+        const closeBtn = editModalContent.querySelector("#closeViewModalBtn");
+        const closeViewBtn = editModalContent.querySelector("#closeViewBtn");
+        const leaveBtn = editModalContent.querySelector("#leaveTeamBtn");
+
+        const closeViewModal = () => {
+          editModal.style.display = "none";
+          document.body.style.overflow = "auto";
+        };
+
+        [closeBtn, closeViewBtn].forEach(btn => btn?.addEventListener("click", closeViewModal));
+        editModal.addEventListener("click", e => {
+          if (e.target === editModal) closeViewModal();
+        });
+
+        // Handle leave team button
+        if (leaveBtn) {
+          leaveBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to leave this team?')) {
+              fetch(`/teams/leave/${teamId}/`, {
+                method: 'POST',
+                headers: {
+                  'X-CSRFToken': '{{ csrf_token }}',
+                  'Content-Type': 'application/json'
+                }
+              })
+              .then(response => response.json())
+              .then(data => {
+                if (data.success) {
+                  alert('You have left the team successfully!');
+                  window.location.reload();
+                } else {
+                  alert('Error leaving team: ' + data.error);
+                }
+              })
+              .catch(error => {
+                console.error('Error:', error);
+                alert('Error leaving team. Please try again.');
+              });
+            }
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error loading view form:', error);
+        alert('Error loading team details.');
+      });
+  });
 });
+
+  // ===== Leave Team =====
+  leaveButtons.forEach(btn => {
+    btn.addEventListener('click', e => {
+      const teamId = e.target.dataset.teamId;
+      const teamName = e.target.closest('.team-card').querySelector('.team-name').textContent;
+      
+      if (confirm(`Are you sure you want to leave the team "${teamName}"?`)) {
+        fetch(`/teams/leave/${teamId}/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('You have left the team successfully!');
+            window.location.reload();
+          } else {
+            alert('Error leaving team: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error leaving team. Please try again.');
+        });
+      }
+    });
+  });
+});
+
+// ===== Setup View Team Modal (Read-only) =====
+function setupViewTeamModal(editModalContent) {
+    const form = editModalContent.querySelector('#editTeamForm');
+    const deleteBtn = editModalContent.querySelector('#deleteTeamBtn');
+    
+    // Disable all form inputs for view mode
+    if (form) {
+        const inputs = form.querySelectorAll('input, textarea, button, select');
+        inputs.forEach(input => {
+            if (input.type !== 'hidden') {
+                input.disabled = true;
+                input.style.opacity = '0.7';
+                input.style.cursor = 'not-allowed';
+            }
+        });
+        
+        // Hide delete button in view mode
+        if (deleteBtn) {
+            deleteBtn.style.display = 'none';
+        }
+        
+        // Change submit button text
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.textContent = 'Close';
+            submitBtn.type = 'button';
+            submitBtn.addEventListener('click', function() {
+                document.getElementById('editTeamModal').style.display = 'none';
+                document.body.style.overflow = 'auto';
+            });
+        }
+    }
+}
 
 // ===== MEMBER MANAGEMENT FUNCTIONS =====
 let selectedMembers = [];
 
-// ... (rest of the member management functions remain the same)
 function setupMembersSearch() {
   const searchInput = document.getElementById('membersSearch');
   const membersContainer = document.getElementById('membersContainer');
@@ -487,30 +614,59 @@ function setupEditTeamModal(editModalContent) {
     // Load available users for adding
     loadAvailableUsersForEdit();
 
-      function loadAvailableUsersForEdit() {
-        const membersContainer = editModalContent.querySelector("#membersContainer");
-        const loadingDiv = editModalContent.querySelector("#membersLoading");
-        
-        if (!membersContainer) return;
-        
-        // Get team ID from the form action
-        const teamId = form.action.split('/').filter(part => part).pop();
-        
-        fetch(`{% url 'get_users_without_teams' %}?team_id=${teamId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.users.length > 0) {
-                    // ... rest of the function remains the same ...
-                } else {
-                    loadingDiv.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No available users to add.</p>';
-                    membersContainer.style.display = 'none';
-                }
-            })
-            .catch(error => {
-                console.error('Error loading users:', error);
-                loadingDiv.innerHTML = '<p style="color: #dc2626; text-align: center;">Error loading users.</p>';
-            });
-    }
+    function loadAvailableUsersForEdit() {
+    const membersContainer = editModalContent.querySelector("#membersContainer");
+    const loadingDiv = editModalContent.querySelector("#membersLoading");
+    
+    if (!membersContainer) return;
+    
+    // Get team ID from the form action
+    const teamId = form.action.split('/').filter(part => part).pop();
+    
+    fetch(`{% url 'get_users_without_teams' %}?team_id=${teamId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.users.length > 0) {
+                membersContainer.innerHTML = data.users.map(user => 
+                    `<div class="user-option" data-user-id="${user.user_ID}" data-username="${user.username}" data-email="${user.email}">
+                        <img src="${user.profile_picture || '{% static "images/default-avatar.png" %}'}" 
+                             alt="${user.username}" 
+                             class="user-avatar">
+                        <div class="user-info">
+                            <div class="username">${user.username}</div>
+                            <div class="email">${user.email}</div>
+                        </div>
+                        <button type="button" class="add-user-btn" data-user-id="${user.user_ID}" data-username="${user.username}">+</button>
+                    </div>`
+                ).join('');
+                loadingDiv.style.display = 'none';
+                membersContainer.style.display = 'block';
+                
+                // Add event listeners to all add buttons
+                membersContainer.querySelectorAll('.add-user-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const userId = parseInt(this.getAttribute('data-user-id'));
+                        const username = this.getAttribute('data-username');
+                        addNewMemberToTeam(userId, username);
+                    });
+                });
+                
+                // Hide already selected members
+                selectedNewMembers.forEach(member => {
+                    removeUserFromSuggestions(member.id);
+                });
+                
+                setupEditMembersSearch();
+            } else {
+                loadingDiv.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No available users to add.</p>';
+                membersContainer.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading users:', error);
+            loadingDiv.innerHTML = '<p style="color: #dc2626; text-align: center;">Error loading users.</p>';
+        });
+}
 
     function setupEditMembersSearch() {
         const searchInput = editModalContent.querySelector('#membersSearch');

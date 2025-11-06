@@ -8,4 +8,6 @@ urlpatterns = [
     path('get-users-without-teams/', views.get_users_without_teams, name='get_users_without_teams'),
     path('edit/<int:team_ID>/', views.edit_team, name='edit_team'),
     path('delete/<int:team_ID>/', views.delete_team, name='delete_team'),
+    path('leave/<int:team_ID>/', views.leave_team, name='leave_team'), 
+    path('view/<int:team_ID>/', views.view_team, name='view_team'),     
 ]

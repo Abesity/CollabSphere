@@ -2,12 +2,18 @@
 
 <div>
   <button class="modal-close" id="closeEditModalBtn">&times;</button>
-  <h2 style="text-align:center;">Edit Team</h2>
+  <h2 style="text-align:center;">
+    {% if team.user_id_owner == request.session.user_ID %}
+      Edit Team
+    {% else %}
+      Team Details
+    {% endif %}
+  </h2>
 
   <form id="editTeamForm" method="post" enctype="multipart/form-data" action="{% url 'edit_team' team.team_ID %}">
     {% csrf_token %}
     
-    <input type="hidden" name="team_members" id="selectedMembersInput" value="{{ current_member_ids }}">
+    <input type="hidden" name="team_members" id="selectedMembersInput" value="{% for member in team.members %}{% if not forloop.first %},{% endif %}{{ member.user_id }}{% endfor %}">    
     <input type="hidden" name="members_to_remove" id="membersToRemoveInput" value="">
 
     <!-- Team Icon -->
@@ -21,40 +27,46 @@
           style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #e5e7eb;"
         >
       </div>
-      <label for="id_icon_url" style="display:block; font-weight:600; margin-bottom:0.4rem;">Team Icon</label>
-      <input type="file" name="icon_url" id="id_icon_url" accept="image/*">
-      {% if team.icon_url %}
-        <div style="margin-top: 5px;">
-          <label>
-            <input type="checkbox" name="remove_icon" id="removeIcon"> Remove current icon
-          </label>
-        </div>
+      {% if team.user_id_owner == request.session.user_ID %}
+        <label for="id_icon_url" style="display:block; font-weight:600; margin-bottom:0.4rem;">Team Icon</label>
+        <input type="file" name="icon_url" id="id_icon_url" accept="image/*">
+        {% if team.icon_url %}
+          <div style="margin-top: 5px;">
+            <label>
+              <input type="checkbox" name="remove_icon" id="removeIcon"> Remove current icon
+            </label>
+          </div>
+        {% endif %}
       {% endif %}
     </div>
 
     <div class="form-group">
-    <label for="id_team_name">Team Name <span style="color:#dc2626">*</span></label>
-    <input type="text" name="team_name" id="id_team_name" value="{{ team.team_name }}" placeholder="Enter team name..." required>
+      <label for="id_team_name">Team Name <span style="color:#dc2626">*</span></label>
+      <input type="text" name="team_name" id="id_team_name" value="{{ team.team_name }}" 
+             {% if team.user_id_owner != request.session.user_ID %}readonly{% endif %}
+             placeholder="Enter team name..." required>
     </div>
 
     <div class="form-group">
-    <label for="id_description">Description</label>
-    <textarea name="description" id="id_description" placeholder="Briefly describe your team...">{{ team.description|default:'' }}</textarea>
+      <label for="id_description">Description</label>
+      <textarea name="description" id="id_description" 
+                {% if team.user_id_owner != request.session.user_ID %}readonly{% endif %}
+                placeholder="Briefly describe your team...">{{ team.description|default:'' }}</textarea>
     </div>
 
-    <!-- Current Team Members Section -->
+      <!-- Current Team Members Section -->
     <div class="form-group">
       <label>Current Team Members</label>
       <div id="currentMembersContainer" class="current-members-container" style="min-height: 50px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #f9fafb;">
-        {% for member in current_members %}
-          <div class="current-member-tag" data-user-id="{{ member.user_ID }}">
-            <img src="{{ member.profile_picture|default:'/static/images/default-avatar.png' }}" 
-                 alt="{{ member.username }}" 
-                 class="member-avatar-small">
-            <span>{{ member.username }}</span>
-            {% if member.user_ID != team.user_id_owner %}
-              <button type="button" class="remove-member-btn" data-user-id="{{ member.user_ID }}" data-username="{{ member.username }}">×</button>
-            {% else %}
+        {% for member in team.members %}
+          <div class="current-member-tag" data-user-id="{{ member.user_id }}">
+            <img src="{{ member.user.profile_picture|default:'/static/images/default-avatar.png' }}" 
+                alt="{{ member.user.username }}" 
+                class="member-avatar-small">
+            <span>{{ member.user.username }}</span>
+            {% if team.user_id_owner == request.session.user_ID and member.user_id != team.user_id_owner %}
+              <button type="button" class="remove-member-btn" data-user-id="{{ member.user_id }}" data-username="{{ member.user.username }}">×</button>
+            {% elif member.user_id == team.user_id_owner %}
               <span class="owner-badge">Owner</span>
             {% endif %}
           </div>
@@ -64,43 +76,50 @@
       </div>
     </div>
 
-    <!-- Add New Members Section -->
-    <div class="form-group">
-      <label for="membersSearch">Add New Members</label>
-      
-      <!-- Selected New Members Display -->
-      <div id="selectedMembersContainer" class="selected-members-container" style="min-height: 50px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #f9fafb;">
-        <div class="no-selected-members" style="color: var(--text-muted); text-align: center;">No new members selected</div>
-      </div>
+    <!-- Add New Members Section (Only for owners) -->
+    {% if team.user_id_owner == request.session.user_ID %}
+      <div class="form-group">
+        <label for="membersSearch">Add New Members</label>
+        
+        <!-- Selected New Members Display -->
+        <div id="selectedMembersContainer" class="selected-members-container" style="min-height: 50px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #f9fafb;">
+          <div class="no-selected-members" style="color: var(--text-muted); text-align: center;">No new members selected</div>
+        </div>
 
-      <!-- Search and User List -->
-      <div class="members-search-section">
-        <input 
-          type="text" 
-          id="membersSearch" 
-          class="search-input" 
-          placeholder="Search for users to add..."
-          autocomplete="off"
-          style="margin-bottom: 10px;"
-        >
-        
-        <div id="membersLoading" style="text-align: center; padding: 20px; color: var(--text-muted);">
-          Loading available users...
+        <!-- Search and User List -->
+        <div class="members-search-section">
+          <input 
+            type="text" 
+            id="membersSearch" 
+            class="search-input" 
+            placeholder="Search for users to add..."
+            autocomplete="off"
+            style="margin-bottom: 10px;"
+          >
+          
+          <div id="membersLoading" style="text-align: center; padding: 20px; color: var(--text-muted);">
+            Loading available users...
+          </div>
+          
+          <div id="membersContainer" class="members-container" style="display: none; max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <!-- Users will be populated here by JavaScript -->
+          </div>
         </div>
         
-        <div id="membersContainer" class="members-container" style="display: none; max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
-          <!-- Users will be populated here by JavaScript -->
-        </div>
+        <small style="color: var(--text-muted);">
+          Click the + button to add users. Only users without existing teams are shown.
+        </small>
       </div>
-      
-      <small style="color: var(--text-muted);">
-        Click the + button to add users. Only users without existing teams are shown.
-      </small>
-    </div>
+    {% endif %}
 
     <div class="modal-buttons" style="text-align:right; margin-top: 20px;">
-      <button type="button" class="btn-danger" id="deleteTeamBtn" style="margin-right: auto;">Delete Team</button>
-      <button type="submit" class="btn-primary">Update Team</button>
+      {% if team.user_id_owner == request.session.user_ID %}
+        <button type="button" class="btn-danger" id="deleteTeamBtn" style="margin-right: auto;">Delete Team</button>
+        <button type="submit" class="btn-primary">Update Team</button>
+      {% else %}
+        <button type="button" class="btn-danger" id="leaveTeamBtn" style="margin-right: auto;">Leave Team</button>
+        <button type="button" class="btn-secondary" id="closeViewBtn">Close</button>
+      {% endif %}
       <button type="button" class="btn-secondary" id="cancelEditModalBtn">Cancel</button>
     </div>
   </form>

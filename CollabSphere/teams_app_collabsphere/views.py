@@ -176,7 +176,6 @@ def switch_team(request, team_ID):
 
 @login_required
 def edit_team(request, team_ID):
-    """View for editing a team"""
     try:
         old_team_data = Team.get(team_ID)
     except Exception as e:
@@ -244,59 +243,39 @@ def edit_team(request, team_ID):
             print(f"Error updating team: {e}")
             return JsonResponse({'success': False, 'error': str(e)})
 
-    # GET request
+            # GET request
     try:
-        team = old_team_data or next(
-            (t for t in Team.get_user_teams(request.user) if t['team_ID'] == team_ID), None
-        )
+            # Get the team with members data
+            teams_data = Team.get_user_teams(request.user)
+            team = next((t for t in teams_data if t['team_ID'] == team_ID), None)
 
-        if not team:
-            return JsonResponse({'success': False, 'error': 'Team not found'})
+            if not team:
+                return JsonResponse({'success': False, 'error': 'Team not found'})
 
-        current_members = []
-        for member_data in team.get('members', []):
-            try:
-                if 'user' in member_data:
-                    user_data = member_data['user']
-                    current_members.append({
-                        'user_ID': member_data.get('user_id', user_data.get('user_ID', '')),
-                        'username': user_data.get('username', 'Unknown'),
-                        'profile_picture': user_data.get('profile_picture', '')
-                    })
-                else:
-                    current_members.append({
-                        'user_ID': member_data.get('user_id', ''),
-                        'username': member_data.get('username', 'Unknown'),
-                        'profile_picture': member_data.get('profile_picture', '')
-                    })
-            except (KeyError, AttributeError) as e:
-                print(f"Error processing member data: {e}")
-                continue
+            # Use the team.members data that's already in the correct format
+            current_member_ids = ','.join(
+                str(member['user_id']) for member in team.get('members', [])
+            )
 
-        current_member_ids = ','.join(
-            str(member['user_ID']) for member in current_members if member.get('user_ID')
-        )
+            initial_data = {
+                'team_name': team.get('team_name', ''),
+                'description': team.get('description', ''),
+                'team_members': current_member_ids,
+            }
 
-        initial_data = {
-            'team_name': team.get('team_name', ''),
-            'description': team.get('description', ''),
-            'team_members': current_member_ids,
-        }
+            form = EditTeamForm(initial=initial_data)
+            context = {
+                'team': team,
+                'current_members': team.get('members', []),  # This should now match team_card.html
+                'current_member_ids': current_member_ids,
+                'form': form
+            }
 
-        form = EditTeamForm(initial=initial_data)
-        context = {
-            'team': team,
-            'current_members': current_members,
-            'current_member_ids': current_member_ids,
-            'form': form
-        }
-
-        return render(request, 'edit_team.html', context)
+            return render(request, 'edit_team.html', context)
 
     except Exception as e:
-        print(f"Error loading edit team: {e}")
-        return JsonResponse({'success': False, 'error': str(e)})
-
+            print(f"Error loading edit team: {e}")
+            return JsonResponse({'success': False, 'error': str(e)})
 
 @login_required
 @require_http_methods(["POST"])
@@ -332,4 +311,113 @@ def delete_team(request, team_ID):
 
     except Exception as e:
         print(f"Error deleting team: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+@require_http_methods(["POST"])
+def leave_team(request, team_ID):
+    """Leave a team (for non-owners)"""
+    try:
+        # Get the Supabase user ID
+        supabase_user_id = Team.get_supabase_user_id(request.user)
+        if not supabase_user_id:
+            return JsonResponse({'success': False, 'error': 'User not found in database'})
+
+        # Verify user is member of the team and not the owner
+        team_response = Team.get(team_ID)
+        
+        if not team_response:
+            return JsonResponse({'success': False, 'error': 'Team not found'})
+        
+        team_owner_id = team_response.get('user_id_owner')
+        
+        if team_owner_id == supabase_user_id:
+            return JsonResponse({'success': False, 'error': 'Team owner cannot leave the team. Transfer ownership first.'})
+
+        # Mark user as left the team
+        leave_result = Team.supabase.table('user_team')\
+            .update({'left_at': 'now()'})\
+            .eq('user_id', supabase_user_id)\
+            .eq('team_ID', team_ID)\
+            .is_('left_at', None)\
+            .execute()
+
+        if leave_result.data:
+            # Notification for leaving team
+            try:
+                trigger_context = {
+                    'action': 'update',
+                    'updated_by': supabase_user_id,
+                    'removed_member_ids': [supabase_user_id]
+                }
+                
+                triggered_notifications = TeamNotificationTriggers.evaluate_all_triggers(
+                    team_response,
+                    trigger_context
+                )
+
+                for trigger in triggered_notifications:
+                    print(f"🔔 TEAM TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+
+            except Exception as e:
+                print(f"⚠️ Error evaluating leave team triggers: {e}")
+
+            return JsonResponse({'success': True, 'message': 'Successfully left the team'})
+        else:
+            return JsonResponse({'success': False, 'error': 'Failed to leave team'})
+
+    except Exception as e:
+        print(f"Error leaving team: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def view_team(request, team_ID):
+    """View team details (read-only for non-owners)"""
+    try:
+        team_data = Team.get(team_ID)
+        if not team_data:
+            return JsonResponse({'success': False, 'error': 'Team not found'})
+
+        current_user_supabase_id = Team.get_supabase_user_id(request.user)
+
+        # DEBUG: Print team data to see structure
+        print(f"DEBUG Team Data: {team_data}")
+
+        # Get team members - FIXED query
+        members_response = Team.supabase.table('user_team')\
+            .select('user_id, user:user_id(username, profile_picture)')\
+            .eq('team_ID', team_ID)\
+            .is_('left_at', None)\
+            .execute()
+
+        # DEBUG: Print members response
+        print(f"DEBUG Members Response: {members_response}")
+
+        current_members = []
+        for member_data in members_response.data:
+            try:
+                user_data = member_data.get('user', {})
+                print(f"DEBUG Member Data: {member_data}")  # Debug each member
+                current_members.append({
+                    'user_ID': member_data.get('user_id'),
+                    'username': user_data.get('username', 'Unknown'),
+                    'profile_picture': user_data.get('profile_picture', '')
+                })
+            except (KeyError, AttributeError) as e:
+                print(f"Error processing member data: {e}")
+                continue
+
+        # DEBUG: Print final current_members
+        print(f"DEBUG Final current_members: {current_members}")
+
+        context = {
+            'team': team_data,
+            'current_members': current_members,
+            'is_owner': team_data.get('user_id_owner') == current_user_supabase_id
+        }
+
+        return render(request, 'view_team.html', context)
+
+    except Exception as e:
+        print(f"Error loading team details: {e}")
         return JsonResponse({'success': False, 'error': str(e)})

@@ -139,6 +139,36 @@ class Team:
         except Exception as e:
             print(f"Error getting user teams: {e}")
             return []
+        
+    @staticmethod
+    def get(team_ID):
+            """Get a specific team by ID"""
+            try:
+                response = supabase.table('team')\
+                    .select('*')\
+                    .eq('team_ID', team_ID)\
+                    .execute()
+                
+                if response.data:
+                    return response.data[0]
+                return None
+            except Exception as e:
+                print(f"Error getting team: {e}")
+                return None
+        
+    @staticmethod
+    def delete(team_ID):
+            """Delete a team"""
+            try:
+                response = supabase.table('team')\
+                    .delete()\
+                    .eq('team_ID', team_ID)\
+                    .execute()
+                
+                return {'success': True, 'message': 'Team deleted successfully'}
+            except Exception as e:
+                print(f"Error deleting team: {e}")
+                return {'success': False, 'error': str(e)}
 
     @staticmethod
     def create_new_team(team_name, description, icon_file, django_user, selected_members):
