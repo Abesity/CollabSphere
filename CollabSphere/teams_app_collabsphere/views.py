@@ -133,12 +133,17 @@ def create_team(request):
     form = CreateTeamForm()
     return render(request, 'create_team.html', {'form': form})
 
-
 @login_required
 def get_users_without_teams(request):
     """API endpoint to get users who don't have teams (for adding members)"""
     try:
-        users_data = UserTeam.get_users_without_teams()
+        # Get team_id from request if provided (for edit team scenario)
+        team_id = request.GET.get('team_id')
+        
+        if team_id:
+            users_data = UserTeam.get_users_without_teams(team_id=int(team_id))
+        else:
+            users_data = UserTeam.get_users_without_teams()
 
         return JsonResponse({
             'success': True,
@@ -150,7 +155,6 @@ def get_users_without_teams(request):
             'success': False,
             'error': str(e)
         })
-
 
 @login_required
 @require_http_methods(["POST"])

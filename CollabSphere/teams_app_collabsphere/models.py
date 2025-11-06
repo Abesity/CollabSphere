@@ -365,36 +365,52 @@ class UserTeam:
     """UserTeam model handling user-team relationships"""
     
     @staticmethod
-    def get_users_without_teams():
-        """Get users who don't belong to any active team"""
+    def get_users_without_teams(team_id=None):
+        """Get users who don't belong to the specified team (or any team if no team_id provided)"""
         try:
             # Get all users from Supabase
             all_users_response = supabase.table('user')\
                 .select('user_ID, username, email, profile_picture')\
                 .execute()
             
-            # Get users who are in teams from Supabase
-            team_users_response = supabase.table('user_team')\
-                .select('user_id')\
-                .is_('left_at', None)\
-                .execute()
-            
-            team_user_ids = {member['user_id'] for member in team_users_response.data} if team_users_response.data else set()
-            
-            # Filter users who are not in any team
-            users_without_teams = [
-                user for user in all_users_response.data 
-                if user['user_ID'] not in team_user_ids
-            ]
+            if team_id:
+                # Get users who are in the SPECIFIC team
+                team_users_response = supabase.table('user_team')\
+                    .select('user_id')\
+                    .eq('team_ID', team_id)\
+                    .is_('left_at', None)\
+                    .execute()
+                
+                team_user_ids = {member['user_id'] for member in team_users_response.data} if team_users_response.data else set()
+                
+                # Filter users who are NOT in this specific team
+                available_users = [
+                    user for user in all_users_response.data 
+                    if user['user_ID'] not in team_user_ids
+                ]
+            else:
+                # Original behavior: get users not in any team
+                team_users_response = supabase.table('user_team')\
+                    .select('user_id')\
+                    .is_('left_at', None)\
+                    .execute()
+                
+                team_user_ids = {member['user_id'] for member in team_users_response.data} if team_users_response.data else set()
+                
+                # Filter users who are not in any team
+                available_users = [
+                    user for user in all_users_response.data 
+                    if user['user_ID'] not in team_user_ids
+                ]
             
             # Ensure profile pictures use full URLs
-            for user in users_without_teams:
+            for user in available_users:
                 if user.get('profile_picture') and user['profile_picture'].startswith('/'):
                     user['profile_picture'] = f"{SUPABASE_URL}/storage/v1/object/public/{user['profile_picture']}"
                 elif not user.get('profile_picture'):
                     user['profile_picture'] = '/static/images/default-avatar.png'
             
-            return users_without_teams
+            return available_users
             
         except Exception as e:
             print(f"Error getting users without teams: {e}")
