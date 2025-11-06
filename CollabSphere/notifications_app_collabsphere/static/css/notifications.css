@@ -1,108 +1,265 @@
+:root {
+  --primary-color: #2D333A;
+  --secondary-color: #3D74C3;
+  --bg-color: #FAFBFB;
+  --card-border: #c0c6d1;
+  --text-muted: #6c757d;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+  color: var(--primary-color);
+}
+
+body::after {
+  padding: 0;
+  margin: 0;
+  content: "";
+  position: fixed;             
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;          
+  background: url("/static/images/bg.png") bottom / cover no-repeat;
+  opacity: 0.60;                
+  z-index: -1;                
+}
+
 .notifications-container {
-    padding: 20px;
-    max-width: 800px;
-    margin: 0 auto;
+  align-content: center;
+  margin: auto;
+  justify-content: center;
+  width: 80%;
+  background: #fff;
+  border-radius: 18px;
+  border: 2px solid var(--card-border);
+  box-shadow: 0 4px 12px rgba(129, 137, 176, 0.15);
+  padding: 1.5rem;
+  color: var(--primary-color);
+}
+
+.notifications-header {
+  justify-content: space-between;
+  display: flex;
+  gap: 30px;
 }
 
 .notifications-list {
-    margin-top: 20px;
+  margin-top: 20px;
 }
 
 .notification-item {
-    padding: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    background-color: #fff;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  padding: 15px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  background-color: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(129, 137, 176, 0.1);
 }
 
 .notification-item:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(129, 137, 176, 0.2);
+  transform: translateY(-2px);
+  border-color: var(--secondary-color);
 }
 
 .notification-item.unread {
-    background-color: #f0f7ff;
-    border-left: 4px solid #007bff;
+  background-color: #f0f7ff;
+  border-left: 4px solid var(--secondary-color);
 }
 
 .notification-content {
-    cursor: pointer;
-    padding: 5px;
+  cursor: pointer;
+  padding: 5px;
 }
 
 .notification-content h4 {
-    margin: 0 0 5px 0;
-    color: #333;
-    font-size: 1rem;
+  margin: 0 0 5px 0;
+  color: var(--primary-color);
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .notification-content small {
-    color: #666;
-    font-size: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }
 
 .badge {
-    margin-left: 8px;
-    font-size: 0.75rem;
-    padding: 0.25em 0.6em;
+  margin-left: 8px;
+  font-size: 0.75rem;
+  padding: 0.25em 0.6em;
+  border-radius: 8px;
+  font-weight: 500;
 }
 
 /* Modal styles */
 .notification-details {
-    padding: 15px;
-    background-color: #f8f9fa;
-    border-radius: 6px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
 }
 
 .notification-details p {
-    margin-bottom: 10px;
-    line-height: 1.5;
+  margin-bottom: 10px;
+  line-height: 1.5;
+  color: var(--primary-color);
 }
 
 .notification-details strong {
-    color: #495057;
+  color: var(--primary-color);
 }
 
 /* Toast styles */
 .toast-container {
-    z-index: 1050;
+  z-index: 1050;
 }
 
 /* Dropdown notification styles */
 .notification-dropdown {
-    position: relative;
-    display: inline-block;
+  position: relative;
+  display: inline-block;
 }
 
 .notification-badge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background-color: #dc3545;
-    color: white;
-    border-radius: 50%;
-    padding: 2px 6px;
-    font-size: 12px;
-    min-width: 18px;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: var(--secondary-color);
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 12px;
+  min-width: 18px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  font-weight: 500;
 }
 
 /* Modal footer buttons */
 .modal-footer .btn {
-    padding: 8px 16px;
-    border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: 0.2s ease-in-out;
 }
 
 .modal-footer .btn-primary {
-    background-color: #007bff;
-    border-color: #007bff;
+  background-color: var(--secondary-color);
+  border: 2px solid var(--secondary-color);
+  color: #fff;
 }
 
 .modal-footer .btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #0056b3;
+  background-color: #245d8b;
+  border-color: #245d8b;
+}
+
+.modal-footer .btn-outline-primary {
+  color: var(--secondary-color);
+  border: 2px solid var(--secondary-color);
+  background-color: transparent;
+}
+
+.modal-footer .btn-outline-primary:hover {
+  background-color: var(--secondary-color);
+  color: #fff;
+  border-color: var(--secondary-color);
+}
+
+/* Unified button styles */
+.btn {
+  font-weight: 500;
+  border-radius: 8px;
+  transition: 0.2s ease-in-out;
+}
+
+.btn-outline-primary,
+.btn-outline-secondary {
+  color: var(--secondary-color);
+  border: 2px solid var(--secondary-color);
+  background-color: transparent;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-secondary:hover {
+  background-color: var(--secondary-color);
+  color: #fff;
+  border-color: var(--secondary-color);
+}
+
+.btn-primary {
+  background-color: var(--secondary-color);
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #245d8b;
+}
+
+/* Card title consistency */
+.card-title {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+/* Action buttons in notifications */
+.notification-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+.notification-actions .btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+/* Empty state styling */
+.notifications-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.notifications-empty h4 {
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* Status indicators */
+.notification-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--secondary-color);
+}
+
+.status-dot.unread {
+  background-color: var(--secondary-color);
+}
+
+.status-dot.read {
+  background-color: var(--text-muted);
 }
