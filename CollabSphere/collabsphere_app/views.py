@@ -37,15 +37,22 @@ def home(request):
     has_checked_in_today = SupabaseService.get_today_checkins(user_id)
     tasks_data = SupabaseService.get_user_tasks(user_id, user.username)
 
+    # Filter tasks for the template
+    all_tasks = tasks_data["all_tasks"]
+    created_tasks = [task for task in all_tasks if task.get('created_by') == user.username]
+    assigned_tasks = [task for task in all_tasks if task.get('assigned_to') == user.username or task.get('assigned_to_username') == user.username]
+
     context = {
         "greeting": greeting,
         "user_name": user.username,
         "user_data": user_data,
         "has_checked_in_today": has_checked_in_today,
-        "tasks": tasks_data["all_tasks"],
-        "active_tasks": len(tasks_data["all_tasks"]),
-        "created_tasks_count": len(tasks_data["created_tasks"]),
-        "assigned_tasks_count": len(tasks_data["assigned_tasks"]),
+        "tasks": all_tasks,
+        "created_tasks": created_tasks,  
+        "assigned_tasks": assigned_tasks,  
+        "active_tasks": len(all_tasks),
+        "created_tasks_count": len(created_tasks),
+        "assigned_tasks_count": len(assigned_tasks),
     }
 
     response = render(request, "home.html", context)

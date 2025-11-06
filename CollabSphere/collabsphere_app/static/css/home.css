@@ -464,3 +464,40 @@ body::after {
   font-size: 1.1rem;
   margin: 0;
 }
+
+/* Tab Switching for tasks */
+.task-tabs {
+    display: flex;
+    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 15px;
+}
+
+.task-tab {
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--bg-color);
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.task-tab:hover {
+    color: #004085;
+    background-color: var(--bg-color);
+}
+
+.task-tab.active {
+    color: var(--secondary-color);
+    border-bottom-color: var(--secondary-color);
+    font-weight: 500;
+}
+
+.task-tab-content {
+    display: none;
+}
+
+.task-tab-content.active {
+    display: block;
+}

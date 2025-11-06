@@ -128,5 +128,5 @@ class SupabaseService:
     @staticmethod
     def get_all_users():
         """Fetch all users (for admin dashboard)."""
-        response = supabase.table("users").select("*").execute()
+        response = supabase.table("user").select("*").execute()
         return response.data or []
