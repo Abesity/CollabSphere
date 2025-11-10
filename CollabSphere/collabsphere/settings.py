@@ -82,7 +82,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                  "collabsphere_app.context_processors.user_profile",
-
+                'teams_app_collabsphere.views.active_team_context',
             ],
         },
     },

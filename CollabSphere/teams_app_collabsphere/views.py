@@ -161,9 +161,15 @@ def get_users_without_teams(request):
 def switch_team(request, team_ID):
     """Switch the user's active team"""
     try:
-        result = Team.switch_user_team(request.user, team_ID)
+        print(f"DEBUG: Switching to team {team_ID} for user {request.user.username}")
+        
+        # Use the set_active_team method instead of switch_user_team
+        result = Team.set_active_team(request.user, team_ID)
 
+        print(f"DEBUG: Switch result: {result}")
+        
         if result.get('success'):
+            # Update session as well for consistency
             request.session['current_team_ID'] = team_ID
             return JsonResponse({'success': True})
         else:
@@ -172,8 +178,7 @@ def switch_team(request, team_ID):
     except Exception as e:
         print(f"Error switching team: {e}")
         return JsonResponse({'success': False, 'error': str(e)})
-
-
+    
 @login_required
 def edit_team(request, team_ID):
     try:
@@ -421,3 +426,79 @@ def view_team(request, team_ID):
     except Exception as e:
         print(f"Error loading team details: {e}")
         return JsonResponse({'success': False, 'error': str(e)})
+    
+# Set users active team
+def active_team_context(request):
+    """Context processor to make active team available globally"""
+    if request.user.is_authenticated:
+        try:
+            active_team = Team.get_active_team(request.user)
+            active_team_id = active_team['team_ID'] if active_team else None
+            
+            # Initialize active team if none is set
+            if not active_team_id:
+                active_team_id = Team.initialize_active_team(request.user)
+                if active_team_id:
+                    active_team = Team.get_active_team(request.user)
+            
+            return {
+                'active_team': active_team,
+                'active_team_id': active_team_id,
+            }
+        except Exception as e:
+            print(f"Error getting active team context: {e}")
+            return {'active_team': None, 'active_team_id': None}
+    return {'active_team': None, 'active_team_id': None}
+
+
+# Update the main teams view to include active team info
+@login_required
+def teams(request):
+    """Main teams view that displays all teams the user belongs to"""
+    try:
+        # Get search query
+        search_query = request.GET.get('q', '').strip()
+
+        # Get current user's teams using the model method
+        teams_data = Team.get_user_teams(request.user)
+        
+        # Get active team
+        active_team = Team.get_active_team(request.user)
+        active_team_id = active_team['team_ID'] if active_team else None
+
+        # Filter teams based on search query
+        if search_query:
+            search_lower = search_query.lower()
+            filtered_teams = []
+            for team in teams_data:
+                # Search in team name, description, and owner
+                team_name = team.get('team_name', '').lower()
+                description = team.get('description', '').lower()
+                owner_username = team.get('owner', {}).get('username', '').lower() if team.get('owner') else ''
+
+                if (search_lower in team_name or
+                    search_lower in description or
+                    search_lower in owner_username):
+                    filtered_teams.append(team)
+            teams_data = filtered_teams
+
+        context = {
+            'teams': teams_data,
+            'search_query': search_query,
+            'create_team_form': CreateTeamForm(),
+            'active_team': active_team,
+            'active_team_id': active_team_id
+        }
+
+        return render(request, 'teams.html', context)
+
+    except Exception as e:
+        print(f"Error loading teams: {e}")
+        context = {
+            'teams': [],
+            'error': 'Unable to load teams at this time.',
+            'create_team_form': CreateTeamForm(),
+            'active_team': None,
+            'active_team_id': None
+        }
+        return render(request, 'teams.html', context)

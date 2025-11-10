@@ -1,7 +1,7 @@
 {% load static humanize %}
 {% load math_filters %}
 
-<article class="card team-card"
+<article class="card team-card {% if team.team_ID == active_team_id %}active-team{% endif %}"
          data-name="{{ team.team_name|lower }}"
          data-desc="{{ team.description|default:''|lower }}"
          data-owner="{% if team.owner.username %}{{ team.owner.username|lower }}{% else %}owner-{{ team.user_id_owner }}{% endif %}">
@@ -12,11 +12,13 @@
          alt="{{ team.team_name }} icon"
          class="team-icon"
          onerror="this.src='{% static 'images/default-team-icon.png' %}'">
+    {% if team.team_ID == active_team_id %}
+      <div class="active-team-badge">Active</div>
+    {% endif %}
   </div>
 
   <!-- Team Header -->
   <div class="card-header">
-    <!-- ADD TEAM NAME HERE -->
     <h3 class="team-name">{{ team.team_name }}</h3>
   </div>
 
@@ -51,11 +53,20 @@
 
   <!-- Footer -->
   <div class="card-footer footer-actions">
+    {% if team.team_ID == active_team_id %}
+      <button class="active-team-btn" disabled>
+        <span class="active-indicator"></span>
+        Active Team
+      </button>
+    {% else %}
+      <button class="switch-team-btn" data-team-id="{{ team.team_ID }}" data-team-name="{{ team.team_name }}">
+        Switch to Team
+      </button>
+    {% endif %}
+    
     {% if team.user_id_owner == request.session.user_ID %}
-      <!-- Owner sees Edit button -->
       <button class="edit-team-btn" data-team-id="{{ team.team_ID }}">Edit</button>
     {% else %}
-      <!-- Non-owner sees View and Leave buttons -->
       <button class="view-team-btn" data-team-id="{{ team.team_ID }}">View</button>
       <button class="leave-team-btn" data-team-id="{{ team.team_ID }}">Leave</button>
     {% endif %}

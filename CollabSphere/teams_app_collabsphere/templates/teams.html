@@ -5,7 +5,7 @@
 {% block title %}Teams – CollabSphere{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/teams.css' %}?v=1.1">
+<link rel="stylesheet" href="{% static 'css/teams.css' %}?v=1.2">
 {% endblock %}
 
 {% block extra_js %}
@@ -15,7 +15,22 @@
 {% block content %}
 <div class="container-fluid dashboard-container">
   <main class="dashboard-main">
-
+  <!-- Add this after the search section -->
+  {% if active_team %}
+  <section class="current-team-section">
+      <div class="current-team-header">
+          <div class="current-team-info">
+              <span class="current-team-label">Current Active Team:</span>
+              <div class="current-team-details">
+                  {% if active_team.icon_url %}
+                  <img src="{{ active_team.icon_url }}" alt="{{ active_team.team_name }}" class="current-team-icon">
+                  {% endif %}
+                  <strong class="current-team-name">{{ active_team.team_name }}</strong>
+              </div>
+          </div>
+      </div>
+  </section>
+  {% endif %}
     <!-- Header Section -->
     <section class="welcome-text">
       <h1>Your Teams</h1>
@@ -108,6 +123,108 @@
 
   document.addEventListener('DOMContentLoaded', () => filterCards(input.value));
 })();
+
+// Switch team functionality 
+function setupSwitchTeamButtons() {
+    const switchButtons = document.querySelectorAll('.switch-team-btn');
+    
+    switchButtons.forEach(btn => {
+        // Remove any existing event listeners by cloning
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+    });
+    
+    // Re-select the buttons after cloning
+    const freshSwitchButtons = document.querySelectorAll('.switch-team-btn');
+    
+    freshSwitchButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const teamId = this.dataset.teamId;
+            const teamName = this.dataset.teamName;
+            
+            // Confirmation dialog
+            if (confirm(`Are you sure you want to switch to "${teamName}" as your active team?\n\nYou'll see content and tasks for this team across CollabSphere.`)) {
+                
+                // Show loading state
+                const originalText = this.textContent;
+                const originalHTML = this.innerHTML;
+                this.textContent = 'Switching...';
+                this.disabled = true;
+                
+                fetch(`/teams/switch/${teamId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Success message with team name
+                        showSuccessMessage(`Successfully switched to "${teamName}"!`);
+                        
+                        // Update UI to reflect the change
+                        updateActiveTeamUI(teamId);
+                        
+                        // Force a hard reload to ensure fresh data
+                        setTimeout(() => {
+                            window.location.reload(true);
+                        }, 1500);
+                    } else {
+                        // Restore button state
+                        this.textContent = originalText;
+                        this.innerHTML = originalHTML;
+                        this.disabled = false;
+                        
+                        // Show error message
+                        alert('Error switching team: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    
+                    // Restore button state
+                    this.textContent = originalText;
+                    this.innerHTML = originalHTML;
+                    this.disabled = false;
+                    
+                    alert('Error switching team. Please try again.');
+                });
+            }
+        });
+    });
+}
+
+// Function to update UI when team is switched
+function updateActiveTeamUI(activeTeamId) {
+    // Remove active class from all teams
+    document.querySelectorAll('.team-card').forEach(card => {
+        card.classList.remove('active-team');
+    });
+    
+    // Add active class to the new active team
+    const activeCard = document.querySelector(`.team-card[data-team-id="${activeTeamId}"]`);
+    if (activeCard) {
+        activeCard.classList.add('active-team');
+    }
+    
+    // Update buttons - switch buttons become active team buttons
+    document.querySelectorAll('.switch-team-btn').forEach(btn => {
+        btn.textContent = 'Switch to Team';
+        btn.disabled = false;
+        btn.classList.remove('active-team-btn');
+    });
+    
+    document.querySelectorAll('.active-team-btn').forEach(btn => {
+        btn.disabled = true;
+    });
+}
+
+// Call this function when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    setupSwitchTeamButtons();
+});
 
 document.addEventListener('DOMContentLoaded', function() {
   const addBtn = document.getElementById('addTeamBtn');
@@ -373,6 +490,70 @@ viewButtons.forEach(btn => {
   });
 });
 
+
+  // Function to show success message
+  function showSuccessMessage(message) {
+      // Create success message element
+      const successMsg = document.createElement('div');
+      successMsg.className = 'success-message';
+      successMsg.innerHTML = `
+          <div class="success-content">
+              <span class="success-icon">✓</span>
+              <span class="success-text">${message}</span>
+          </div>
+      `;
+      
+      // Add styles
+      successMsg.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #10b981;
+          color: white;
+          padding: 16px 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          z-index: 10000;
+          animation: slideInRight 0.3s ease-out;
+      `;
+      
+      // Add keyframes for animation
+      const style = document.createElement('style');
+      style.textContent = `
+          @keyframes slideInRight {
+              from {
+                  transform: translateX(100%);
+                  opacity: 0;
+              }
+              to {
+                  transform: translateX(0);
+                  opacity: 1;
+              }
+          }
+          .success-content {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+          }
+          .success-icon {
+              font-weight: bold;
+              font-size: 18px;
+          }
+          .success-text {
+              font-weight: 500;
+          }
+      `;
+      document.head.appendChild(style);
+      
+      // Add to page
+      document.body.appendChild(successMsg);
+      
+      // Remove after 3 seconds
+      setTimeout(() => {
+          successMsg.remove();
+          style.remove();
+      }, 3000);
+  }
 // ===== Setup View Team Modal (Read-only) =====
 function setupViewTeamModal(editModalContent) {
     const form = editModalContent.querySelector('#editTeamForm');

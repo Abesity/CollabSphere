@@ -390,7 +390,109 @@ class Team:
 
         except Exception as e:
             print(f"Error updating team: {e}")
-            return {'success': False, 'error': str(e)}   
+            return {'success': False, 'error': str(e)}  
+        
+    # Set Active Team and reflect across other apps
+    @staticmethod
+    def set_active_team(django_user, team_ID):
+        """Set user's active team"""
+        try:
+            # Get the Supabase user ID
+            supabase_user_id = Team.get_supabase_user_id(django_user)
+            if not supabase_user_id:
+                return {'success': False, 'error': 'User not found in database'}
+
+            # Verify user is member of the team
+            membership_check = supabase.table('user_team')\
+                .select('*')\
+                .eq('user_id', supabase_user_id)\
+                .eq('team_ID', team_ID)\
+                .is_('left_at', None)\
+                .execute()
+            
+            if not membership_check.data:
+                return {'success': False, 'error': 'Not a member of this team'}
+            
+            # Update user's active team - THIS IS THE CRITICAL LINE
+            update_response = supabase.table('user')\
+                .update({'active_team_id': team_ID})\
+                .eq('user_ID', supabase_user_id)\
+                .execute()
+            
+            if update_response.data:
+                return {'success': True, 'message': f'Active team set to {team_ID}'}
+            else:
+                return {'success': False, 'error': 'Failed to update active team'}
+                
+        except Exception as e:
+            print(f"Error setting active team: {e}")
+            return {'success': False, 'error': str(e)}
+        
+    @staticmethod
+    def get_active_team(django_user):
+        """Get user's active team - SIMPLE VERSION"""
+        try:
+            supabase_user_id = Team.get_supabase_user_id(django_user)
+            if not supabase_user_id:
+                return None
+
+            user_response = supabase.table('user')\
+                .select('active_team_id')\
+                .eq('user_ID', supabase_user_id)\
+                .execute()
+            
+            if not user_response.data or not user_response.data[0].get('active_team_id'):
+                return None
+                
+            active_team_id = user_response.data[0]['active_team_id']
+            
+            team_response = supabase.table('team')\
+                .select('team_ID, team_name, description, icon_url, user_id_owner')\
+                .eq('team_ID', active_team_id)\
+                .execute()
+            
+            if team_response.data:
+                return team_response.data[0]
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error getting active team: {e}")
+            return None
+
+    @staticmethod
+    def get_active_team_id(django_user):
+        """Get only the active team ID"""
+        try:
+            active_team = Team.get_active_team(django_user)
+            return active_team['team_ID'] if active_team else None
+        except Exception as e:
+            print(f"Error getting active team ID: {e}")
+            return None
+
+    @staticmethod
+    def initialize_active_team(django_user):
+        """Set first available team as active if none is set"""
+        try:
+            # Check if user already has an active team
+            current_active = Team.get_active_team(django_user)
+            if current_active:
+                return current_active['team_ID']
+
+            # Get user's teams
+            teams = Team.get_user_teams(django_user)
+            if teams and len(teams) > 0:
+                # Set first team as active
+                first_team_id = teams[0]['team_ID']
+                result = Team.set_active_team(django_user, first_team_id)
+                if result.get('success'):
+                    return first_team_id
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error initializing active team: {e}")
+            return None
 class UserTeam:
     """UserTeam model handling user-team relationships"""
     
