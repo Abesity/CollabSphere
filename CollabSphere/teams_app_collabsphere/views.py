@@ -441,15 +441,29 @@ def active_team_context(request):
                 if active_team_id:
                     active_team = Team.get_active_team(request.user)
             
+            # Calculate team members count
+            team_members_count = 0
+            if active_team_id:
+                team_members = Team.get_active_team_members(request.user)
+                team_members_count = len(team_members)
+            
             return {
                 'active_team': active_team,
                 'active_team_id': active_team_id,
+                'team_members_count': team_members_count,
             }
         except Exception as e:
             print(f"Error getting active team context: {e}")
-            return {'active_team': None, 'active_team_id': None}
-    return {'active_team': None, 'active_team_id': None}
-
+            return {
+                'active_team': None, 
+                'active_team_id': None,
+                'team_members_count': 0,
+            }
+    return {
+        'active_team': None, 
+        'active_team_id': None,
+        'team_members_count': 0,
+    }
 
 # Update the main teams view to include active team info
 @login_required
