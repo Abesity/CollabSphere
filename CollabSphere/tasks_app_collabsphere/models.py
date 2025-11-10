@@ -2,6 +2,7 @@ from django.conf import settings
 from supabase import create_client, Client
 from datetime import datetime
 from django.contrib.auth import get_user_model
+from teams_app_collabsphere.models import Team
 
 User = get_user_model()
 
@@ -118,8 +119,71 @@ class Task:
         except Exception as e:
             print("Error counting tasks:", e)
             return 0
+# Get users team members and current active team
+    @staticmethod
+    def get_active_team_members(django_user):
+        """Get members of user's active team"""
+        try:
+            # Use the imported Team class
+            return Team.get_active_team_members(django_user)
+        except Exception as e:
+            print("Error fetching active team members:", e)
+            return []
 
-
+    @staticmethod
+    def get_user_active_team_id(django_user):
+        """Get user's active team ID"""
+        try:
+            # Use the imported Team class
+            return Team.get_active_team_id(django_user)
+        except Exception as e:
+            print("Error getting active team ID:", e)
+            return None
+        
+# HELPER METHOD TO GET TEAM MEMBERS
+    @staticmethod
+    def get_team_members(team_id):
+        """Get members of a specific team"""
+        try:
+            members_response = supabase.table('user_team')\
+                .select('user_id, user:user_id(username, profile_picture)')\
+                .eq('team_ID', team_id)\
+                .is_('left_at', None)\
+                .execute()
+            
+            members = []
+            for member_data in members_response.data:
+                user_data = member_data.get('user', {})
+                members.append({
+                    "id": member_data.get('user_id'),
+                    "username": user_data.get('username', 'Unknown')
+                })
+            
+            return members
+            
+        except Exception as e:
+            print(f"Error fetching team {team_id} members:", e)
+            return []
+        
+    @staticmethod
+    def get_team_name(team_id):
+        """Get team name by team ID"""
+        try:
+            if not team_id:
+                return None
+                
+            response = supabase.table('team')\
+                .select('team_name')\
+                .eq('team_ID', team_id)\
+                .execute()
+            
+            if response.data and len(response.data) > 0:
+                return response.data[0]['team_name']
+            return None
+        except Exception as e:
+            print(f"Error fetching team name for ID {team_id}:", e)
+            return None
+# COMMENTS
 class Comment:
     """Wrapper for Supabase 'task_comments' table operations."""
 

@@ -751,11 +751,11 @@ body::after {
 }
 
 .switch-team-btn:hover {
-    background: #245d8b !important;
+    background: #818b94 !important;
     transform: translateY(-1px);
 }
 
-/* Make sure the active team stands out with a glow effect */
+/* active team stands out with a glow effect */
 .card.team-card.active-team::before {
     content: '';
     position: absolute;
@@ -763,7 +763,6 @@ body::after {
     left: -3px;
     right: -3px;
     bottom: -3px;
-    background: linear-gradient(135deg, #3b82f6, #60a5fa, #3b82f6);
     border-radius: 17px;
     z-index: -1;
     animation: borderGlow 3s ease-in-out infinite;

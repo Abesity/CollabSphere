@@ -15,22 +15,47 @@ def tasks(request):
     """
     Renders the Create Task modal (tasks.html)
     """
-    team_members = Task.fetch_team_members()
+    from teams_app_collabsphere.models import Team
+    
+    # Ensure user has an active team initialized
+    Team.initialize_active_team(request.user)
+    
+    # Get active team info
+    active_team_id = Task.get_user_active_team_id(request.user)
+    team_members = Task.get_active_team_members(request.user)
+    
+    # Get team name if there's an active team
+    team_name = None
+    if active_team_id:
+        team_name = Task.get_team_name(active_team_id)
+    
+    # Debug output
+    print(f"DEBUG: Active team ID: {active_team_id}")
+    print(f"DEBUG: Team name: {team_name}")
+    print(f"DEBUG: Team members count: {len(team_members)}")
+    
     context = {
         "task_id": 1,
-        "team_id": 101,
+        "team_id": active_team_id,
+        "team_name": team_name,  # Add team name to context
         "team_members": team_members,
+        "has_active_team": active_team_id is not None
     }
     return render(request, "tasks.html", context)
 
-
-# CREATE TASK
 @login_required
 def task_create(request):
     """Handle POST to create a new task and redirect to home."""
     if request.method != "POST":
         return redirect("home")
 
+    # Get active team info first
+    active_team_id = Task.get_user_active_team_id(request.user)
+    team_members = Task.get_active_team_members(request.user)
+    
+    # Debug
+    print(f"DEBUG task_create: Active team ID: {active_team_id}")
+    
     title = request.POST.get("taskName", "").strip()
     description = request.POST.get("description") or None
     assign_to_raw = request.POST.get("assignTo")
@@ -40,12 +65,20 @@ def task_create(request):
     except ValueError:
         assigned_to = None
 
+    # Verify assigned user is in active team
     assigned_to_username = None
     if assigned_to:
-        members = Task.fetch_team_members()
+        members = Task.get_active_team_members(request.user)
         match = next((m for m in members if m["id"] == assigned_to), None)
         if match:
             assigned_to_username = match["username"]
+        else:
+            # Security: If user tries to assign to someone not in team, clear assignment
+            assigned_to = None
+            assigned_to_username = None
+
+    # Get active team ID for the task
+    active_team_id = Task.get_user_active_team_id(request.user)
 
     payload = {
         "title": title,
@@ -59,7 +92,7 @@ def task_create(request):
         "start_date": request.POST.get("startDate") or None,
         "due_date": request.POST.get("dueDate") or None,
         "priority": request.POST.get("priority") in ["on", "true", "True"],
-        "team_id": None,
+        "team_id": active_team_id,  # Set to active team ID
     }
 
     task_result = Task.create(payload)
@@ -73,7 +106,8 @@ def task_create(request):
             'assigned_to_username': assigned_to_username,
             'created_by': request.user.username,
             'due_date': payload['due_date'],
-            'task_id': task_result[0]['task_id'] if task_result and len(task_result) > 0 else None
+            'task_id': task_result[0]['task_id'] if task_result and len(task_result) > 0 else None,
+            'team_id': active_team_id
         }
         
         try:
@@ -90,7 +124,8 @@ def task_create(request):
             'assigned_to': assigned_to,
             'due_date': payload['due_date'],
             'status': payload['status'],
-            'priority': payload['priority']
+            'priority': payload['priority'],
+            'team_id': active_team_id
         }
         
         trigger_context = {
@@ -110,8 +145,6 @@ def task_create(request):
     
     return redirect("home")
 
-
-# TASK DETAIL
 @login_required
 def task_detail(request, task_id):
     """Display a single task's details (read-only modal)."""
@@ -130,13 +163,21 @@ def task_detail(request, task_id):
         if val and isinstance(val, str) and "T" in val:
             task_data[key] = val.split("T")[0]
 
+    # Get members from the task's team or active team
+    task_team_id = task_data.get('team_id')
+    if task_team_id:
+        # Get members from the specific task's team
+        team_members = Task.get_team_members(task_team_id)
+    else:
+        # Fallback to active team members
+        team_members = Task.get_active_team_members(request.user)
+
     context = {
         "task": task_data,
-        "team_members": Task.fetch_team_members(),
+        "team_members": team_members,
         "comments": Task.fetch_comments(task_id),
     }
     return render(request, "task_detail.html", context)
-
 
 # UPDATE TASK
 @login_required
@@ -163,7 +204,23 @@ def task_update(request, task_id):
     except ValueError:
         assigned_to = None
 
+    # Verify assigned user is in the task's team or active team
     assigned_to_username = None
+    if assigned_to:
+        task_team_id = task_data.get('team_id')
+        if task_team_id:
+            members = Task.get_team_members(task_team_id)
+        else:
+            members = Task.get_active_team_members(request.user)
+            
+        match = next((m for m in members if m["id"] == assigned_to), None)
+        if match:
+            assigned_to_username = match["username"]
+        else:
+            # Security: Clear assignment if user not in team
+            assigned_to = None
+            assigned_to_username = None
+    
     if assigned_to:
         members = Task.fetch_team_members()
         match = next((m for m in members if m["id"] == assigned_to), None)
