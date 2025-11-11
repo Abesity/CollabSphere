@@ -246,6 +246,41 @@ class Team:
         except Exception as e:
             print(f"Error creating team: {e}")
             return {'success': False, 'error': f'Database error: {str(e)}'}
+    
+    @staticmethod
+    def get_active_team_members(django_user):
+        """Get members of user's active team"""
+        try:
+            # Get active team ID
+            active_team = Team.get_active_team(django_user)
+            if not active_team:
+                print(f"DEBUG: No active team for user {django_user.username}")
+                return []
+            
+            active_team_id = active_team['team_ID']
+            print(f"DEBUG: Active team ID found: {active_team_id}")
+            
+            # Get team members
+            members_response = Team.supabase.table('user_team')\
+                .select('user_id, user:user_id(username, profile_picture)')\
+                .eq('team_ID', active_team_id)\
+                .is_('left_at', None)\
+                .execute()
+            
+            members = []
+            for member_data in members_response.data:
+                user_data = member_data.get('user', {})
+                members.append({
+                    "id": member_data.get('user_id'),
+                    "username": user_data.get('username', 'Unknown')
+                })
+            
+            print(f"DEBUG: Found {len(members)} members for active team {active_team_id}")
+            return members
+            
+        except Exception as e:
+            print(f"Error fetching active team members: {e}")
+            return []
                 
     @staticmethod
     def switch_user_team(django_user, team_ID):
@@ -324,14 +359,32 @@ class Team:
                 if not update_response.data:
                     return {'success': False, 'error': 'Failed to update team information.'}
 
-            # Handle member additions - IMPROVED: Better duplicate handling
+            # Add debug logging
+            print(f"DEBUG: Team owner ID: {team_owner_id}")
+            print(f"DEBUG: Members to add: {team_members}")
+            print(f"DEBUG: Members to remove: {members_to_remove}")
+
+            # Handle member additions
             if team_members:
                 print(f"DEBUG: Processing {len(team_members)} members to add")
                 for user_id in team_members:
                     # Skip if trying to add owner (they're already a member)
                     if user_id == team_owner_id:
+                        print(f"DEBUG: Skipping owner {user_id}")
                         continue
-                        
+                    
+                    # Verify user exists in database
+                    user_check = supabase.table('user')\
+                        .select('user_ID, username')\
+                        .eq('user_ID', user_id)\
+                        .execute()
+                    
+                    if not user_check.data:
+                        print(f"ERROR: User {user_id} does not exist in database")
+                        continue
+                    else:
+                        print(f"DEBUG: User {user_id} exists: {user_check.data[0]['username']}")
+                    
                     # Check if user is already an active member
                     existing_member = supabase.table('user_team')\
                         .select('*')\
@@ -343,7 +396,8 @@ class Team:
                     # Only add if not already an active member
                     if not existing_member.data:
                         try:
-                            # Add new member
+                            print(f"DEBUG: Attempting to add member {user_id} to team")
+                            # Add new member with better error handling
                             add_result = supabase.table('user_team')\
                                 .insert({
                                     'user_id': user_id,
@@ -352,18 +406,31 @@ class Team:
                                 })\
                                 .execute()
                             
-                            if not add_result.data:
-                                print(f"Warning: Failed to add member {user_id} to team")
+                            if add_result.data:
+                                print(f"SUCCESS: Added member {user_id} to team")
+                            else:
+                                # Check if it's actually a duplicate despite our check
+                                print(f"WARNING: No data returned when adding member {user_id}")
                                 
                         except Exception as e:
-                            # Check if it's a duplicate key error and ignore it
                             error_str = str(e)
-                            if 'duplicate key' in error_str and 'user_team_pkey' in error_str:
-                                print(f"Member {user_id} already exists in team, skipping...")
+                            # Check for various duplicate error messages
+                            if any(dup_indicator in error_str.lower() for dup_indicator in 
+                                ['duplicate key', 'already exists', 'unique constraint', '23505']):
+                                print(f"INFO: Member {user_id} already exists in team")
+                                # Continue with other members
+                                continue
+                            elif 'server disconnected' in error_str.lower():
+                                print(f"WARNING: Server disconnected when adding member {user_id}, but member may have been added")
+                                # Assume success and continue
+                                continue
                             else:
-                                print(f"Error adding member {user_id}: {e}")
-                            # Continue with other members even if one fails
-
+                                print(f"ERROR adding member {user_id}: {e}")
+                                # For non-duplicate errors, continue with other members
+                                continue
+                    else:
+                        print(f"INFO: Member {user_id} is already in the team")
+            
             # Handle member removals
             if members_to_remove:
                 print(f"DEBUG: Processing {len(members_to_remove)} members to remove")
@@ -390,7 +457,109 @@ class Team:
 
         except Exception as e:
             print(f"Error updating team: {e}")
-            return {'success': False, 'error': str(e)}   
+            return {'success': False, 'error': str(e)}
+    
+    # Set Active Team and reflect across other apps
+    @staticmethod
+    def set_active_team(django_user, team_ID):
+        """Set user's active team"""
+        try:
+            # Get the Supabase user ID
+            supabase_user_id = Team.get_supabase_user_id(django_user)
+            if not supabase_user_id:
+                return {'success': False, 'error': 'User not found in database'}
+
+            # Verify user is member of the team
+            membership_check = supabase.table('user_team')\
+                .select('*')\
+                .eq('user_id', supabase_user_id)\
+                .eq('team_ID', team_ID)\
+                .is_('left_at', None)\
+                .execute()
+            
+            if not membership_check.data:
+                return {'success': False, 'error': 'Not a member of this team'}
+            
+            # Update user's active team - THIS IS THE CRITICAL LINE
+            update_response = supabase.table('user')\
+                .update({'active_team_id': team_ID})\
+                .eq('user_ID', supabase_user_id)\
+                .execute()
+            
+            if update_response.data:
+                return {'success': True, 'message': f'Active team set to {team_ID}'}
+            else:
+                return {'success': False, 'error': 'Failed to update active team'}
+                
+        except Exception as e:
+            print(f"Error setting active team: {e}")
+            return {'success': False, 'error': str(e)}
+        
+    @staticmethod
+    def get_active_team(django_user):
+        """Get user's active team - SIMPLE VERSION"""
+        try:
+            supabase_user_id = Team.get_supabase_user_id(django_user)
+            if not supabase_user_id:
+                return None
+
+            user_response = supabase.table('user')\
+                .select('active_team_id')\
+                .eq('user_ID', supabase_user_id)\
+                .execute()
+            
+            if not user_response.data or not user_response.data[0].get('active_team_id'):
+                return None
+                
+            active_team_id = user_response.data[0]['active_team_id']
+            
+            team_response = supabase.table('team')\
+                .select('team_ID, team_name, description, icon_url, user_id_owner')\
+                .eq('team_ID', active_team_id)\
+                .execute()
+            
+            if team_response.data:
+                return team_response.data[0]
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error getting active team: {e}")
+            return None
+
+    @staticmethod
+    def get_active_team_id(django_user):
+        """Get only the active team ID"""
+        try:
+            active_team = Team.get_active_team(django_user)
+            return active_team['team_ID'] if active_team else None
+        except Exception as e:
+            print(f"Error getting active team ID: {e}")
+            return None
+
+    @staticmethod
+    def initialize_active_team(django_user):
+        """Set first available team as active if none is set"""
+        try:
+            # Check if user already has an active team
+            current_active = Team.get_active_team(django_user)
+            if current_active:
+                return current_active['team_ID']
+
+            # Get user's teams
+            teams = Team.get_user_teams(django_user)
+            if teams and len(teams) > 0:
+                # Set first team as active
+                first_team_id = teams[0]['team_ID']
+                result = Team.set_active_team(django_user, first_team_id)
+                if result.get('success'):
+                    return first_team_id
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error initializing active team: {e}")
+            return None
 class UserTeam:
     """UserTeam model handling user-team relationships"""
     

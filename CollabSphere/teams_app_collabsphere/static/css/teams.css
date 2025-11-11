@@ -677,3 +677,98 @@ body::after {
   from { transform: translateY(30px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* ==============================
+   Active Team Styles 
+============================== */
+
+/* Active team card styling */
+.card.team-card.active-team {
+    border: 3px solid #3b82f6 !important;
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4) !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%) !important;
+    position: relative;
+}
+
+/* Active team badge */
+.active-team-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Active team button - make it clearly different */
+.active-team-btn {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: white !important;
+    cursor: not-allowed !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    opacity: 1 !important;
+    margin-left: 5px !important;
+    font-size: 0.9rem !important;
+}
+
+.active-team-btn:disabled {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: white !important;
+}
+
+.active-indicator {
+    color: white;
+    margin-right: 6px;
+    font-size: 14px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Switch team button - ensure it's properly styled */
+.switch-team-btn {
+    background: var(--secondary-color) !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+    margin-left: 5px !important;
+    font-size: 0.9rem !important;
+}
+
+.switch-team-btn:hover {
+    background: #818b94 !important;
+    transform: translateY(-1px);
+}
+
+/* active team stands out with a glow effect */
+.card.team-card.active-team::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    border-radius: 17px;
+    z-index: -1;
+    animation: borderGlow 3s ease-in-out infinite;
+}
+
+@keyframes borderGlow {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
