@@ -350,45 +350,52 @@ document.addEventListener('DOMContentLoaded', function() {
           });
 
           // Handle edit form submission
-          const editForm = editModalContent.querySelector('#editTeamForm');
-          if (editForm) {
+        const editForm = editModalContent.querySelector('#editTeamForm');
+        if (editForm) {
             editForm.addEventListener('submit', function(e) {
-              e.preventDefault();
-              
-              const formData = new FormData(editForm);
-              const submitButton = editForm.querySelector('button[type="submit"]');
-              
-              submitButton.disabled = true;
-              submitButton.textContent = 'Updating...';
-              
-              fetch(editForm.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                  'X-CSRFToken': '{{ csrf_token }}'
-                }
-              })
-              .then(response => response.json())
-              .then(data => {
-                if (data.success) {
-                  closeEditModal();
-                  setTimeout(() => {
-                    window.location.reload(true);
-                  }, 100);
-                } else {
-                  alert('Error updating team: ' + data.error);
-                  submitButton.disabled = false;
-                  submitButton.textContent = 'Update Team';
-                }
-              })
-              .catch(error => {
-                console.error('Error:', error);
-                alert('Error updating team. Please try again.');
-                submitButton.disabled = false;
-                submitButton.textContent = 'Update Team';
-              });
+                e.preventDefault();
+                
+                const formData = new FormData(editForm);
+                const submitButton = editForm.querySelector('button[type="submit"]');
+                
+                submitButton.disabled = true;
+                submitButton.textContent = 'Updating...';
+                
+                fetch(editForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message and force complete page refresh
+                        showSuccessMessage('Team updated successfully!');
+                        
+                        // Close modal first
+                        closeEditModal();
+                        
+                        // Force a complete refresh of the page to ensure UI is in sync
+                        setTimeout(() => {
+                            window.location.reload(true); // true forces reload from server, not cache
+                        }, 1500);
+                    } else {
+                        alert('Error updating team: ' + data.error);
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Update Team';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error updating team. Please try again.');
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Update Team';
+                });
             });
-          }
+        }
+
         })
         .catch(error => {
           console.error('Error loading edit form:', error);

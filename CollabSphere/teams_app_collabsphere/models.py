@@ -359,14 +359,32 @@ class Team:
                 if not update_response.data:
                     return {'success': False, 'error': 'Failed to update team information.'}
 
-            # Handle member additions - IMPROVED: Better duplicate handling
+            # Add debug logging
+            print(f"DEBUG: Team owner ID: {team_owner_id}")
+            print(f"DEBUG: Members to add: {team_members}")
+            print(f"DEBUG: Members to remove: {members_to_remove}")
+
+            # Handle member additions
             if team_members:
                 print(f"DEBUG: Processing {len(team_members)} members to add")
                 for user_id in team_members:
                     # Skip if trying to add owner (they're already a member)
                     if user_id == team_owner_id:
+                        print(f"DEBUG: Skipping owner {user_id}")
                         continue
-                        
+                    
+                    # Verify user exists in database
+                    user_check = supabase.table('user')\
+                        .select('user_ID, username')\
+                        .eq('user_ID', user_id)\
+                        .execute()
+                    
+                    if not user_check.data:
+                        print(f"ERROR: User {user_id} does not exist in database")
+                        continue
+                    else:
+                        print(f"DEBUG: User {user_id} exists: {user_check.data[0]['username']}")
+                    
                     # Check if user is already an active member
                     existing_member = supabase.table('user_team')\
                         .select('*')\
@@ -378,7 +396,8 @@ class Team:
                     # Only add if not already an active member
                     if not existing_member.data:
                         try:
-                            # Add new member
+                            print(f"DEBUG: Attempting to add member {user_id} to team")
+                            # Add new member with better error handling
                             add_result = supabase.table('user_team')\
                                 .insert({
                                     'user_id': user_id,
@@ -387,18 +406,31 @@ class Team:
                                 })\
                                 .execute()
                             
-                            if not add_result.data:
-                                print(f"Warning: Failed to add member {user_id} to team")
+                            if add_result.data:
+                                print(f"SUCCESS: Added member {user_id} to team")
+                            else:
+                                # Check if it's actually a duplicate despite our check
+                                print(f"WARNING: No data returned when adding member {user_id}")
                                 
                         except Exception as e:
-                            # Check if it's a duplicate key error and ignore it
                             error_str = str(e)
-                            if 'duplicate key' in error_str and 'user_team_pkey' in error_str:
-                                print(f"Member {user_id} already exists in team, skipping...")
+                            # Check for various duplicate error messages
+                            if any(dup_indicator in error_str.lower() for dup_indicator in 
+                                ['duplicate key', 'already exists', 'unique constraint', '23505']):
+                                print(f"INFO: Member {user_id} already exists in team")
+                                # Continue with other members
+                                continue
+                            elif 'server disconnected' in error_str.lower():
+                                print(f"WARNING: Server disconnected when adding member {user_id}, but member may have been added")
+                                # Assume success and continue
+                                continue
                             else:
-                                print(f"Error adding member {user_id}: {e}")
-                            # Continue with other members even if one fails
-
+                                print(f"ERROR adding member {user_id}: {e}")
+                                # For non-duplicate errors, continue with other members
+                                continue
+                    else:
+                        print(f"INFO: Member {user_id} is already in the team")
+            
             # Handle member removals
             if members_to_remove:
                 print(f"DEBUG: Processing {len(members_to_remove)} members to remove")
@@ -425,8 +457,8 @@ class Team:
 
         except Exception as e:
             print(f"Error updating team: {e}")
-            return {'success': False, 'error': str(e)}  
-        
+            return {'success': False, 'error': str(e)}
+    
     # Set Active Team and reflect across other apps
     @staticmethod
     def set_active_team(django_user, team_ID):
