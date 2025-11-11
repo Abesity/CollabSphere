@@ -19,6 +19,9 @@
     <section class="welcome-text">
       <h1>{{ greeting }}, {{ fullname|default:"User" }}!</h1>
       <p>{{ team_message|default:"Here's a summary of your recent check-ins." }}</p>
+      {% if active_team %}
+        <small class="text-muted">Viewing team: {{ active_team.team_name }}</small>
+      {% endif %}
     </section>
 
     <!-- Well-being Chart and Previous Check-ins -->
@@ -27,7 +30,7 @@
         <!-- Line chart -->
         <div class="card wellbeing-chart mb-4">
           <div class="card-header">
-            <h3>Well-being Trends</h3>
+            <h3>{% if is_team_view %}Team Well-being Trends{% else %}Your Well-being Trends{% endif %}</h3>
           </div>
           <div class="card-content">
             <canvas id="wellbeingChart" height="250"></canvas>
@@ -37,13 +40,28 @@
         <!-- Previous check-ins -->
         <div class="card recent-checkins">
           <div class="card-header">
-            <h3>Previous Check-ins</h3>
+            <h3>{% if is_team_view %}Team Check-ins{% else %}Your Check-ins{% endif %}</h3>
           </div>
           <div class="card-content">
             <ul class="list-group">
               {% for checkin in recent_checkins %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                   {{ checkin.date_submitted }}
+                <li class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>
+                        {% if is_team_view and checkin.user %}
+                          {{ checkin.user.username }}
+                        {% else %}
+                          You
+                        {% endif %}
+                      </strong>
+                      <br>
+                      <small class="text-muted">{{ checkin.date_submitted }}</small>
+                      {% if checkin.notes %}
+                        <br>
+                        <small>"{{ checkin.notes }}"</small>
+                      {% endif %}
+                    </div>
                     <span class="badge 
                       {% if checkin.status == 'Good' %}bg-success
                       {% elif checkin.status == 'Okay' %}bg-warning
@@ -51,10 +69,17 @@
                       {% else %}bg-secondary
                       {% endif %}">
                       {{ checkin.status|default:"None" }}
-                  </span>
+                    </span>
+                  </div>
                 </li>
               {% empty %}
-                <li class="list-group-item text-muted">No check-ins yet.</li>
+                <li class="list-group-item text-muted">
+                  {% if is_team_view %}
+                    No team check-ins yet.
+                  {% else %}
+                    No check-ins yet.
+                  {% endif %}
+                </li>
               {% endfor %}
             </ul>
           </div>
@@ -97,6 +122,7 @@ function createWellbeingChart() {
   }
 
   const chartData = {{ chart_data|safe }};
+  const individualCheckinsData = {{ individual_checkins_data|safe|default:"[]" }};
   
   // If no data, show a message
   if (!chartData || chartData.length === 0) {
@@ -208,12 +234,38 @@ function createWellbeingChart() {
               label: function(context) {
                 const index = context.dataIndex;
                 const mood = moodStatuses[index];
-                return `Mood: ${mood}`;
+                return `Average Mood: ${mood}`;
               },
               afterLabel: function(context) {
                 const index = context.dataIndex;
                 const date = validData[index].date;
-                return `Date: ${date}`;
+                const checkinCount = validData[index].checkin_count;
+                
+                // Get individual check-ins for this date
+                const individualCheckins = validData[index].individual_checkins || [];
+                
+                let tooltipText = `Date: ${date}\n`;
+                tooltipText += `Total Check-ins: ${checkinCount}\n\n`;
+                
+                if (individualCheckins.length > 0) {
+                  tooltipText += 'Individual Check-ins:\n';
+                  individualCheckins.forEach(checkin => {
+                    const statusEmoji = checkin.status === 'Good' ? '😊' : 
+                                      checkin.status === 'Okay' ? '😐' : '😔';
+                    tooltipText += `• ${checkin.username}: ${checkin.status} ${statusEmoji}\n`;
+                  });
+                }
+                
+                return tooltipText;
+              },
+              footer: function(context) {
+                // Add a helpful note for team view
+                const index = context[0].dataIndex;
+                const individualCheckins = validData[index].individual_checkins || [];
+                if (individualCheckins.length > 0) {
+                  return;
+                }
+                return '';
               }
             }
           }

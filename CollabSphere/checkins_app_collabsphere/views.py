@@ -7,6 +7,7 @@ import json
 
 from .models import WellbeingService
 from .notification_triggers import CheckinNotificationTriggers
+from teams_app_collabsphere.models import Team
 
 
 @login_required(login_url='login')
@@ -15,37 +16,122 @@ def wellbeing_dashboard(request):
     if not user_id:
         return redirect("login")
 
-    # Fetch recent check-ins from service
+    # Get active team info
+    active_team = Team.get_active_team(request.user)
+    active_team_id = active_team['team_ID'] if active_team else None
+
+    # Fetch team check-ins if user has an active team
+    team_checkins = []
+    team_chart_data = []
+    individual_checkins_data = []  # Store individual check-ins for detailed tooltips
+    
+    if active_team_id:
+        try:
+            # Get team check-ins for the list
+            team_checkins = WellbeingService.get_team_checkins(active_team_id, limit=15)
+            
+            # Get team check-ins for the chart with user details
+            team_chart_raw_data = WellbeingService.get_team_checkins_for_chart(active_team_id)
+            
+            # Store individual check-ins for detailed tooltips
+            individual_checkins_data = team_chart_raw_data
+            
+            # Prepare chart data (group by date and calculate average mood)
+            chart_data_by_date = {}
+            for checkin in team_chart_raw_data:
+                date_val = checkin.get("date_submitted")
+                if not date_val:
+                    continue
+                    
+                # Convert to date string for grouping
+                if isinstance(date_val, str):
+                    try:
+                        date_obj = datetime.fromisoformat(date_val.replace('Z', '+00:00'))
+                        date_str = date_obj.strftime('%Y-%m-%d')
+                    except:
+                        date_str = date_val.split('T')[0] if 'T' in date_val else date_val
+                else:
+                    date_str = date_val.strftime('%Y-%m-%d')
+                
+                # Convert status to numerical value
+                status = checkin.get("status") or "Okay"
+                mood_value = 1  # Default to "Okay"
+                if status == 'Good':
+                    mood_value = 2
+                elif status == 'Needs Support':
+                    mood_value = 0
+                
+                if date_str not in chart_data_by_date:
+                    chart_data_by_date[date_str] = {
+                        'date': date_str,
+                        'moods': [],
+                        'checkins': [],  # Store individual check-ins for this date
+                        'count': 0
+                    }
+                
+                chart_data_by_date[date_str]['moods'].append(mood_value)
+                chart_data_by_date[date_str]['checkins'].append({
+                    'username': checkin.get('user', {}).get('username', 'Unknown'),
+                    'status': status,
+                    'mood_value': mood_value
+                })
+                chart_data_by_date[date_str]['count'] += 1
+            
+            # Calculate average mood per day
+            for date_data in chart_data_by_date.values():
+                if date_data['moods']:
+                    avg_mood = sum(date_data['moods']) / len(date_data['moods'])
+                    # Convert back to status for display
+                    if avg_mood >= 1.5:
+                        status_display = 'Good'
+                    elif avg_mood >= 0.5:
+                        status_display = 'Okay'
+                    else:
+                        status_display = 'Needs Support'
+                    
+                    team_chart_data.append({
+                        "date": date_data['date'],
+                        "mood": status_display,
+                        "avg_mood": avg_mood,
+                        "checkin_count": date_data['count'],
+                        "individual_checkins": date_data['checkins']  # Include individual check-ins
+                    })
+            
+            # Sort by date for the chart
+            team_chart_data.sort(key=lambda x: x['date'])
+            
+        except Exception as e:
+            print(f"Error fetching team check-ins: {e}")
+            team_checkins = []
+            team_chart_data = []
+            individual_checkins_data = []
+    
+    # Also get user's personal check-ins
     try:
-        recent_checkins = WellbeingService.get_recent_checkins(user_id)
+        user_checkins = WellbeingService.get_recent_checkins(user_id)
     except Exception as e:
-        print(f"Error fetching check-ins: {e}")
-        recent_checkins = []
+        print(f"Error fetching user check-ins: {e}")
+        user_checkins = []
 
-    # Prepare chart data (oldest first)
-    chart_data = []
-    for checkin in reversed(recent_checkins):
-        date_val = checkin.get("date_submitted")
-        formatted_date = date_val if isinstance(date_val, str) else date_val.isoformat() if date_val else ""
-
-        status = checkin.get("status") or "Okay"
-
-        chart_data.append({
-            "date": formatted_date,
-            "mood": status,
-        })
-
-    chart_data_json = json.dumps(chart_data)
+    # Prepare chart data JSON
+    chart_data_json = json.dumps(team_chart_data if active_team_id else [])
 
     # Check if user has checked in today
     has_checked_in_today = WellbeingService.has_checked_in_today(user_id)
 
+    # Team message
+    team_message = f"Team {active_team['team_name']}'s recent check-ins" if active_team else "Your recent check-ins"
+
     context = {
-        "recent_checkins": recent_checkins,
+        "recent_checkins": team_checkins if active_team_id else user_checkins,
         "chart_data": chart_data_json,
         "greeting": "Hello",
         "fullname": request.user.username,
         "has_checked_in_today": has_checked_in_today,
+        "team_message": team_message,
+        "is_team_view": active_team_id is not None,
+        "active_team": active_team,
+        "individual_checkins_data": json.dumps(individual_checkins_data),  # Pass individual data for tooltips
     }
 
     return render(request, "wellbeing_dashboard.html", context)
@@ -53,7 +139,7 @@ def wellbeing_dashboard(request):
 
 @login_required(login_url='login')
 def checkins_modal(request):
-    print("🔥 checkins_modal view hit!")
+    print("checkins_modal view accessible")
     user = request.user
 
     # Get Supabase user ID for logged-in user
