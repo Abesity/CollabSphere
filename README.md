@@ -34,9 +34,7 @@ cd CollabSphere
 ### 2. Install Requirements
 
 ```bash
-pip install django==5.2.6 supabase
-python -m pip install Pillow
-pip install whitenoise
+pip install -r requirements.txt
 ```
 
 ### 3. Apply Migrations
