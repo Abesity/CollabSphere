@@ -142,12 +142,12 @@ class Task:
         
 # HELPER METHOD TO GET TEAM MEMBERS
     @staticmethod
-    def get_team_members(team_id):
+    def get_team_members(team_ID):
         """Get members of a specific team"""
         try:
             members_response = supabase.table('user_team')\
                 .select('user_id, user:user_id(username, profile_picture)')\
-                .eq('team_ID', team_id)\
+                .eq('team_ID', team_ID)\
                 .is_('left_at', None)\
                 .execute()
             
@@ -162,26 +162,26 @@ class Task:
             return members
             
         except Exception as e:
-            print(f"Error fetching team {team_id} members:", e)
+            print(f"Error fetching team {team_ID} members:", e)
             return []
         
     @staticmethod
-    def get_team_name(team_id):
+    def get_team_name(team_ID):
         """Get team name by team ID"""
         try:
-            if not team_id:
+            if not team_ID:
                 return None
                 
             response = supabase.table('team')\
                 .select('team_name')\
-                .eq('team_ID', team_id)\
+                .eq('team_ID', team_ID)\
                 .execute()
             
             if response.data and len(response.data) > 0:
                 return response.data[0]['team_name']
             return None
         except Exception as e:
-            print(f"Error fetching team name for ID {team_id}:", e)
+            print(f"Error fetching team name for ID {team_ID}:", e)
             return None
 # COMMENTS
 class Comment:

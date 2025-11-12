@@ -144,7 +144,6 @@ def task_create(request):
             print(f"⚠️ Error evaluating task triggers: {e}")
     
     return redirect("home")
-
 @login_required
 def task_detail(request, task_id):
     """Display a single task's details (read-only modal)."""
@@ -163,11 +162,17 @@ def task_detail(request, task_id):
         if val and isinstance(val, str) and "T" in val:
             task_data[key] = val.split("T")[0]
 
+    # Get active team info
+    active_team_id = Task.get_user_active_team_id(request.user)
+    team_name = Task.get_team_name(active_team_id) if active_team_id else None
+    
     # Get members from the task's team or active team
-    task_team_id = task_data.get('team_ID')
+    task_team_id = task_data.get('team_ID')  # Note: uppercase ID from database
     if task_team_id:
         # Get members from the specific task's team
         team_members = Task.get_team_members(task_team_id)
+        # Use the task's team name if available
+        team_name = Task.get_team_name(task_team_id) or team_name
     else:
         # Fallback to active team members
         team_members = Task.get_active_team_members(request.user)
@@ -176,6 +181,9 @@ def task_detail(request, task_id):
         "task": task_data,
         "team_members": team_members,
         "comments": Task.fetch_comments(task_id),
+        "team_id": active_team_id,  # Add this
+        "team_name": team_name,     # Add this
+        "has_active_team": active_team_id is not None  # Add this
     }
     return render(request, "task_detail.html", context)
 
