@@ -41,7 +41,7 @@ class WellbeingService:
                     user:user_id(username, profile_picture)
                 """)
                 .in_("user_id", member_ids)
-                .order("date_submitted", desc=True)
+                .order("date_submitted", desc=True)  # Keep descending for recent first
                 .limit(limit)
                 .execute()
             )
@@ -49,7 +49,7 @@ class WellbeingService:
         except Exception as e:
             print(f"Error fetching team check-ins: {e}")
             return []
-
+    
     @staticmethod
     def get_team_checkins_for_chart(team_id, days_back=30):
         """Fetch check-ins for chart data for all team members with user details."""

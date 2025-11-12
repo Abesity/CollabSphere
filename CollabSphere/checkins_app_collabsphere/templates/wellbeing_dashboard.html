@@ -39,54 +39,57 @@
 
         <!-- Previous check-ins -->
         <div class="card recent-checkins">
-          <div class="card-header">
-            <h3>{% if is_team_view %}Team Check-ins{% else %}Your Check-ins{% endif %}</h3>
-          </div>
-          <div class="card-content">
-            <ul class="list-group">
-              {% for checkin in recent_checkins %}
-                <li class="list-group-item">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <strong>
-                        {% if is_team_view and checkin.user %}
-                          {{ checkin.user.username }}
-                        {% else %}
-                          You
-                        {% endif %}
-                      </strong>
-                      <br>
-                      <small class="text-muted">{{ checkin.date_submitted }}</small>
-                      {% if checkin.notes %}
-                        <br>
-                        <small>"{{ checkin.notes }}"</small>
-                      {% endif %}
-                    </div>
-                    <span class="badge 
-                      {% if checkin.status == 'Good' %}bg-success
-                      {% elif checkin.status == 'Okay' %}bg-warning
-                      {% elif checkin.status == 'Needs Support' or checkin.status == None %}bg-danger
-                      {% else %}bg-secondary
-                      {% endif %}">
-                      {{ checkin.status|default:"None" }}
-                    </span>
-                  </div>
-                </li>
-              {% empty %}
-                <li class="list-group-item text-muted">
-                  {% if is_team_view %}
-                    No team check-ins yet.
-                  {% else %}
-                    No check-ins yet.
+  <div class="card-header">
+    <h3>{% if is_team_view %}Team Check-ins{% else %}Your Check-ins{% endif %}</h3>
+  </div>
+  <div class="card-content">
+    {% if grouped_checkins %}
+      {% for date, checkins in grouped_checkins.items %}
+        <h5 class="mt-3 mb-2 text-primary">{{ date|date:"F j, Y" }}</h5>
+        <ul class="list-group mb-3">
+          {% for checkin in checkins %}
+            <li class="list-group-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>
+                    {% if is_team_view and checkin.user %}
+                      {{ checkin.user.username }}
+                    {% else %}
+                      You
+                    {% endif %}
+                  </strong>
+                  {% if checkin.notes %}
+                    <br>
+                    <small class="text-muted">"{{ checkin.notes }}"</small>
                   {% endif %}
-                </li>
-              {% endfor %}
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
+                </div>
+                <span class="badge 
+                  {% if checkin.status == 'Good' %}bg-success
+                  {% elif checkin.status == 'Okay' %}bg-warning
+                  {% elif checkin.status == 'Needs Support' or checkin.status == None %}bg-danger
+                  {% else %}bg-secondary
+                  {% endif %}">
+                  {{ checkin.status|default:"None" }}
+                </span>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted">
+        {% if is_team_view %}
+          No team check-ins yet.
+        {% else %}
+          No check-ins yet.
+        {% endif %}
+      </p>
+    {% endif %}
+  </div>
+</div>
 
+
+    </section>
   </main>
 </div>
 <script src="{% static 'js/chart.min.js' %}"></script>
