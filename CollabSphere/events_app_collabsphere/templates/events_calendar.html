@@ -19,19 +19,31 @@
     <!-- Header Section -->
     <section class="calendar-header">
       <h1>Events Calendar</h1>
-      <p>Manage your team's schedule and upcoming events</p>
+      <p>
+        {% if team_name %}
+          Managing schedule for <strong>{{ team_name }}</strong>
+        {% else %}
+          Manage your team's schedule and upcoming events
+        {% endif %}
+      </p>
+      
+      {% if not has_active_team %}
+      <div class="alert alert-warning">
+        <small>No active team selected. Please select a team to create and view events.</small>
+      </div>
+      {% endif %}
       
       <div class="calendar-controls">
         <div class="calendar-nav">
           <button class="btn-calendar" id="prevMonth">
             ‹ Previous
           </button>
-          <div class="current-month" id="currentMonth">June 2023</div>
+          <div class="current-month" id="currentMonth">Loading...</div>
           <button class="btn-calendar" id="nextMonth">
             Next ›
           </button>
         </div>
-        <button class="btn-new" id="addEvent">
+        <button class="btn-new" id="addEvent" {% if not has_active_team %}disabled title="Select a team to create events"{% endif %}>
           + New Event
         </button>
       </div>
@@ -51,113 +63,9 @@
       </div>
       
       <!-- Calendar Days -->
-      <div class="calendar-days">
-        <!-- Previous month days -->
-        <div class="calendar-day other-month">
-          <div class="day-number">28</div>
-          <div class="empty-day">No events</div>
-        </div>
-        <div class="calendar-day other-month">
-          <div class="day-number">29</div>
-          <div class="empty-day">No events</div>
-        </div>
-        <div class="calendar-day other-month">
-          <div class="day-number">30</div>
-          <div class="empty-day">No events</div>
-        </div>
-        <div class="calendar-day other-month">
-          <div class="day-number">31</div>
-          <div class="empty-day">No events</div>
-        </div>
-        
-        <!-- Current month days with sample events -->
-        <div class="calendar-day">
-          <div class="day-number">1</div>
-          <div class="events-container">
-            <div class="event-item team-meeting">
-              <span class="event-time">10:00 AM</span>
-              <span class="event-title">Team Stand-up</span>
-            </div>
-            <div class="event-item deadline">
-              <span class="event-time">3:00 PM</span>
-              <span class="event-title">Project Deadline</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="calendar-day">
-          <div class="day-number">2</div>
-          <div class="empty-day">+ Add event</div>
-        </div>
-        
-        <div class="calendar-day">
-          <div class="day-number">3</div>
-          <div class="empty-day">+ Add event</div>
-        </div>
-        
-        <div class="calendar-day">
-          <div class="day-number">4</div>
-          <div class="events-container">
-            <div class="event-item personal">
-              <span class="event-time">All Day</span>
-              <span class="event-title">Vacation Day</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- More days with mixed content -->
-        <div class="calendar-day">
-          <div class="day-number">5</div>
-          <div class="empty-day">+ Add event</div>
-        </div>
-        
-        <div class="calendar-day">
-          <div class="day-number">6</div>
-          <div class="empty-day">+ Add event</div>
-        </div>
-        
-        <div class="calendar-day">
-          <div class="day-number">7</div>
-          <div class="events-container">
-            <div class="event-item team-event">
-              <span class="event-time">2:00 PM</span>
-              <span class="event-title">Client Presentation</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Continue with more sample days -->
-        <div class="calendar-day today">
-          <div class="day-number">15</div>
-          <div class="events-container">
-            <div class="event-item deadline">
-              <span class="event-time">9:00 AM</span>
-              <span class="event-title">Sprint Review</span>
-            </div>
-            <div class="event-item team-meeting">
-              <span class="event-time">1:30 PM</span>
-              <span class="event-title">Planning Session</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Add more empty days for demonstration -->
-        {% for day in "123456789" %}
-        <div class="calendar-day">
-          <div class="day-number">{{ day|add:16 }}</div>
-          <div class="empty-day">+ Add event</div>
-        </div>
-        {% endfor %}
-        
-        <!-- Next month days -->
-        <div class="calendar-day other-month">
-          <div class="day-number">1</div>
-          <div class="empty-day">No events</div>
-        </div>
-        <div class="calendar-day other-month">
-          <div class="day-number">2</div>
-          <div class="empty-day">No events</div>
-        </div>
+      <div class="calendar-days" id="calendarDays">
+        <!-- Calendar will be populated by JavaScript -->
+        <div class="loading-message">Loading calendar...</div>
       </div>
     </section>
 
@@ -165,82 +73,425 @@
     <section class="upcoming-events">
       <div class="card">
         <h3>Upcoming Events</h3>
-        <ul class="upcoming-list">
-          <li class="upcoming-item">
+        <div id="upcomingEventsList">
+          {% for event in upcoming_events %}
+          <div class="upcoming-item" data-event-id="{{ event.id }}">
             <div class="upcoming-date">
-              <div class="upcoming-day">15</div>
-              <div class="upcoming-month">Jun</div>
+              <div class="upcoming-day">{{ event.day }}</div>
+              <div class="upcoming-month">{{ event.month }}</div>
             </div>
             <div class="upcoming-details">
-              <div class="upcoming-title">Sprint Review Meeting</div>
-              <div class="upcoming-time">9:00 AM - 10:30 AM</div>
+              <div class="upcoming-title">{{ event.title }}</div>
+              <div class="upcoming-time">{{ event.time }}</div>
             </div>
             <div class="upcoming-type team">Team</div>
-          </li>
-          <li class="upcoming-item">
-            <div class="upcoming-date">
-              <div class="upcoming-day">16</div>
-              <div class="upcoming-month">Jun</div>
-            </div>
-            <div class="upcoming-details">
-              <div class="upcoming-title">Project Deadline</div>
-              <div class="upcoming-time">5:00 PM</div>
-            </div>
-            <div class="upcoming-type team">Work</div>
-          </li>
-          <li class="upcoming-item">
-            <div class="upcoming-date">
-              <div class="upcoming-day">18</div>
-              <div class="upcoming-month">Jun</div>
-            </div>
-            <div class="upcoming-details">
-              <div class="upcoming-title">Team Lunch</div>
-              <div class="upcoming-time">12:00 PM - 1:30 PM</div>
-            </div>
-            <div class="upcoming-type personal">Social</div>
-          </li>
-        </ul>
+          </div>
+          {% empty %}
+          <div class="no-events">
+            {% if has_active_team %}
+              No upcoming events
+            {% else %}
+              Select a team to view events
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </section>
 
   </main>
 </div>
 
+<!-- Event Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="eventModalLabel">Create New Event</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="eventForm">
+          {% csrf_token %}
+          {% if team_name %}
+          <div class="alert alert-info mb-3">
+            <small>This event will be created for Team <strong>{{ team_name }}</strong></small>
+          </div>
+          {% endif %}
+          <div class="mb-3">
+            <label for="eventTitle" class="form-label">Event Title *</label>
+            <input type="text" class="form-control" id="eventTitle" name="title" required>
+          </div>
+          <div class="mb-3">
+            <label for="eventDescription" class="form-label">Description</label>
+            <textarea class="form-control" id="eventDescription" name="description" rows="3" placeholder="Optional event description..."></textarea>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="eventStartDate" class="form-label">Start Date *</label>
+              <input type="date" class="form-control" id="eventStartDate" name="start_date" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="eventStartTime" class="form-label">Start Time *</label>
+              <input type="time" class="form-control" id="eventStartTime" name="start_time" value="09:00" required>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="eventEndDate" class="form-label">End Date</label>
+              <input type="date" class="form-control" id="eventEndDate" name="end_date">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="eventEndTime" class="form-label">End Time</label>
+              <input type="time" class="form-control" id="eventEndTime" name="end_time" value="10:00">
+            </div>
+          </div>
+          <div class="form-text">
+            * Required fields. If end date/time is not specified, it will default to the same as start.
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveEvent">
+          <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+          Save Event
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+// Global variables
+let currentDate = new Date();
+let currentEvents = {{ events_json|safe }};
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Simple navigation for demo
-    document.getElementById('prevMonth').addEventListener('click', function() {
-        alert('Previous month - functionality to be implemented');
-    });
+    console.log('🟢 Calendar DOM loaded');
+    initializeCalendar();
     
-    document.getElementById('nextMonth').addEventListener('click', function() {
-        alert('Next month - functionality to be implemented');
-    });
+    // Event listeners - check if elements exist first
+    const prevMonthBtn = document.getElementById('prevMonth');
+    const nextMonthBtn = document.getElementById('nextMonth');
+    const addEventBtn = document.getElementById('addEvent');
+    const saveEventBtn = document.getElementById('saveEvent');
     
-    document.getElementById('addEvent').addEventListener('click', function() {
-        alert('Add new event - functionality to be implemented');
-    });
+    if (prevMonthBtn) prevMonthBtn.addEventListener('click', previousMonth);
+    if (nextMonthBtn) nextMonthBtn.addEventListener('click', nextMonth);
+    if (addEventBtn) addEventBtn.addEventListener('click', showEventModal);
+    if (saveEventBtn) saveEventBtn.addEventListener('click', saveEvent);
     
-    // Click handlers for empty slots
-    document.querySelectorAll('.empty-day').forEach(slot => {
-        slot.addEventListener('click', function() {
-            alert('Add event to this day - functionality to be implemented');
-        });
-    });
-    
-    // Click handlers for events
-    document.querySelectorAll('.event-item').forEach(event => {
-        event.addEventListener('click', function() {
-            alert('View event details - functionality to be implemented');
-        });
-    });
-    
-    // Click handlers for upcoming events
-    document.querySelectorAll('.upcoming-item').forEach(item => {
-        item.addEventListener('click', function() {
-            alert('View upcoming event - functionality to be implemented');
-        });
-    });
+    // Load events for current month
+    loadEventsForMonth();
 });
+
+function getCSRFToken() {
+    const name = 'csrftoken';
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue ? cookieValue.trim() : null;
+}
+
+
+function initializeCalendar() {
+    console.log('🟢 Initializing calendar');
+    updateCalendarHeader();
+    renderCalendar();
+}
+
+function updateCalendarHeader() {
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+    const currentMonthElement = document.getElementById('currentMonth');
+    if (currentMonthElement) {
+        currentMonthElement.textContent = 
+            `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+    }
+}
+
+function renderCalendar() {
+    const calendarDays = document.getElementById('calendarDays');
+    if (!calendarDays) {
+        console.error('❌ Calendar days container not found');
+        return;
+    }
+    
+    calendarDays.innerHTML = '';
+    
+    const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+    const startingDayOfWeek = firstDay.getDay();
+    const totalDays = lastDay.getDate();
+    
+    // Previous month days
+    const prevMonthLastDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0).getDate();
+    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+        const dayElement = createDayElement(prevMonthLastDay - i, true);
+        calendarDays.appendChild(dayElement);
+    }
+    
+    // Current month days
+    const today = new Date();
+    for (let day = 1; day <= totalDays; day++) {
+        const isToday = today.getDate() === day && 
+                       today.getMonth() === currentDate.getMonth() && 
+                       today.getFullYear() === currentDate.getFullYear();
+        const dayElement = createDayElement(day, false, isToday);
+        calendarDays.appendChild(dayElement);
+    }
+    
+    // Add events to days
+    addEventsToCalendar();
+}
+
+function createDayElement(dayNumber, isOtherMonth, isToday = false) {
+    const dayElement = document.createElement('div');
+    dayElement.className = 'calendar-day';
+    if (isOtherMonth) dayElement.classList.add('other-month');
+    if (isToday) dayElement.classList.add('today');
+    
+    dayElement.innerHTML = `
+        <div class="day-number">${dayNumber}</div>
+        <div class="events-container" data-day="${dayNumber}"></div>
+    `;
+    
+    // Add click event for adding events
+    if (!isOtherMonth) {
+        const eventsContainer = dayElement.querySelector('.events-container');
+        if (eventsContainer) {
+            eventsContainer.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    showEventModalForDay(dayNumber);
+                }
+            });
+        }
+    }
+    
+    return dayElement;
+}
+
+function addEventsToCalendar() {
+    if (!currentEvents || !Array.isArray(currentEvents)) {
+        console.log('No events to display');
+        return;
+    }
+    
+    currentEvents.forEach(event => {
+        const eventDate = new Date(event.start);
+        if (eventDate.getMonth() === currentDate.getMonth() && 
+            eventDate.getFullYear() === currentDate.getFullYear()) {
+            
+            const dayElement = document.querySelector(`.events-container[data-day="${eventDate.getDate()}"]`);
+            if (dayElement) {
+                const eventElement = document.createElement('div');
+                eventElement.className = 'event-item team-meeting';
+                eventElement.innerHTML = `
+                    <span class="event-time">${event.start_time}</span>
+                    <span class="event-title">${event.title}</span>
+                `;
+                eventElement.addEventListener('click', () => viewEventDetails(event.id));
+                dayElement.appendChild(eventElement);
+            }
+        }
+    });
+    
+    // Show message if no events and no active team
+    const hasEvents = currentEvents.length > 0;
+    const hasActiveTeam = {{ has_active_team|yesno:"true,false" }};
+    
+    if (!hasEvents && !hasActiveTeam) {
+        const calendarDays = document.getElementById('calendarDays');
+        const message = document.createElement('div');
+        message.className = 'no-team-message';
+        message.style.gridColumn = '1 / -1';
+        message.style.textAlign = 'center';
+        message.style.padding = '2rem';
+        message.style.color = '#6c757d';
+        message.innerHTML = `
+            <p>No active team selected. Please select a team to view and create events.</p>
+        `;
+        calendarDays.appendChild(message);
+    }
+}
+
+function showEventModalForDay(day) {
+    const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    document.getElementById('eventStartDate').value = startDate.toISOString().split('T')[0];
+    document.getElementById('eventStartTime').value = '09:00';
+    document.getElementById('eventEndDate').value = startDate.toISOString().split('T')[0];
+    document.getElementById('eventEndTime').value = '10:00';
+    
+    // Clear form
+    document.getElementById('eventTitle').value = '';
+    document.getElementById('eventDescription').value = '';
+    
+    const modalElement = document.getElementById('eventModal');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    }
+}
+
+function showEventModal() {
+    console.log('🟢 Showing event modal');
+    
+    // Clear form and set default values
+    const eventTitle = document.getElementById('eventTitle');
+    const eventDescription = document.getElementById('eventDescription');
+    const eventStartDate = document.getElementById('eventStartDate');
+    const eventStartTime = document.getElementById('eventStartTime');
+    const eventEndDate = document.getElementById('eventEndDate');
+    const eventEndTime = document.getElementById('eventEndTime');
+    
+    if (eventTitle) eventTitle.value = '';
+    if (eventDescription) eventDescription.value = '';
+    
+    const today = new Date().toISOString().split('T')[0];
+    if (eventStartDate) eventStartDate.value = today;
+    if (eventStartTime) eventStartTime.value = '09:00';
+    if (eventEndDate) eventEndDate.value = today;
+    if (eventEndTime) eventEndTime.value = '10:00';
+    
+    const modalElement = document.getElementById('eventModal');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    } else {
+        console.error('❌ Event modal element not found');
+    }
+}
+
+async function saveEvent() {
+    console.log('🟢 Saving event...');
+    
+    const saveBtn = document.getElementById('saveEvent');
+    if (!saveBtn) {
+        console.error('❌ Save button not found');
+        return;
+    }
+    
+    // Show loading state
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Saving...';
+    
+    const eventTitle = document.getElementById('eventTitle');
+    if (!eventTitle || !eventTitle.value) {
+        alert('Please enter an event title');
+        resetSaveButton();
+        return;
+    }
+
+    const formData = new FormData(document.getElementById('eventForm'));
+    
+    try {
+        const response = await fetch("{% url 'create_event' %}", {
+            method: 'POST',
+            body: formData,
+        });
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('❌ Non-JSON response:', text.substring(0, 500));
+            throw new Error('Server returned an error page instead of JSON');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Close modal and refresh calendar
+            const modalElement = document.getElementById('eventModal');
+            if (modalElement) {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+            }
+            loadEventsForMonth();
+            showToast('Event created successfully!', 'success');
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error saving event:', error);
+        alert('Error saving event: ' + error.message);
+    } finally {
+        resetSaveButton();
+    }
+}
+
+function resetSaveButton() {
+    const saveBtn = document.getElementById('saveEvent');
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = 'Save Event';
+    }
+}
+
+async function loadEventsForMonth() {
+    try {
+        const response = await fetch(`{% url 'get_events' %}?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            currentEvents = result.events;
+            renderCalendar();
+        }
+    } catch (error) {
+        console.error('Error loading events:', error);
+    }
+}
+
+function viewEventDetails(eventId) {
+    // For now, just show an alert. You can expand this to show event details.
+    alert(`Viewing event details for ID: ${eventId}\n\nThis would open a detailed view in a future update.`);
+}
+
+function previousMonth() {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    updateCalendarHeader();
+    loadEventsForMonth();
+}
+
+function nextMonth() {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    updateCalendarHeader();
+    loadEventsForMonth();
+}
+
+function showToast(message, type = 'info') {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} alert-dismissible fade show`;
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '9999';
+    toast.style.minWidth = '300px';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
+}
+
 </script>
 {% endblock %}
