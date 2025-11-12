@@ -36,7 +36,7 @@ def tasks(request):
     
     context = {
         "task_id": 1,
-        "team_id": active_team_id,
+        "team_ID": active_team_id,
         "team_name": team_name,  # Add team name to context
         "team_members": team_members,
         "has_active_team": active_team_id is not None
@@ -92,7 +92,7 @@ def task_create(request):
         "start_date": request.POST.get("startDate") or None,
         "due_date": request.POST.get("dueDate") or None,
         "priority": request.POST.get("priority") in ["on", "true", "True"],
-        "team_id": active_team_id,  # Set to active team ID
+        "team_ID": active_team_id,  # Set to active team ID
     }
 
     task_result = Task.create(payload)
@@ -107,7 +107,7 @@ def task_create(request):
             'created_by': request.user.username,
             'due_date': payload['due_date'],
             'task_id': task_result[0]['task_id'] if task_result and len(task_result) > 0 else None,
-            'team_id': active_team_id
+            'team_ID': active_team_id
         }
         
         try:
@@ -125,7 +125,7 @@ def task_create(request):
             'due_date': payload['due_date'],
             'status': payload['status'],
             'priority': payload['priority'],
-            'team_id': active_team_id
+            'team_ID': active_team_id
         }
         
         trigger_context = {
@@ -164,7 +164,7 @@ def task_detail(request, task_id):
             task_data[key] = val.split("T")[0]
 
     # Get members from the task's team or active team
-    task_team_id = task_data.get('team_id')
+    task_team_id = task_data.get('team_ID')
     if task_team_id:
         # Get members from the specific task's team
         team_members = Task.get_team_members(task_team_id)
@@ -207,7 +207,7 @@ def task_update(request, task_id):
     # Verify assigned user is in the task's team or active team
     assigned_to_username = None
     if assigned_to:
-        task_team_id = task_data.get('team_id')
+        task_team_id = task_data.get('team_ID')
         if task_team_id:
             members = Task.get_team_members(task_team_id)
         else:
