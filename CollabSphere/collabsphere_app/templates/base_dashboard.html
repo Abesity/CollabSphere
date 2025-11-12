@@ -63,6 +63,7 @@
         z-index: -1 !important;  
     }
 
+
     </style>
     {% endblock %}
 
@@ -74,8 +75,26 @@
         <div class="container-fluid">
             <!-- Left: Logo + Name -->
           <img src="{% static 'images/logo.png' %}" alt="CollabSphere Logo" style="height:40px; margin-right:10px;">
-          <div style="margin-right: 40px; font-size: 1.5rem; font-weight: bold; color: #245d8b;">CollabSphere</div>
-
+          <div style="margin-right: 40px; font-size: 1.5rem; font-weight: bold; color: #3D74C3;">CollabSphere</div>
+            
+        <div class="active-team" style="
+            transition: all 0.3s ease; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+            border-radius: 10px; 
+            padding: 5px; 
+            color: #FAFBFB;
+            margin-right: 40px; 
+            font-size: 1.0rem; 
+            font-weight: bold; 
+            cursor: default;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        "
+        onmouseover="this.style.background='linear-gradient(135deg, #059669 0%, #047857 100%)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'" 
+        onmouseout="this.style.background='linear-gradient(135deg, #10b981 0%, #059669 100%)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+            {% if active_team %}
+                {{ active_team.team_name }}
+            {% endif %}
+        </div>
 
             <!-- Right: Nav links -->
             <div class="d-flex align-items-center ms-auto">

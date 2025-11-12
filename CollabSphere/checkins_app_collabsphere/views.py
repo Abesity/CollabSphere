@@ -3,11 +3,37 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.utils import timezone
 from datetime import datetime
+from collections import defaultdict
 import json
 
 from .models import WellbeingService
 from .notification_triggers import CheckinNotificationTriggers
 from teams_app_collabsphere.models import Team
+
+
+def group_checkins_by_date(checkins):
+    grouped = defaultdict(list)
+    for c in checkins:
+        date_val = c.get("date_submitted")
+        if not date_val:
+            continue
+        # Convert string or datetime to normalized date string
+        if isinstance(date_val, str):
+            try:
+                date_obj = datetime.fromisoformat(date_val.replace("Z", "+00:00"))
+            except:
+                try:
+                    date_obj = datetime.strptime(date_val, "%Y-%m-%dT%H:%M:%S.%fZ")
+                except:
+                    date_obj = datetime.now()
+        else:
+            date_obj = date_val
+
+        date_str = date_obj.strftime("%Y-%m-%d")
+        grouped[date_str].append(c)
+    
+    # Sort newest to oldest
+    return dict(sorted(grouped.items(), key=lambda x: x[0], reverse=True))
 
 
 @login_required(login_url='login')
@@ -122,6 +148,9 @@ def wellbeing_dashboard(request):
     # Team message
     team_message = f"Team {active_team['team_name']}'s recent check-ins" if active_team else "Your recent check-ins"
 
+    # Group check-ins by date
+    grouped_checkins = group_checkins_by_date(team_checkins if active_team_id else user_checkins)
+ 
     context = {
         "recent_checkins": team_checkins if active_team_id else user_checkins,
         "chart_data": chart_data_json,
@@ -131,11 +160,11 @@ def wellbeing_dashboard(request):
         "team_message": team_message,
         "is_team_view": active_team_id is not None,
         "active_team": active_team,
-        "individual_checkins_data": json.dumps(individual_checkins_data),  # Pass individual data for tooltips
+        "individual_checkins_data": json.dumps(individual_checkins_data), 
+        "grouped_checkins": grouped_checkins,
     }
 
     return render(request, "wellbeing_dashboard.html", context)
-
 
 @login_required(login_url='login')
 def checkins_modal(request):

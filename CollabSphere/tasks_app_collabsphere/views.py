@@ -36,7 +36,7 @@ def tasks(request):
     
     context = {
         "task_id": 1,
-        "team_id": active_team_id,
+        "team_ID": active_team_id,
         "team_name": team_name,  # Add team name to context
         "team_members": team_members,
         "has_active_team": active_team_id is not None
@@ -92,7 +92,7 @@ def task_create(request):
         "start_date": request.POST.get("startDate") or None,
         "due_date": request.POST.get("dueDate") or None,
         "priority": request.POST.get("priority") in ["on", "true", "True"],
-        "team_id": active_team_id,  # Set to active team ID
+        "team_ID": active_team_id,  # Set to active team ID
     }
 
     task_result = Task.create(payload)
@@ -107,7 +107,7 @@ def task_create(request):
             'created_by': request.user.username,
             'due_date': payload['due_date'],
             'task_id': task_result[0]['task_id'] if task_result and len(task_result) > 0 else None,
-            'team_id': active_team_id
+            'team_ID': active_team_id
         }
         
         try:
@@ -125,7 +125,7 @@ def task_create(request):
             'due_date': payload['due_date'],
             'status': payload['status'],
             'priority': payload['priority'],
-            'team_id': active_team_id
+            'team_ID': active_team_id
         }
         
         trigger_context = {
@@ -144,7 +144,6 @@ def task_create(request):
             print(f"⚠️ Error evaluating task triggers: {e}")
     
     return redirect("home")
-
 @login_required
 def task_detail(request, task_id):
     """Display a single task's details (read-only modal)."""
@@ -163,11 +162,17 @@ def task_detail(request, task_id):
         if val and isinstance(val, str) and "T" in val:
             task_data[key] = val.split("T")[0]
 
+    # Get active team info
+    active_team_id = Task.get_user_active_team_id(request.user)
+    team_name = Task.get_team_name(active_team_id) if active_team_id else None
+    
     # Get members from the task's team or active team
-    task_team_id = task_data.get('team_id')
+    task_team_id = task_data.get('team_ID')  # Note: uppercase ID from database
     if task_team_id:
         # Get members from the specific task's team
         team_members = Task.get_team_members(task_team_id)
+        # Use the task's team name if available
+        team_name = Task.get_team_name(task_team_id) or team_name
     else:
         # Fallback to active team members
         team_members = Task.get_active_team_members(request.user)
@@ -176,6 +181,9 @@ def task_detail(request, task_id):
         "task": task_data,
         "team_members": team_members,
         "comments": Task.fetch_comments(task_id),
+        "team_id": active_team_id,  # Add this
+        "team_name": team_name,     # Add this
+        "has_active_team": active_team_id is not None  # Add this
     }
     return render(request, "task_detail.html", context)
 
@@ -207,7 +215,7 @@ def task_update(request, task_id):
     # Verify assigned user is in the task's team or active team
     assigned_to_username = None
     if assigned_to:
-        task_team_id = task_data.get('team_id')
+        task_team_id = task_data.get('team_ID')
         if task_team_id:
             members = Task.get_team_members(task_team_id)
         else:
