@@ -155,6 +155,29 @@ class Team:
             except Exception as e:
                 print(f"Error getting team: {e}")
                 return None
+            
+    @staticmethod
+    def get_team_name(team_ID):
+        """Helper function to get team name"""
+        try:
+            if not team_ID:
+                return None
+                
+            from django.conf import settings
+            from supabase import create_client
+            supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+            
+            response = supabase.table('team')\
+                .select('team_name')\
+                .eq('team_ID', team_ID)\
+                .execute()
+            
+            if response.data and len(response.data) > 0:
+                return response.data[0]['team_name']
+            return None
+        except Exception as e:
+            print(f"Error fetching team name for ID {team_ID}:", e)
+            return None
         
     @staticmethod
     def delete(team_ID):
@@ -564,19 +587,19 @@ class UserTeam:
     """UserTeam model handling user-team relationships"""
     
     @staticmethod
-    def get_users_without_teams(team_id=None):
-        """Get users who don't belong to the specified team (or any team if no team_id provided)"""
+    def get_users_without_teams(team_ID=None):
+        """Get users who don't belong to the specified team (or any team if no team_ID provided)"""
         try:
             # Get all users from Supabase
             all_users_response = supabase.table('user')\
                 .select('user_ID, username, email, profile_picture')\
                 .execute()
             
-            if team_id:
+            if team_ID:
                 # Get users who are in the SPECIFIC team
                 team_users_response = supabase.table('user_team')\
                     .select('user_id')\
-                    .eq('team_ID', team_id)\
+                    .eq('team_ID', team_ID)\
                     .is_('left_at', None)\
                     .execute()
                 

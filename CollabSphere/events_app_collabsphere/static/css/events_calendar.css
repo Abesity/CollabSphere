@@ -6,6 +6,17 @@
   --text-muted: #6c757d;
 }
 
+.eventModal {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 1055 !important;
+}
+
+.eventModal .modal-dialog {
+  margin: auto;
+}
+
 
 body {
   width: 100%;
