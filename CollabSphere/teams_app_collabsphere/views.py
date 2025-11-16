@@ -68,12 +68,12 @@ def create_team(request):
                 if result.get('success'):
                     # --- Notification Integration START ---
                     try:
-                        team_id = result['team_ID']
+                        team_ID = result['team_ID']
                         member_ids = form.cleaned_data['selected_members']
                         creator_id = request.session.get("user_ID")  # Assuming user ID is in session
 
                         team_data = {
-                            'team_ID': team_id,
+                            'team_ID': team_ID,
                             'team_name': form.cleaned_data['team_name'],
                             'description': form.cleaned_data['description']
                         }
@@ -137,11 +137,11 @@ def create_team(request):
 def get_users_without_teams(request):
     """API endpoint to get users who don't have teams (for adding members)"""
     try:
-        # Get team_id from request if provided (for edit team scenario)
-        team_id = request.GET.get('team_id')
+        # Get team_ID from request if provided (for edit team scenario)
+        team_ID = request.GET.get('team_ID')
         
-        if team_id:
-            users_data = UserTeam.get_users_without_teams(team_id=int(team_id))
+        if team_ID:
+            users_data = UserTeam.get_users_without_teams(team_ID=int(team_ID))
         else:
             users_data = UserTeam.get_users_without_teams()
 
@@ -287,37 +287,66 @@ def edit_team(request, team_ID):
 def delete_team(request, team_ID):
     """Delete a team"""
     try:
+        print(f"DEBUG: Attempting to delete team {team_ID}")
+        
+        # Get team data for notifications BEFORE deletion
         team_data = Team.get(team_ID)
+        if not team_data:
+            print(f"DEBUG: Team {team_ID} not found in database")
+            return JsonResponse({'success': False, 'error': 'Team not found'})
 
-        if team_data and team_data.get("owner_id") == request.session.get("user_ID"):
-            Team.delete(team_ID)
+        # Get the Supabase user ID for the current user
+        current_user_supabase_id = Team.get_supabase_user_id(request.user)
+        if not current_user_supabase_id:
+            return JsonResponse({'success': False, 'error': 'User not found in database'})
 
-            try:
-                deleted_by_id = request.session.get("user_ID")
-                trigger_context = {
-                    'action': 'delete',
-                    'deleted_by': deleted_by_id
-                }
+        print(f"DEBUG: Current user Supabase ID: {current_user_supabase_id}")
+        print(f"DEBUG: Team owner ID: {team_data.get('user_id_owner')}")
 
-                triggered_notifications = TeamNotificationTriggers.evaluate_all_triggers(
-                    team_data,
-                    trigger_context
-                )
-
-                for trigger in triggered_notifications:
-                    print(f"🔔 TEAM TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
-
-            except Exception as e:
-                print(f"⚠️ Error evaluating team deletion triggers: {e}")
-
-            return JsonResponse({'success': True, 'message': 'Team deleted successfully'})
+        if team_data.get("user_id_owner") == current_user_supabase_id:
+            print(f"DEBUG: Ownership verified, proceeding with deletion")
+            
+            # Call the delete method from the model (no direct Supabase calls)
+            delete_result = Team.delete(team_ID, request.user)
+            print(f"DEBUG: Delete result: {delete_result}")
+            
+            if delete_result.get('success'):
+                # --- Notification Integration for Team Deletion ---
+                try:
+                    deleted_by_id = request.session.get("user_ID")
+                    
+                    trigger_context = {
+                        'action': 'delete',
+                        'deleted_by': deleted_by_id
+                    }
+                    
+                    triggered_notifications = TeamNotificationTriggers.evaluate_all_triggers(
+                        team_data,
+                        trigger_context
+                    )
+                    
+                    for trigger in triggered_notifications:
+                        print(f"🔔 TEAM TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+                        # Example: dispatch_notification(trigger, sender_user=request.user)
+                        
+                except Exception as e:
+                    print(f"⚠️ Error evaluating team deletion triggers: {e}")
+                # --- Notification Integration END ---
+                
+                print(f"DEBUG: Returning success response for team deletion")
+                return JsonResponse({'success': True, 'message': 'Team deleted successfully'})
+            else:
+                print(f"DEBUG: Delete method failed: {delete_result.get('error')}")
+                return JsonResponse({'success': False, 'error': delete_result.get('error', 'Failed to delete team')})
         else:
-            return JsonResponse({'success': False, 'error': 'Team not found or unauthorized'})
+            error_msg = f'Unauthorized: You are not the owner of this team'
+            print(f"DEBUG: {error_msg}")
+            return JsonResponse({'success': False, 'error': error_msg})
 
     except Exception as e:
         print(f"Error deleting team: {e}")
         return JsonResponse({'success': False, 'error': str(e)})
-
+    
 @login_required
 @require_http_methods(["POST"])
 def leave_team(request, team_ID):

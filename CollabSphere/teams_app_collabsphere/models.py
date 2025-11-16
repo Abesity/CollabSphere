@@ -180,19 +180,87 @@ class Team:
             return None
         
     @staticmethod
-    def delete(team_ID):
-            """Delete a team"""
-            try:
-                response = supabase.table('team')\
-                    .delete()\
+    def delete(team_ID, django_user=None):
+        """Delete a team and all its related records"""
+        try:
+            print(f"DEBUG: Starting deletion process for team {team_ID}")
+            
+            # If user is provided, verify ownership
+            if django_user:
+                current_user_supabase_id = Team.get_supabase_user_id(django_user)
+                if not current_user_supabase_id:
+                    return {'success': False, 'error': 'User not found in database'}
+
+                # Verify user owns the team
+                team_response = supabase.table('team')\
+                    .select('*')\
                     .eq('team_ID', team_ID)\
                     .execute()
                 
-                return {'success': True, 'message': 'Team deleted successfully'}
-            except Exception as e:
+                if not team_response.data:
+                    return {'success': False, 'error': 'Team not found'}
+                
+                team_data = team_response.data[0]
+                team_owner_id = team_data.get('user_id_owner')
+                
+                if team_owner_id != current_user_supabase_id:
+                    return {'success': False, 'error': 'You are not the owner of this team'}
+            else:
+                # If no user provided, just get team data for notifications
+                team_response = supabase.table('team')\
+                    .select('*')\
+                    .eq('team_ID', team_ID)\
+                    .execute()
+                team_data = team_response.data[0] if team_response.data else {}
+            
+            # 1. First, update users who have this as their active_team_id to NULL
+            update_users_response = supabase.table('user')\
+                .update({'active_team_id': None})\
+                .eq('active_team_id', team_ID)\
+                .execute()
+            print(f"DEBUG: Updated users with active_team_id")
+
+            # 2. Delete calendar events for this team
+            delete_calendar_events_response = supabase.table('calendarevent')\
+                .delete()\
+                .eq('team_ID', team_ID)\
+                .execute()
+            print(f"DEBUG: Deleted calendar events")
+
+            # 3. Delete tasks for this team
+            delete_tasks_response = supabase.table('tasks')\
+                .delete()\
+                .eq('team_ID', team_ID)\
+                .execute()
+            print(f"DEBUG: Deleted tasks")
+
+            # 4. Delete user_team relationships for this team
+            delete_members_response = supabase.table('user_team')\
+                .delete()\
+                .eq('team_ID', team_ID)\
+                .execute()
+            print(f"DEBUG: Deleted user_team records")
+
+            # 5. Finally delete the team itself
+            delete_team_response = supabase.table('team')\
+                .delete()\
+                .eq('team_ID', team_ID)\
+                .execute()
+            
+            if delete_team_response.data:
+                print(f"DEBUG: Successfully deleted team {team_ID}")
+                result = {'success': True, 'message': 'Team deleted successfully'}
+                if django_user:
+                    result['team_data'] = team_data
+                return result
+            else:
+                print(f"DEBUG: No team found with ID {team_ID}")
+                return {'success': False, 'error': 'Team not found'}
+                
+        except Exception as e:
                 print(f"Error deleting team: {e}")
                 return {'success': False, 'error': str(e)}
-
+    
     @staticmethod
     def create_new_team(team_name, description, icon_file, django_user, selected_members):
         """Create a new team and add members"""
