@@ -2,8 +2,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
 
-from tasks_app.models import Task  # replace with your actual tasks app
-from team_app.models import UserTeam, Team  # replace with your actual apps
+from tasks_app_collabsphere.models import Task  
+from teams_app_collabsphere.models import UserTeam, Team  
 from .views import create_task_notification, create_team_notification
 
 User = get_user_model()
