@@ -6,10 +6,12 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=1.0">
 <link rel="stylesheet" href="{% static 'css/events_calendar.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/recurring_events.css' %}?v=1.0">
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/sidebar.js' %}"></script>
+<script src="{% static 'js/recurring_events.js' %}"></script>
 {% endblock %}
 
 {% block content %}
@@ -104,7 +106,7 @@
 
 <!-- Event Modal -->
 <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="eventModalLabel">Create New Event</h5>
@@ -118,14 +120,18 @@
             <small>This event will be created for Team <strong>{{ team_name }}</strong></small>
           </div>
           {% endif %}
+          
+          <!-- Basic Event Information -->
           <div class="mb-3">
             <label for="eventTitle" class="form-label">Event Title *</label>
             <input type="text" class="form-control" id="eventTitle" name="title" required>
           </div>
+          
           <div class="mb-3">
             <label for="eventDescription" class="form-label">Description</label>
             <textarea class="form-control" id="eventDescription" name="description" rows="3" placeholder="Optional event description..."></textarea>
           </div>
+          
           <div class="row">
             <div class="col-md-6 mb-3">
               <label for="eventStartDate" class="form-label">Start Date *</label>
@@ -136,6 +142,7 @@
               <input type="time" class="form-control" id="eventStartTime" name="start_time" value="09:00" required>
             </div>
           </div>
+          
           <div class="row">
             <div class="col-md-6 mb-3">
               <label for="eventEndDate" class="form-label">End Date</label>
@@ -146,7 +153,99 @@
               <input type="time" class="form-control" id="eventEndTime" name="end_time" value="10:00">
             </div>
           </div>
-          <div class="form-text">
+
+          <!-- ========================================== -->
+          <!-- TASK 3.2.1: RECURRING EVENT OPTIONS START -->
+          <!-- ========================================== -->
+          
+          <hr class="my-4">
+          
+          <div class="mb-3">
+            <div class="form-check">
+              <input type="checkbox" id="isRecurring" name="is_recurring" class="form-check-input">
+              <label for="isRecurring" class="form-check-label fw-bold">
+                🔁 Recurring Event
+              </label>
+            </div>
+          </div>
+
+          <!-- Recurring Options Container (Hidden by default) -->
+          <div id="recurringOptions" style="display: none;">
+            
+            <!-- Frequency Selection -->
+            <div class="mb-3">
+              <label for="frequency" class="form-label">Repeat Frequency</label>
+              <select id="frequency" name="frequency" class="form-select">
+                <option value="">Does not repeat</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+
+            <!-- Weekly Day Selector (Shows only for weekly frequency) -->
+            <div class="mb-3" id="weeklyOptions" style="display: none;">
+              <label class="form-label">Repeat on these days</label>
+              <div class="btn-group d-flex" role="group" aria-label="Days of week">
+                <input type="checkbox" class="btn-check" id="sun" name="days[]" value="0" autocomplete="off">
+                <label class="btn btn-outline-primary btn-sm" for="sun">Sun</label>
+                
+                <input type="checkbox" class="btn-check" id="mon" name="days[]" value="1" autocomplete="off">
+                <label class="btn btn-outline-primary btn-sm" for="mon">Mon</label>
+                
+                <input type="checkbox" class="btn-check" id="tue" name="days[]" value="2" autocomplete="off">
+                <label class="btn btn-outline-primary btn-sm" for="tue">Tue</label>
+                
+                <input type="checkbox" class="btn-check" id="wed" name="days[]" value="3" autocomplete="off">
+                <label class="btn btn-outline-primary btn-sm" for="wed">Wed</label>
+                
+                <input type="checkbox" class="btn-check" id="thu" name="days[]" value="4" autocomplete="off">
+                <label class="btn btn-outline-primary btn-sm" for="thu">Thu</label>
+                
+                <input type="checkbox" class="btn-check" id="fri" name="days[]" value="5" autocomplete="off">
+                <label class="btn btn-outline-primary btn-sm" for="fri">Fri</label>
+                
+                <input type="checkbox" class="btn-check" id="sat" name="days[]" value="6" autocomplete="off">
+                <label class="btn btn-outline-primary btn-sm" for="sat">Sat</label>
+              </div>
+            </div>
+
+            <!-- End Options -->
+            <div class="mb-3">
+              <label for="endsOn" class="form-label">Ends</label>
+              <select id="endsOn" name="ends_on" class="form-select">
+                <option value="never">Never</option>
+                <option value="on">On a specific date</option>
+                <option value="after">After a number of occurrences</option>
+              </select>
+            </div>
+
+            <!-- End Date Field (Shows when "On date" is selected) -->
+            <div class="mb-3" id="endDateField" style="display: none;">
+              <label for="recurrenceEndDate" class="form-label">End Date</label>
+              <input type="date" id="recurrenceEndDate" name="recurrence_end_date" class="form-control">
+            </div>
+
+            <!-- Occurrences Field (Shows when "After" is selected) -->
+            <div class="mb-3" id="occurrencesField" style="display: none;">
+              <label for="occurrences" class="form-label">Number of Occurrences</label>
+              <input type="number" id="occurrences" name="occurrences" class="form-control" min="1" value="10" placeholder="e.g., 10">
+              <div class="form-text">How many times should this event repeat?</div>
+            </div>
+
+            <!-- Recurrence Summary -->
+            <div class="alert alert-info" id="recurrenceSummary" style="display: none;">
+              <strong>📅 Summary:</strong> <span id="summaryText"></span>
+            </div>
+
+          </div>
+          
+          <!-- ======================================== -->
+          <!-- TASK 3.2.1: RECURRING EVENT OPTIONS END -->
+          <!-- ======================================== -->
+          
+          <div class="form-text mt-3">
             * Required fields. If end date/time is not specified, it will default to the same as start.
           </div>
         </form>
@@ -295,9 +394,13 @@ function addEventsToCalendar() {
             if (dayElement) {
                 const eventElement = document.createElement('div');
                 eventElement.className = 'event-item team-meeting';
+                
+                // Add recurring indicator if applicable
+                const recurringIcon = event.is_recurring ? '🔁 ' : '';
+                
                 eventElement.innerHTML = `
                     <span class="event-time">${event.start_time}</span>
-                    <span class="event-title">${event.title}</span>
+                    <span class="event-title">${recurringIcon}${event.title}</span>
                 `;
                 eventElement.addEventListener('click', () => viewEventDetails(event.id));
                 dayElement.appendChild(eventElement);
@@ -335,6 +438,13 @@ function showEventModalForDay(day) {
     document.getElementById('eventTitle').value = '';
     document.getElementById('eventDescription').value = '';
     
+    // Reset recurring options
+    const isRecurringCheckbox = document.getElementById('isRecurring');
+    if (isRecurringCheckbox) {
+        isRecurringCheckbox.checked = false;
+        document.getElementById('recurringOptions').style.display = 'none';
+    }
+    
     const modalElement = document.getElementById('eventModal');
     if (modalElement) {
         const modal = new bootstrap.Modal(modalElement);
@@ -361,6 +471,13 @@ function showEventModal() {
     if (eventStartTime) eventStartTime.value = '09:00';
     if (eventEndDate) eventEndDate.value = today;
     if (eventEndTime) eventEndTime.value = '10:00';
+    
+    // Reset recurring options
+    const isRecurringCheckbox = document.getElementById('isRecurring');
+    if (isRecurringCheckbox) {
+        isRecurringCheckbox.checked = false;
+        document.getElementById('recurringOptions').style.display = 'none';
+    }
     
     const modalElement = document.getElementById('eventModal');
     if (modalElement) {
@@ -393,6 +510,16 @@ async function saveEvent() {
 
     const formData = new FormData(document.getElementById('eventForm'));
     
+    // Log recurring event data if enabled
+    const isRecurring = document.getElementById('isRecurring').checked;
+    if (isRecurring) {
+        console.log('🔁 Saving recurring event with options:', {
+            frequency: formData.get('frequency'),
+            ends_on: formData.get('ends_on'),
+            days: formData.getAll('days[]')
+        });
+    }
+    
     try {
         const response = await fetch("{% url 'create_event' %}", {
             method: 'POST',
@@ -419,7 +546,12 @@ async function saveEvent() {
                 }
             }
             loadEventsForMonth();
-            showToast('Event created successfully!', 'success');
+            
+            // Show success message with recurring info
+            const message = isRecurring ? 
+                'Recurring event created successfully!' : 
+                'Event created successfully!';
+            showToast(message, 'success');
         } else {
             alert('Error: ' + result.error);
         }
