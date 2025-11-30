@@ -171,3 +171,49 @@ def create_team_notification(team_data, member_value, sender_user=None):
             Notification.sync_to_supabase(notification)
         except Exception as e:
             print(f"Error creating team notification: {e}")
+
+
+def create_comment_notifications(task_data, recipients, sender_user=None, comment_content=""):
+    """Create notifications for task comment activity.
+
+    Args:
+        task_data (dict): Includes task_id and title.
+        recipients (iterable): Values resolvable by _resolve_recipient (user, dict, username, supabase id).
+        sender_user (User): Django user who authored the comment.
+        comment_content (str): Text of the comment for the notification body.
+    """
+    if not task_data or not recipients:
+        return
+
+    task_title = task_data.get('title') or 'Task'
+    task_id = task_data.get('task_id')
+    related_url = f"/tasks/{task_id}/detail/" if task_id else None
+    preview = (comment_content or '').strip() or 'New comment posted.'
+
+    seen_recipient_ids = set()
+
+    for recipient_value in recipients:
+        recipient = _resolve_recipient(recipient_value)
+        if not recipient:
+            continue
+        if sender_user and recipient.id == sender_user.id:
+            continue
+        if recipient.id in seen_recipient_ids:
+            continue
+
+        seen_recipient_ids.add(recipient.id)
+
+        try:
+            notification = Notification.objects.create(
+                recipient=recipient,
+                sender=sender_user,
+                notification_type='comment',
+                title=f"New comment on {task_title}",
+                message=preview[:255],
+                description=comment_content,
+                related_object_id=task_id,
+                related_object_url=related_url,
+            )
+            Notification.sync_to_supabase(notification)
+        except Exception as e:
+            print(f"Error creating comment notification: {e}")

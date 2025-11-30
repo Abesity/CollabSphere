@@ -26,7 +26,12 @@ SECRET_KEY = 'django-insecure-gw36@lm01qz3)yf7v-z0vau+#z=&z5xh)hk#+8u^&xqcde#as)
 DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.onrender.com']
-CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.onrender.com',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'http://127.0.0.1:58842',  # Windsurf proxy
+]
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://oafdtoodydpmqryfulvu.supabase.co")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZmR0b29keWRwbXFyeWZ1bHZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4MDQxNTEsImV4cCI6MjA3NDM4MDE1MX0.tLNm5vLBpCtAtiCXSJYIbxOE-T2XySOlsEkD_vCzg8E") #replace with your supabase URL

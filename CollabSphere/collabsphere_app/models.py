@@ -80,9 +80,11 @@ class SupabaseService:
     @staticmethod
     def get_user_tasks(user_id, username):
         """Get all tasks created by or assigned to the user."""
+        print(f"DEBUG get_user_tasks: Fetching tasks for user_id={user_id}, username={username}")
         created_tasks = (
             supabase.table("tasks").select("*").eq("created_by", username).execute().data or []
         )
+        print(f"DEBUG get_user_tasks: Created tasks count={len(created_tasks)}")
 
         assigned_tasks = (
             supabase.table("tasks")
@@ -93,9 +95,11 @@ class SupabaseService:
             .data
             or []
         )
+        print(f"DEBUG get_user_tasks: Assigned tasks count={len(assigned_tasks)}")
 
         all_tasks = created_tasks + assigned_tasks
         all_tasks.sort(key=lambda x: x.get("date_created", ""), reverse=True)
+        print(f"DEBUG get_user_tasks: Total tasks={len(all_tasks)}")
         return {
             "created_tasks": created_tasks,
             "assigned_tasks": assigned_tasks,
@@ -130,3 +134,23 @@ class SupabaseService:
         """Fetch all users (for admin dashboard)."""
         response = supabase.table("user").select("*").execute()
         return response.data or []
+
+    @staticmethod
+    def get_user_notifications(user_id, limit=10):
+        """Fetch recent notifications for the user from Supabase."""
+        if not user_id:
+            return []
+
+        try:
+            response = (
+                supabase.table("notifications")
+                .select("notification_id, notification_type, title, message, read, created_at, related_object_url")
+                .eq("recipient", int(user_id))
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            return response.data or []
+        except Exception as e:
+            print(f"Error fetching notifications for user {user_id}: {e}")
+            return []

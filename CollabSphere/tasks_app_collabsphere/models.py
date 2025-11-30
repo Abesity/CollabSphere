@@ -239,6 +239,22 @@ class Comment:
             print("Error deleting comment:", e)
             return False
 
+    @staticmethod
+    def get_commenter_usernames(task_id):
+        """Return a set of usernames who have commented on a task."""
+        try:
+            resp = (
+                supabase.table("task_comments")
+                .select("username")
+                .eq("task_id", task_id)
+                .execute()
+            )
+            rows = getattr(resp, "data", resp) or []
+            return {row.get("username") for row in rows if row.get("username")}
+        except Exception as e:
+            print("Error fetching comment usernames:", e)
+            return set()
+
 
 class TaskPermissions:
     """Encapsulates task access logic."""

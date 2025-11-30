@@ -14,6 +14,7 @@ class Notification(models.Model):
     NOTIFICATION_TYPES = (
         ('task', 'Task Assignment'),
         ('team', 'Team Invitation'),
+        ('comment', 'Task Comment'),
     )
 
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
