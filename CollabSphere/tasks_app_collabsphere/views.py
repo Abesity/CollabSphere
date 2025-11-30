@@ -9,8 +9,10 @@ from django.contrib import messages
 
 from .models import Task, Comment, TaskPermissions
 from .notification_triggers import TaskNotificationTriggers
-from notifications_app_collabsphere.views import create_comment_notifications
-
+from notifications_app_collabsphere.views import (
+    create_comment_notifications,
+    create_comment_reply_notification,
+)
 
 # TASKS VIEW (Modal)
 @login_required
@@ -402,6 +404,24 @@ def add_comment(request, task_id):
         
         print(f" Comment added successfully: {result}")
 
+        parent_comment = Comment.get(parent_id) if parent_id else None
+        comment_task_data = {
+            'task_id': task_id,
+            'title': task_data.get('title', 'Task')
+        }
+
+        reply_notification_recipient = None
+        if parent_comment:
+            try:
+                reply_notification_recipient = create_comment_reply_notification(
+                    comment_task_data,
+                    parent_comment,
+                    sender_user=request.user,
+                    comment_content=content
+                )
+            except Exception as reply_error:
+                print(f" Error creating reply notification: {reply_error}")
+
         # Create notifications for relevant users
         try:
             recipients = []
@@ -423,16 +443,14 @@ def add_comment(request, task_id):
             for username in commenter_usernames:
                 recipients.append(username)
 
-            comment_task_data = {
-                'task_id': task_id,
-                'title': task_data.get('title', 'Task')
-            }
+            excluded_ids = {reply_notification_recipient.id} if reply_notification_recipient else None
 
             create_comment_notifications(
                 comment_task_data,
                 recipients,
                 sender_user=request.user,
-                comment_content=content
+                comment_content=content,
+                exclude_recipient_ids=excluded_ids
             )
         except Exception as notify_error:
             print(f" Error creating comment notifications: {notify_error}")

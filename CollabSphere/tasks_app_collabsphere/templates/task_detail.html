@@ -307,8 +307,9 @@
 <script>
 console.log('🟢 SCRIPT FILE LOADED');
 
-// Execute immediately since modal is already inserted
-(function() {
+let replyClickHandlerAttached = false;
+
+function initTaskDetailModal() {
     console.log('🟢 INITIALIZING TASK DETAIL MODAL');
     
     const modal = document.getElementById('taskDetailModal');
@@ -319,8 +320,7 @@ console.log('🟢 SCRIPT FILE LOADED');
         // Listen for when modal is shown
         modal.addEventListener('shown.bs.modal', function () {
             console.log('🟢 MODAL IS NOW VISIBLE - Initializing...');
-            initializeReplyButtons();
-        });
+            initializeReplyButtons()});
         
         // Also initialize immediately in case modal is already open
         setTimeout(function() {
@@ -602,35 +602,25 @@ console.log('🟢 SCRIPT FILE LOADED');
             });
         });
     }
-});
+}
 
 function handleClicks(e) {
-    console.log('🔵 CLICK:', e.target.tagName, e.target.className);
-    
     // Check for reply button
     const replyBtn = e.target.closest('.btn-reply');
     
     if (replyBtn) {
-        console.log('🟢 REPLY BUTTON CLICKED!');
         e.preventDefault();
         e.stopPropagation();
         
         const commentId = replyBtn.getAttribute('data-comment-id');
-        console.log('🟢 Comment ID:', commentId);
-        
         const formId = 'reply-form-' + commentId;
-        console.log('🟢 Looking for form:', formId);
-        
         const replyFormContainer = document.getElementById(formId);
-        console.log('🟢 Form found:', replyFormContainer !== null);
         
         if (!replyFormContainer) {
             console.error('❌ FORM NOT FOUND!');
             showError('Reply form not found! Please refresh the page.');
             return;
         }
-        
-        console.log('🟢 Current display:', replyFormContainer.style.display);
         
         // Hide all other forms
         document.querySelectorAll('.reply-form-container').forEach(form => {
@@ -642,18 +632,14 @@ function handleClicks(e) {
         // Toggle this form
         if (replyFormContainer.style.display === 'none' || replyFormContainer.style.display === '') {
             replyFormContainer.style.display = 'block';
-            console.log('🟢 FORM SHOWN!');
-            
             setTimeout(() => {
                 const textarea = replyFormContainer.querySelector('textarea');
                 if (textarea) {
                     textarea.focus();
-                    console.log('🟢 TEXTAREA FOCUSED!');
                 }
             }, 100);
         } else {
             replyFormContainer.style.display = 'none';
-            console.log('🟢 FORM HIDDEN!');
         }
         return;
     }
@@ -662,7 +648,6 @@ function handleClicks(e) {
     const cancelBtn = e.target.closest('.cancel-reply-btn');
     
     if (cancelBtn) {
-        console.log('🟢 CANCEL CLICKED');
         e.preventDefault();
         e.stopPropagation();
         
@@ -672,13 +657,25 @@ function handleClicks(e) {
             form.style.display = 'none';
             const textarea = form.querySelector('textarea');
             if (textarea) textarea.value = '';
-            console.log('🟢 Form hidden and cleared');
         }
     }
 }
 
 function initializeReplyButtons() {
-    // Placeholder function - reply buttons are handled by the click handler on document.body
+    if (replyClickHandlerAttached) {
+        return;
+    }
+
+    if (document.body) {
+        document.body.addEventListener('click', handleClicks, true);
+        replyClickHandlerAttached = true;
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTaskDetailModal);
+} else {
+    initTaskDetailModal();
 }
 
 function getCookie(name) {

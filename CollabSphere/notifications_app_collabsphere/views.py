@@ -173,7 +173,7 @@ def create_team_notification(team_data, member_value, sender_user=None):
             print(f"Error creating team notification: {e}")
 
 
-def create_comment_notifications(task_data, recipients, sender_user=None, comment_content=""):
+def create_comment_notifications(task_data, recipients, sender_user=None, comment_content="", exclude_recipient_ids=None):
     """Create notifications for task comment activity.
 
     Args:
@@ -181,6 +181,7 @@ def create_comment_notifications(task_data, recipients, sender_user=None, commen
         recipients (iterable): Values resolvable by _resolve_recipient (user, dict, username, supabase id).
         sender_user (User): Django user who authored the comment.
         comment_content (str): Text of the comment for the notification body.
+        exclude_recipient_ids (set[int]): Optional Django user IDs to skip when sending.
     """
     if not task_data or not recipients:
         return
@@ -191,10 +192,13 @@ def create_comment_notifications(task_data, recipients, sender_user=None, commen
     preview = (comment_content or '').strip() or 'New comment posted.'
 
     seen_recipient_ids = set()
+    excluded_ids = exclude_recipient_ids or set()
 
     for recipient_value in recipients:
         recipient = _resolve_recipient(recipient_value)
         if not recipient:
+            continue
+        if recipient.id in excluded_ids:
             continue
         if sender_user and recipient.id == sender_user.id:
             continue
@@ -217,3 +221,47 @@ def create_comment_notifications(task_data, recipients, sender_user=None, commen
             Notification.sync_to_supabase(notification)
         except Exception as e:
             print(f"Error creating comment notification: {e}")
+
+
+def create_comment_reply_notification(task_data, parent_comment, sender_user=None, comment_content=""):
+    """Notify the parent comment author about a direct reply.
+
+    Returns the recipient user instance if a notification was created, else None.
+    """
+    if not task_data or not parent_comment:
+        return None
+
+    parent_username = parent_comment.get('username')
+    parent_user_id = parent_comment.get('user_id') or parent_comment.get('user_ID')
+
+    recipient_value = {
+        'username': parent_username,
+        'user_ID': parent_user_id
+    }
+    recipient = _resolve_recipient(recipient_value)
+
+    if not recipient or (sender_user and recipient.id == sender_user.id):
+        return None
+
+    task_title = task_data.get('title') or 'Task'
+    task_id = task_data.get('task_id')
+    related_url = f"/tasks/{task_id}/detail/" if task_id else None
+    preview = (comment_content or '').strip() or 'New reply posted.'
+    reply_author = getattr(sender_user, 'username', 'Someone')
+
+    try:
+        notification = Notification.objects.create(
+            recipient=recipient,
+            sender=sender_user,
+            notification_type='comment',
+            title=f"{reply_author} replied to your comment on {task_title}",
+            message=preview[:255],
+            description=comment_content,
+            related_object_id=task_id,
+            related_object_url=related_url,
+        )
+        Notification.sync_to_supabase(notification)
+        return recipient
+    except Exception as e:
+        print(f"Error creating comment reply notification: {e}")
+        return None
