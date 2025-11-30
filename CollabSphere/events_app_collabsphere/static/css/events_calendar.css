@@ -380,6 +380,50 @@ body::after {
   color: #5BBA6F;
 }
 
+.upcoming-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.btn-upcoming-delete {
+  background: transparent;
+  border: none;
+  color: #a0a5b1;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0 0.25rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.btn-upcoming-delete:hover {
+  color: #d0453e;
+}
+
+.day-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.day-event-card {
+  border: 1px solid #e3e6ed;
+  border-radius: 10px;
+  background: #fefefe;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.day-event-card h6 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.day-event-card .btn-link {
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
 .no-events {
   text-align: center;
   color: #6c757d;

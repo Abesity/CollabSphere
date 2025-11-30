@@ -1,4 +1,5 @@
 {% extends "base_dashboard.html" %}
+
 {% load static %}
 
 {% block title %}Events – CollabSphere{% endblock %}
@@ -86,7 +87,10 @@
               <div class="upcoming-title">{{ event.title }}</div>
               <div class="upcoming-time">{{ event.time }}</div>
             </div>
-            <div class="upcoming-type team">Team</div>
+            <div class="upcoming-actions">
+              <span class="upcoming-type team">Team</span>
+              <button type="button" class="btn-upcoming-delete" data-event-id="{{ event.id }}" aria-label="Remove event">×</button>
+            </div>
           </div>
           {% empty %}
           <div class="no-events">
@@ -132,28 +136,23 @@
             <textarea class="form-control" id="eventDescription" name="description" rows="3" placeholder="Optional event description..."></textarea>
           </div>
           
-          <div class="row">
-            <div class="col-md-6 mb-3">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
               <label for="eventStartDate" class="form-label">Start Date *</label>
               <input type="date" class="form-control" id="eventStartDate" name="start_date" required>
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-md-4">
               <label for="eventStartTime" class="form-label">Start Time *</label>
               <input type="time" class="form-control" id="eventStartTime" name="start_time" value="09:00" required>
             </div>
+            <div class="col-md-4">
+              <label for="eventEndTime" class="form-label">End Time *</label>
+              <input type="time" class="form-control" id="eventEndTime" name="end_time" value="10:00" required>
+              <div class="form-text">Ends on the same day.</div>
+            </div>
           </div>
+          <input type="hidden" id="eventEndDate" name="end_date">
           
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="eventEndDate" class="form-label">End Date</label>
-              <input type="date" class="form-control" id="eventEndDate" name="end_date">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label for="eventEndTime" class="form-label">End Time</label>
-              <input type="time" class="form-control" id="eventEndTime" name="end_time" value="10:00">
-            </div>
-          </div>
-
           <!-- ========================================== -->
           <!-- TASK 3.2.1: RECURRING EVENT OPTIONS START -->
           <!-- ========================================== -->
@@ -245,9 +244,7 @@
           <!-- TASK 3.2.1: RECURRING EVENT OPTIONS END -->
           <!-- ======================================== -->
           
-          <div class="form-text mt-3">
-            * Required fields. If end date/time is not specified, it will default to the same as start.
-          </div>
+          <div class="form-text mt-3">* Required fields. Start and end times are captured for the same calendar day.</div>
         </form>
       </div>
       <div class="modal-footer">
@@ -261,25 +258,403 @@
   </div>
 </div>
 
+<!-- Day Action Modal -->
+<div class="modal fade" id="dayActionModal" tabindex="-1" aria-labelledby="dayActionLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="dayActionLabel">Create an event for this day?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1">Would you like to schedule a new event on this date?</p>
+        <div id="dayActionDate" class="text-muted small"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Not Now</button>
+        <button type="button" class="btn btn-primary" id="confirmDayCreate">Create Event</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Day Events Modal -->
+<div class="modal fade" id="dayEventsModal" tabindex="-1" aria-labelledby="dayEventsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="dayEventsLabel">Events on Selected Day</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="dayEventsDate" class="text-muted small mb-3"></div>
+        <div id="dayEventsContainer" class="day-events-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Event Details Modal -->
+<div class="modal fade" id="eventDetailsModal" tabindex="-1" aria-labelledby="eventDetailsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="eventDetailsLabel">Event Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h4 id="eventDetailsTitle" class="mb-2"></h4>
+        <div id="eventDetailsTime" class="text-muted mb-3"></div>
+        <p id="eventDetailsDescription" class="mb-0"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmDeleteLabel">Remove Event</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="confirmDeleteMessage">
+        Are you sure you want to remove this event?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteButton">Yes, Remove</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // Global variables
 let currentDate = new Date();
 let currentEvents = JSON.parse('{{ events_json|escapejs }}');
+const hasActiveTeam = '{{ has_active_team|yesno:"true,false" }}' === 'true';
+let pendingDayDateKey = null;
+let pendingDeleteEventId = null;
+let deleteCallback = null;
+const dayActionModal = document.getElementById('dayActionModal');
+const dayEventsModal = document.getElementById('dayEventsModal');
+const eventDetailsModal = document.getElementById('eventDetailsModal');
+const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+const modalInstances = {
+    dayAction: null,
+    dayEvents: null,
+    eventDetails: null,
+    deleteConfirm: null
+};
+const eventUrls = {
+    create: "{% url 'create_event' %}",
+    getMonth: "{% url 'get_events' %}",
+    detailBase: "{% url 'get_event' 0 %}".replace(/0\/$/, ''),
+    deleteBase: "{% url 'delete_event' 0 %}".replace(/0\/$/, '')
+};
+
+function initModalInstances() {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+        console.warn('Bootstrap JavaScript is required for modals.');
+        return;
+    }
+    modalInstances.dayAction = dayActionModal ? bootstrap.Modal.getOrCreateInstance(dayActionModal) : null;
+    modalInstances.dayEvents = dayEventsModal ? bootstrap.Modal.getOrCreateInstance(dayEventsModal) : null;
+    modalInstances.eventDetails = eventDetailsModal ? bootstrap.Modal.getOrCreateInstance(eventDetailsModal) : null;
+    modalInstances.deleteConfirm = confirmDeleteModal ? bootstrap.Modal.getOrCreateInstance(confirmDeleteModal) : null;
+}
+
+function formatDateKey(year, monthIndex, day) {
+    const month = String(monthIndex + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    return `${year}-${month}-${dayStr}`;
+}
+
+function dayKeyToDate(dateKey) {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
+function handleDaySelection(dateKey) {
+    if (!hasActiveTeam) {
+        showWarning('Select a team before creating events.');
+        return;
+    }
+    const eventsForDay = getEventsForDate(dateKey);
+    if (eventsForDay.length > 0) {
+        showDayEventsModal(dateKey, eventsForDay);
+    } else {
+        showDayCreatePrompt(dateKey);
+    }
+}
+
+function getEventsForDate(dateKey) {
+    if (!Array.isArray(currentEvents)) return [];
+    return currentEvents.filter(evt => normalizeDateKey(evt.start) === dateKey);
+}
+
+function normalizeDateKey(dateStr) {
+    if (!dateStr) return '';
+    if (dateStr.length === 10) return dateStr;
+    return dateStr.split('T')[0];
+}
+
+function showDayCreatePrompt(dateKey) {
+    pendingDayDateKey = dateKey;
+    const dateDisplay = document.getElementById('dayActionDate');
+    if (dateDisplay) {
+        dateDisplay.textContent = dayKeyToDate(dateKey).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    }
+    if (modalInstances.dayAction) {
+        modalInstances.dayAction.show();
+    }
+}
+
+function handleConfirmedDayCreate() {
+    if (!pendingDayDateKey) return;
+    const dateObj = dayKeyToDate(pendingDayDateKey);
+    openEventModalForDate(dateObj);
+    pendingDayDateKey = null;
+    if (modalInstances.dayAction) {
+        modalInstances.dayAction.hide();
+    }
+}
+
+function openEventModalForDate(dateObj) {
+    if (!dateObj) return;
+    const isoDate = dateObj.toISOString().split('T')[0];
+    const eventStartDate = document.getElementById('eventStartDate');
+    const eventEndDate = document.getElementById('eventEndDate');
+    const eventStartTime = document.getElementById('eventStartTime');
+    const eventEndTime = document.getElementById('eventEndTime');
+    if (eventStartDate) eventStartDate.value = isoDate;
+    if (eventEndDate) eventEndDate.value = isoDate;
+    if (eventStartTime) eventStartTime.value = '09:00';
+    if (eventEndTime) eventEndTime.value = '10:00';
+    const modalElement = document.getElementById('eventModal');
+    if (modalElement) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modal.show();
+    }
+}
+
+function showDayEventsModal(dateKey, events) {
+    const container = document.getElementById('dayEventsContainer');
+    const dateLabel = document.getElementById('dayEventsDate');
+    if (dateLabel) {
+        dateLabel.textContent = dayKeyToDate(dateKey).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    }
+    if (container) {
+        container.innerHTML = '';
+        events.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+        events.forEach(event => {
+            const card = document.createElement('div');
+            card.className = 'day-event-card';
+            card.innerHTML = `
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${event.title}</h6>
+                            <div class="text-muted small">${event.start_time || ''} - ${event.end_time || ''}</div>
+                        </div>
+                        <button class="btn btn-link btn-sm p-0" data-event-id="${event.id || ''}">View</button>
+                    </div>
+                    <p class="mb-0 small text-muted mt-2">${event.description || 'No description provided.'}</p>
+                </div>
+            `;
+            const viewBtn = card.querySelector('button[data-event-id]');
+            if (viewBtn) {
+                viewBtn.addEventListener('click', () => {
+                    if (event.id) {
+                        openEventDetailsById(event.id);
+                    }
+                });
+            }
+            container.appendChild(card);
+        });
+    }
+    if (modalInstances.dayEvents) {
+        modalInstances.dayEvents.show();
+    }
+}
+
+async function openEventDetailsById(eventId) {
+    if (!eventId) return;
+    try {
+        const response = await fetch(`${eventUrls.detailBase}/${eventId}/`);
+        const result = await response.json();
+        if (result.success && result.event) {
+            populateEventDetailsModal(result.event);
+        } else {
+            showError(result.error || 'Unable to load event details');
+        }
+    } catch (error) {
+        console.error('Error fetching event details:', error);
+        showError('Unable to load event details');
+    }
+}
+
+function populateEventDetailsModal(event) {
+    const titleEl = document.getElementById('eventDetailsTitle');
+    const timeEl = document.getElementById('eventDetailsTime');
+    const descEl = document.getElementById('eventDetailsDescription');
+    if (titleEl) titleEl.textContent = event.title || 'Untitled Event';
+    if (timeEl) {
+        timeEl.textContent = `${event.start_date || ''} ${event.start_time || ''} - ${event.end_date || ''} ${event.end_time || ''}`.trim();
+    }
+    if (descEl) descEl.textContent = event.description || 'No description provided.';
+    if (modalInstances.eventDetails) {
+        modalInstances.eventDetails.show();
+    }
+}
+
+function formatTimeTo12Hour(timeValue) {
+    if (!timeValue) return '';
+    const [hourStr, minuteStr] = timeValue.split(':');
+    let hour = parseInt(hourStr, 10);
+    const minute = minuteStr || '00';
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return `${hour}:${minute} ${ampm}`;
+}
+
+function addNewEventToCalendarCache(formData, eventId) {
+    if (!Array.isArray(currentEvents)) {
+        currentEvents = [];
+    }
+    const startDate = formData.get('start_date');
+    const endTime = formData.get('end_time');
+    const startTime = formData.get('start_time');
+    currentEvents.push({
+        id: eventId,
+        title: formData.get('title'),
+        description: formData.get('description') || '',
+        start: startDate,
+        start_time: formatTimeTo12Hour(startTime),
+        end_time: formatTimeTo12Hour(endTime),
+        is_recurring: formData.get('is_recurring') === 'on'
+    });
+    renderCalendar();
+}
+
+function handleUpcomingListClick(event) {
+    const deleteBtn = event.target.closest('.btn-upcoming-delete');
+    const item = event.target.closest('.upcoming-item');
+    if (deleteBtn) {
+        const eventId = deleteBtn.dataset.eventId;
+        if (eventId) {
+            requestDeleteConfirmation(eventId, () => {
+                if (item) {
+                    item.remove();
+                }
+            });
+        }
+    } else if (item && item.dataset.eventId) {
+        openEventDetailsById(item.dataset.eventId);
+    }
+}
+
+function requestDeleteConfirmation(eventId, callback) {
+    pendingDeleteEventId = eventId;
+    deleteCallback = callback;
+    if (modalInstances.deleteConfirm) {
+        modalInstances.deleteConfirm.show();
+    }
+}
+
+async function finalizeDeleteRequest() {
+    if (!pendingDeleteEventId) return;
+    const eventId = pendingDeleteEventId;
+    try {
+        await deleteEventById(eventId);
+        if (deleteCallback) {
+            deleteCallback();
+        }
+        deleteCallback = null;
+        pendingDeleteEventId = null;
+        if (modalInstances.deleteConfirm) {
+            modalInstances.deleteConfirm.hide();
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        showError('Failed to delete event.');
+    }
+}
+
+async function deleteEventById(eventId) {
+    const csrfToken = getCSRFToken();
+    const response = await fetch(`${eventUrls.deleteBase}/${eventId}/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': csrfToken || ''
+        }
+    });
+    const result = await response.json();
+    if (!result.success) {
+        throw new Error(result.error || 'Delete failed');
+    }
+    currentEvents = currentEvents.filter(evt => String(evt.id) !== String(eventId));
+    renderCalendar();
+    loadEventsForMonth();
+    showToast('Event removed', 'success');
+}
+
+function showWarning(message) {
+    showToast(message, 'warning');
+}
+
+function showError(message) {
+    showToast(message, 'danger');
+}
+
+function showInfo(message) {
+    showToast(message, 'info');
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🟢 Calendar DOM loaded');
     initializeCalendar();
+    initModalInstances();
     
     // Event listeners - check if elements exist first
     const prevMonthBtn = document.getElementById('prevMonth');
     const nextMonthBtn = document.getElementById('nextMonth');
     const addEventBtn = document.getElementById('addEvent');
     const saveEventBtn = document.getElementById('saveEvent');
+    const startDateInput = document.getElementById('eventStartDate');
+    const endDateInput = document.getElementById('eventEndDate');
+    const confirmDayCreateBtn = document.getElementById('confirmDayCreate');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteButton');
+    const upcomingList = document.getElementById('upcomingEventsList');
     
     if (prevMonthBtn) prevMonthBtn.addEventListener('click', previousMonth);
     if (nextMonthBtn) nextMonthBtn.addEventListener('click', nextMonth);
     if (addEventBtn) addEventBtn.addEventListener('click', showEventModal);
     if (saveEventBtn) saveEventBtn.addEventListener('click', saveEvent);
+    if (startDateInput && endDateInput) {
+        startDateInput.addEventListener('change', () => {
+            if (startDateInput.value) {
+                endDateInput.value = startDateInput.value;
+            }
+        });
+    }
+    if (confirmDayCreateBtn) {
+        confirmDayCreateBtn.addEventListener('click', handleConfirmedDayCreate);
+    }
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', finalizeDeleteRequest);
+    }
+    if (upcomingList) {
+        upcomingList.addEventListener('click', handleUpcomingListClick);
+    }
     
     // Load events for current month
     loadEventsForMonth();
@@ -300,7 +675,6 @@ function getCSRFToken() {
     }
     return cookieValue ? cookieValue.trim() : null;
 }
-
 
 function initializeCalendar() {
     console.log('🟢 Initializing calendar');
@@ -333,19 +707,23 @@ function renderCalendar() {
     const totalDays = lastDay.getDate();
     
     // Previous month days
-    const prevMonthLastDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0).getDate();
+    const prevMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0);
+    const prevMonthLastDay = prevMonthDate.getDate();
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-        const dayElement = createDayElement(prevMonthLastDay - i, true);
+        const dayNum = prevMonthLastDay - i;
+        const dateKey = formatDateKey(prevMonthDate.getFullYear(), prevMonthDate.getMonth(), dayNum);
+        const dayElement = createDayElement(dayNum, true, false, dateKey);
         calendarDays.appendChild(dayElement);
     }
-    
+
     // Current month days
     const today = new Date();
     for (let day = 1; day <= totalDays; day++) {
         const isToday = today.getDate() === day && 
                        today.getMonth() === currentDate.getMonth() && 
                        today.getFullYear() === currentDate.getFullYear();
-        const dayElement = createDayElement(day, false, isToday);
+        const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
+        const dayElement = createDayElement(day, false, isToday, dateKey);
         calendarDays.appendChild(dayElement);
     }
     
@@ -353,27 +731,33 @@ function renderCalendar() {
     addEventsToCalendar();
 }
 
-function createDayElement(dayNumber, isOtherMonth, isToday = false) {
+function createDayElement(dayNumber, isOtherMonth, isToday = false, dateKey = null) {
     const dayElement = document.createElement('div');
     dayElement.className = 'calendar-day';
     if (isOtherMonth) dayElement.classList.add('other-month');
     if (isToday) dayElement.classList.add('today');
-    
+    const dateAttr = dateKey ? `data-date="${dateKey}"` : '';
+    if (dateKey) {
+        dayElement.dataset.dateKey = dateKey;
+    }
+
     dayElement.innerHTML = `
         <div class="day-number">${dayNumber}</div>
-        <div class="events-container" data-day="${dayNumber}"></div>
+        <div class="events-container" data-day="${dayNumber}" ${dateAttr}></div>
     `;
     
-    // Add click event for adding events
     if (!isOtherMonth) {
-        const eventsContainer = dayElement.querySelector('.events-container');
-        if (eventsContainer) {
-            eventsContainer.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    showEventModalForDay(dayNumber);
-                }
-            });
-        }
+        dayElement.addEventListener('click', (event) => {
+            const eventItem = event.target.closest('.event-item');
+            if (eventItem && eventItem.dataset.eventId) {
+                event.stopPropagation();
+                openEventDetailsById(eventItem.dataset.eventId);
+                return;
+            }
+            if (dayElement.dataset.dateKey) {
+                handleDaySelection(dayElement.dataset.dateKey);
+            }
+        });
     }
     
     return dayElement;
@@ -389,11 +773,13 @@ function addEventsToCalendar() {
         const eventDate = new Date(event.start);
         if (eventDate.getMonth() === currentDate.getMonth() && 
             eventDate.getFullYear() === currentDate.getFullYear()) {
-            
-            const dayElement = document.querySelector(`.events-container[data-day="${eventDate.getDate()}"]`);
+            const dayElement = document.querySelector(`.events-container[data-date="${formatDateKey(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate())}"]`);
             if (dayElement) {
                 const eventElement = document.createElement('div');
                 eventElement.className = 'event-item team-meeting';
+                if (event.id) {
+                    eventElement.dataset.eventId = event.id;
+                }
                 
                 // Add recurring indicator if applicable
                 const recurringIcon = event.is_recurring ? '🔁 ' : '';
@@ -402,7 +788,12 @@ function addEventsToCalendar() {
                     <span class="event-time">${event.start_time}</span>
                     <span class="event-title">${recurringIcon}${event.title}</span>
                 `;
-                eventElement.addEventListener('click', () => viewEventDetails(event.id));
+                eventElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (event.id) {
+                        openEventDetailsById(event.id);
+                    }
+                });
                 dayElement.appendChild(eventElement);
             }
         }
@@ -429,27 +820,7 @@ function addEventsToCalendar() {
 
 function showEventModalForDay(day) {
     const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    document.getElementById('eventStartDate').value = startDate.toISOString().split('T')[0];
-    document.getElementById('eventStartTime').value = '09:00';
-    document.getElementById('eventEndDate').value = startDate.toISOString().split('T')[0];
-    document.getElementById('eventEndTime').value = '10:00';
-    
-    // Clear form
-    document.getElementById('eventTitle').value = '';
-    document.getElementById('eventDescription').value = '';
-    
-    // Reset recurring options
-    const isRecurringCheckbox = document.getElementById('isRecurring');
-    if (isRecurringCheckbox) {
-        isRecurringCheckbox.checked = false;
-        document.getElementById('recurringOptions').style.display = 'none';
-    }
-    
-    const modalElement = document.getElementById('eventModal');
-    if (modalElement) {
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
-    }
+    openEventModalForDate(startDate);
 }
 
 function showEventModal() {
@@ -466,10 +837,11 @@ function showEventModal() {
     if (eventTitle) eventTitle.value = '';
     if (eventDescription) eventDescription.value = '';
     
-    const today = new Date().toISOString().split('T')[0];
-    if (eventStartDate) eventStartDate.value = today;
+    const today = new Date();
+    const todayIso = today.toISOString().split('T')[0];
+    if (eventStartDate) eventStartDate.value = todayIso;
     if (eventStartTime) eventStartTime.value = '09:00';
-    if (eventEndDate) eventEndDate.value = today;
+    if (eventEndDate) eventEndDate.value = todayIso;
     if (eventEndTime) eventEndTime.value = '10:00';
     
     // Reset recurring options
@@ -481,10 +853,8 @@ function showEventModal() {
     
     const modalElement = document.getElementById('eventModal');
     if (modalElement) {
-        const modal = new bootstrap.Modal(modalElement);
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.show();
-    } else {
-        console.error('❌ Event modal element not found');
     }
 }
 
@@ -509,6 +879,7 @@ async function saveEvent() {
     }
 
     const formData = new FormData(document.getElementById('eventForm'));
+    applyDefaultEndFields(formData);
     
     // Log recurring event data if enabled
     const isRecurring = document.getElementById('isRecurring').checked;
@@ -521,7 +892,7 @@ async function saveEvent() {
     }
     
     try {
-        const response = await fetch("{% url 'create_event' %}", {
+        const response = await fetch(eventUrls.create, {
             method: 'POST',
             body: formData,
         });
@@ -545,6 +916,7 @@ async function saveEvent() {
                     modal.hide();
                 }
             }
+            addNewEventToCalendarCache(formData, result.event_id);
             loadEventsForMonth();
             
             // Show success message with recurring info
@@ -571,9 +943,44 @@ function resetSaveButton() {
     }
 }
 
+function applyDefaultEndFields(formData, durationMinutes = 60) {
+    const startDate = formData.get('start_date');
+    const startTime = formData.get('start_time') || '09:00';
+    if (!startDate) {
+        return;
+    }
+
+    // Always lock the end date to the chosen start date since events are single-day.
+    formData.set('end_date', startDate);
+
+    const providedEndTime = formData.get('end_time');
+    if (providedEndTime) {
+        return;
+    }
+
+    if (!startTime) {
+        return;
+    }
+
+    const sanitizedDuration = Number.isFinite(parseInt(durationMinutes, 10)) && parseInt(durationMinutes, 10) > 0
+        ? parseInt(durationMinutes, 10)
+        : 60;
+
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const minutesPerDay = 24 * 60;
+    const startMinutes = (startHour * 60) + startMinute;
+    const maxMinutes = minutesPerDay - 1; // 23:59
+    const totalMinutes = Math.min(startMinutes + sanitizedDuration, maxMinutes);
+    const endHour = Math.floor(totalMinutes / 60);
+    const endMinute = totalMinutes % 60;
+    const endTimeStr = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
+
+    formData.set('end_time', endTimeStr);
+}
+
 async function loadEventsForMonth() {
     try {
-        const response = await fetch(`{% url 'get_events' %}?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}`);
+        const response = await fetch(`${eventUrls.getMonth}?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}`);
         const result = await response.json();
         
         if (result.success) {
@@ -586,8 +993,7 @@ async function loadEventsForMonth() {
 }
 
 function viewEventDetails(eventId) {
-    // For now, show a toast info message
-    showInfo(`Event ID: ${eventId} - Detailed view coming in a future update.`);
+    openEventDetailsById(eventId);
 }
 
 function previousMonth() {
