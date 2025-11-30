@@ -387,18 +387,30 @@ body::after {
 }
 
 .btn-upcoming-delete {
-  background: transparent;
-  border: none;
-  color: #a0a5b1;
-  font-size: 1.25rem;
-  line-height: 1;
-  padding: 0 0.25rem;
+  background: #f7e8ea;
+  border: 1px solid #f0cfd4;
+  color: #c0392b;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .btn-upcoming-delete:hover {
-  color: #d0453e;
+  background: #f2d5da;
+  color: #a52b1f;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.1);
+}
+
+.btn-upcoming-delete-icon {
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
 .day-events-list {
