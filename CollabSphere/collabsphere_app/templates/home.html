@@ -1,4 +1,5 @@
 {% extends "base_dashboard.html" %}
+
 {% load static %}
 
 {% block title %}Home – CollabSphere{% endblock %}
@@ -155,39 +156,39 @@
           </div>
           
           <!-- Assigned Tasks Tab Content -->
-<div id="assigned-tasks" class="task-tab-content">
-  <ul class="task-list">
-    {% if assigned_tasks_count > 0 %}
-      {% for task in tasks %}
-        {% if task.assigned_to == user.username or task.assigned_to_username == user.username %}
-          <li class="task-item" onclick="openTaskDetail('{{ task.task_id }}')">
-            <div class="task-title">{{ task.title }}</div>
-            <div class="task-details">
-              {% if task.status == 'Pending' %}
-                <span class="status-circle pending" aria-hidden="true"></span>
-              {% elif task.status == 'In Progress' %}
-                <span class="status-circle in-progress" aria-hidden="true"></span>
-              {% elif task.status == 'Completed' %}
-                <span class="status-circle completed" aria-hidden="true"></span>
-              {% else %}
-                <span class="status-circle pending" aria-hidden="true"></span>
-              {% endif %}
+          <div id="assigned-tasks" class="task-tab-content">
+            <ul class="task-list">
+              {% if assigned_tasks_count > 0 %}
+                {% for task in tasks %}
+                  {% if task.assigned_to == user.username or task.assigned_to_username == user.username %}
+                    <li class="task-item" onclick="openTaskDetail('{{ task.task_id }}')">
+                      <div class="task-title">{{ task.title }}</div>
+                      <div class="task-details">
+                        {% if task.status == 'Pending' %}
+                          <span class="status-circle pending" aria-hidden="true"></span>
+                        {% elif task.status == 'In Progress' %}
+                          <span class="status-circle in-progress" aria-hidden="true"></span>
+                        {% elif task.status == 'Completed' %}
+                          <span class="status-circle completed" aria-hidden="true"></span>
+                        {% else %}
+                          <span class="status-circle pending" aria-hidden="true"></span>
+                        {% endif %}
 
-              <div class="task-meta-right">
-                <span class="status">{{ task.status }}</span>
-                <span class="due-date">{{ task.due_date }}</span>
-              </div>
-            </div>
-          </li>
-        {% endif %}
-      {% endfor %}
-    {% else %}
-      <li class="task-item empty">No tasks assigned to you.</li>
-    {% endif %}
-  </ul>
-</div>
-</div>
-</div>
+                        <div class="task-meta-right">
+                          <span class="status">{{ task.status }}</span>
+                          <span class="due-date">{{ task.due_date }}</span>
+                        </div>
+                      </div>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <li class="task-item empty">No tasks assigned to you.</li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+      </div>
 
       <!-- Rest of your right column content remains the same -->
       <div class="column-right">
@@ -270,178 +271,248 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// -- Comments 
-document.addEventListener('submit', function(e) {
-    // Check if the submitted form is a comment form
-    if (e.target && e.target.id === 'addCommentForm') {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('Comment form submission intercepted via event delegation');
-        
-        const form = e.target;
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = 'Posting...';
-        
-        const formData = new FormData(form);
-        
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-            
-            if (data.error) {
-                alert('Error: ' + data.error);
-                return;
-            }
-            
-            if (data.success) {
-                // Add the new comment to the list
-                const commentsList = document.querySelector('.comments-list');
-                const noCommentsMsg = commentsList.querySelector('.text-muted.text-center');
-                
-                if (noCommentsMsg) {
-                    noCommentsMsg.remove();
-                }
-                
-                const newComment = document.createElement('div');
-                newComment.className = 'comment-item mb-3 p-3 border rounded';
-                newComment.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <strong class="text-primary">${data.username}</strong>
-                        <small class="text-muted">${new Date(data.created_at).toLocaleString()}</small>
-                    </div>
-                    <p class="mb-0">${data.content}</p>
-                `;
-                
-                commentsList.appendChild(newComment);
-                
-                // Clear the form
-                form.reset();
-                
-                // Scroll to show new comment
-                commentsList.scrollTop = commentsList.scrollHeight;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-            alert('Something went wrong. Please try again.');
-        });
-    }
-});
-  
-// --- IMMEDIATE CHECK-IN STATUS VERIFICATION ---
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded, verifying check-in status...');
-    verifyCheckinStatus();
-});
+// Helper function to safely remove existing modals
+function removeModalIfExists(modalId) {
+    return new Promise(resolve => {
+        const modalElement = document.getElementById(modalId);
+        if (!modalElement) {
+            resolve();
+            return;
+        }
 
-// Function to verify check-in status
-function verifyCheckinStatus() {
-    fetch("{% url 'verify_checkin_status' %}", {
-        method: 'GET',
-        headers: { 
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        credentials: 'include'
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
+        if (modalElement.contains(document.activeElement)) {
+            document.activeElement.blur();
         }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Check-in status verification:', data);
-        if (data.has_checked_in_today) {
-            updateWellbeingCardToComplete();
+
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+
+        if (modalInstance && modalElement.classList.contains('show')) {
+            modalElement.addEventListener('hidden.bs.modal', () => {
+                modalInstance.dispose();
+                modalElement.remove();
+                resolve();
+            }, { once: true });
+            modalInstance.hide();
+        } else {
+            if (modalInstance) {
+                modalInstance.dispose();
+            }
+            modalElement.remove();
+            resolve();
         }
-        // If hasn't checked in, the card already shows the check-in option
-    })
-    .catch(error => {
-        console.error('Error verifying check-in status:', error);
     });
 }
 
 // --- TASK MODAL ---
-document.getElementById('openTaskModal').addEventListener('click', function() {
-    
-    fetch("{% url 'tasks' %}")  
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('taskModalContainer').innerHTML = html;
-            
-            const modalElement = document.getElementById('newTaskModal');
-            const modal = new bootstrap.Modal(modalElement);
-            
-       
-            const dateInput = document.getElementById("dateCreated");
-            const today = new Date();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            const yyyy = today.getFullYear();
-            dateInput.value = `${yyyy}-${mm}-${dd}`; 
+document.getElementById('openTaskModal').addEventListener('click', async function() {
+    try {
+        const response = await fetch("{% url 'tasks' %}");
+        if (!response.ok) {
+            throw new Error('Failed to fetch task modal.');
+        }
 
-            const completionSlider = document.getElementById("completion");
-            const completionLabel = document.getElementById("completionValue");
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
 
+        const fetchedModal = doc.getElementById('newTaskModal');
+        if (!fetchedModal) {
+            throw new Error('Task creation modal markup missing in response.');
+        }
+
+        await removeModalIfExists('newTaskModal');
+
+        // Ensure required stylesheets are available
+        doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+            const href = link.getAttribute('href');
+            if (href && !document.querySelector(`link[href="${href}"]`)) {
+                const styleTag = document.createElement('link');
+                Array.from(link.attributes).forEach(attr => {
+                    styleTag.setAttribute(attr.name, attr.value);
+                });
+                document.head.appendChild(styleTag);
+            }
+        });
+
+        document.body.appendChild(fetchedModal);
+        const modal = new bootstrap.Modal(fetchedModal);
+        
+        const dateInput = fetchedModal.querySelector("#dateCreated");
+        const today = new Date();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        if (dateInput) {
+            dateInput.value = todayStr;
+        }
+
+        const completionSlider = fetchedModal.querySelector("#completion");
+        const completionLabel = fetchedModal.querySelector("#completionValue");
+
+        if (completionSlider && completionLabel) {
             completionLabel.textContent = completionSlider.value;
-
             completionSlider.addEventListener("input", function() {
                 completionLabel.textContent = this.value;
             });
-            
-            modal.show();
+        }
+
+        // --- Task date validation (Start Date / Due Date) ---
+        const taskForm = fetchedModal.querySelector('#taskForm');
+        const startDateInput = fetchedModal.querySelector('#startDate');
+        const dueDateInput = fetchedModal.querySelector('#dueDate');
+
+        // Ensure minimum selectable dates are today
+        if (startDateInput) {
+            startDateInput.setAttribute('min', todayStr);
+        }
+        if (dueDateInput) {
+            dueDateInput.setAttribute('min', todayStr);
+        }
+
+        function validateTaskDates() {
+            const creationDate = dateInput ? dateInput.value : todayStr;
+            const start = startDateInput ? startDateInput.value : null;
+            const due = dueDateInput ? dueDateInput.value : null;
+
+            // Start Date must not be earlier than creation date (today)
+            if (start && start < creationDate) {
+                if (typeof showError === 'function') {
+                    showError("Data didn't get saved because the Start Date can't be before today.");
+                } else {
+                    alert("Data didn't get saved because the Start Date can't be before today.");
+                }
+                startDateInput.value = '';
+                return false;
+            }
+
+            // Due Date must not be earlier than creation date (today)
+            if (due && due < creationDate) {
+                if (typeof showError === 'function') {
+                    showError("Data didn't get saved because the Due Date can't be before today.");
+                } else {
+                    alert("Data didn't get saved because the Due Date can't be before today.");
+                }
+                dueDateInput.value = '';
+                return false;
+            }
+
+            // Due Date must not be before Start Date
+            if (start && due && due < start) {
+                if (typeof showError === 'function') {
+                    showError('Due Date cannot be before the Start Date.');
+                } else {
+                    alert('Due Date cannot be before the Start Date.');
+                }
+                return false;
+            }
+
+            return true;
+        }
+
+        if (startDateInput) {
+            startDateInput.addEventListener('change', validateTaskDates);
+        }
+        if (dueDateInput) {
+            dueDateInput.addEventListener('change', validateTaskDates);
+        }
+
+        if (taskForm) {
+            taskForm.addEventListener('submit', function(e) {
+                if (!validateTaskDates()) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        // Execute any scripts inside the fetched modal
+        doc.querySelectorAll('script').forEach(script => {
+            const newScript = document.createElement('script');
+            if (script.src) {
+                newScript.src = script.src;
+            } else {
+                newScript.textContent = script.textContent;
+            }
+            document.body.appendChild(newScript);
         });
+
+        modal.show();
+    } catch (error) {
+        console.error("Error loading task modal:", error);
+        alert("Could not load task modal. Please try again.");
+    }
 });
 
 // Function to open task detail modal
-function openTaskDetail(taskId) {
-  fetch(`/tasks/${taskId}/detail/`, {
-      headers: { "X-Requested-With": "XMLHttpRequest" },
-      credentials: "include"
-  })
-  .then(response => {
+async function openTaskDetail(taskId) {
+  try {
+      const response = await fetch(`/tasks/${taskId}/detail/`, {
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          credentials: "include"
+      });
+
       if (!response.ok) throw new Error("Failed to fetch task detail.");
-      return response.text();
-  })
-  .then(html => {
-      document.getElementById("taskModalContainer").innerHTML = html;
-      const modalElement = document.getElementById("taskDetailModal");
-      const modal = new bootstrap.Modal(modalElement);
-      modal.show();
-      const completionSlider = document.getElementById("completion");
-      const completionValue = document.getElementById("completionValue");
-      if (completionSlider && completionValue) {
-          completionValue.textContent = completionSlider.value;
-          completionSlider.addEventListener("input", () => {
-              completionValue.textContent = completionSlider.value;
-          });
+
+      const html = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      const fetchedModal = doc.getElementById('taskDetailModal');
+      if (!fetchedModal) {
+          throw new Error('Task detail modal markup missing in response.');
       }
-  })
-  .catch(error => {
+
+      await removeModalIfExists('taskDetailModal');
+
+      doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+          const href = link.getAttribute('href');
+          if (href && !document.querySelector(`link[href="${href}"]`)) {
+              const styleTag = document.createElement('link');
+              Array.from(link.attributes).forEach(attr => {
+                  styleTag.setAttribute(attr.name, attr.value);
+              });
+              document.head.appendChild(styleTag);
+          }
+      });
+
+      document.body.appendChild(fetchedModal);
+
+      doc.querySelectorAll('script').forEach(script => {
+          const newScript = document.createElement('script');
+          if (script.src) {
+              newScript.src = script.src;
+          } else {
+              newScript.textContent = script.textContent;
+          }
+          document.body.appendChild(newScript);
+      });
+
+      const modal = new bootstrap.Modal(fetchedModal);
+      modal.show();
+
+      setTimeout(() => {
+          const completionSlider = fetchedModal.querySelector("#completion");
+          const completionValue = fetchedModal.querySelector("#completionValue");
+          if (completionSlider && completionValue) {
+              completionValue.textContent = completionSlider.value;
+              completionSlider.addEventListener("input", () => {
+                  completionValue.textContent = completionSlider.value;
+              });
+          }
+      }, 100);
+  } catch (error) {
       console.error("Error loading task detail:", error);
       alert("Could not load task details. Please try again.");
-  });
+  }
 }
+
 // --- WELLBEING MODAL ---
 const wellbeingModalBtn = document.getElementById('openWellbeingModal');
 
 if (wellbeingModalBtn) {
     wellbeingModalBtn.addEventListener('click', function() {
+
         // Double-check status before opening modal
         fetch("{% url 'verify_checkin_status' %}", {
             headers: { 'X-Requested-With': 'XMLHttpRequest' },

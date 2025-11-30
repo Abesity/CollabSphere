@@ -264,7 +264,7 @@
 <script>
 // Global variables
 let currentDate = new Date();
-let currentEvents = {{ events_json|safe }};
+let currentEvents = JSON.parse('{{ events_json|escapejs }}');
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🟢 Calendar DOM loaded');
@@ -410,7 +410,7 @@ function addEventsToCalendar() {
     
     // Show message if no events and no active team
     const hasEvents = currentEvents.length > 0;
-    const hasActiveTeam = {{ has_active_team|yesno:"true,false" }};
+    const hasActiveTeam = '{{ has_active_team|yesno:"true,false" }}' === 'true';
     
     if (!hasEvents && !hasActiveTeam) {
         const calendarDays = document.getElementById('calendarDays');
@@ -503,7 +503,7 @@ async function saveEvent() {
     
     const eventTitle = document.getElementById('eventTitle');
     if (!eventTitle || !eventTitle.value) {
-        alert('Please enter an event title');
+        showWarning('Please enter an event title');
         resetSaveButton();
         return;
     }
@@ -553,11 +553,11 @@ async function saveEvent() {
                 'Event created successfully!';
             showToast(message, 'success');
         } else {
-            alert('Error: ' + result.error);
+            showError(result.error);
         }
     } catch (error) {
         console.error('Error saving event:', error);
-        alert('Error saving event: ' + error.message);
+        showError('Error saving event: ' + error.message);
     } finally {
         resetSaveButton();
     }
@@ -586,8 +586,8 @@ async function loadEventsForMonth() {
 }
 
 function viewEventDetails(eventId) {
-    // For now, just show an alert. You can expand this to show event details.
-    alert(`Viewing event details for ID: ${eventId}\n\nThis would open a detailed view in a future update.`);
+    // For now, show a toast info message
+    showInfo(`Event ID: ${eventId} - Detailed view coming in a future update.`);
 }
 
 function previousMonth() {

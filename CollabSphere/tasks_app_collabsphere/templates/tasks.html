@@ -114,3 +114,103 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const taskForm = document.getElementById('taskForm');
+    const dateCreatedInput = document.getElementById('dateCreated');
+    const startDateInput = document.getElementById('startDate');
+    const dueDateInput = document.getElementById('dueDate');
+    const completionSlider = document.getElementById('completion');
+    const completionValue = document.getElementById('completionValue');
+    
+    // Set today's date as the creation date
+    const today = new Date().toISOString().split('T')[0];
+    if (dateCreatedInput) {
+        dateCreatedInput.value = today;
+    }
+    
+    // Set minimum date for start and due date inputs
+    if (startDateInput) {
+        startDateInput.setAttribute('min', today);
+    }
+    if (dueDateInput) {
+        dueDateInput.setAttribute('min', today);
+    }
+    
+    // Completion slider handler
+    if (completionSlider && completionValue) {
+        completionSlider.addEventListener('input', function() {
+            completionValue.textContent = this.value;
+        });
+    }
+    
+    // Date validation function
+    function validateTaskDates() {
+        const creationDate = dateCreatedInput ? dateCreatedInput.value : today;
+        const start = startDateInput ? startDateInput.value : null;
+        const due = dueDateInput ? dueDateInput.value : null;
+        
+        // Check Start Date is not earlier than creation date
+        if (start && start < creationDate) {
+            showWarning('Start Date cannot be earlier than the creation date (' + creationDate + ').');
+            startDateInput.value = '';
+            return false;
+        }
+        
+        // Check Due Date is not earlier than creation date
+        if (due && due < creationDate) {
+            showWarning('Due Date cannot be earlier than the creation date (' + creationDate + ').');
+            dueDateInput.value = '';
+            return false;
+        }
+        
+        // Check Due Date is not before Start Date
+        if (start && due && due < start) {
+            showWarning('Due Date cannot be before the Start Date.');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // Add change listeners for immediate date validation
+    if (startDateInput) {
+        startDateInput.addEventListener('change', validateTaskDates);
+    }
+    if (dueDateInput) {
+        dueDateInput.addEventListener('change', validateTaskDates);
+    }
+    
+    // Form submit validation - final check before saving
+    if (taskForm) {
+        taskForm.addEventListener('submit', function(e) {
+            const creationDate = dateCreatedInput ? dateCreatedInput.value : today;
+            const start = startDateInput ? startDateInput.value : null;
+            const due = dueDateInput ? dueDateInput.value : null;
+            
+            // Final validation before submit
+            if (start && start < creationDate) {
+                e.preventDefault();
+                showWarning('Start Date cannot be earlier than the creation date. Please select a valid date.');
+                startDateInput.focus();
+                return false;
+            }
+            
+            if (due && due < creationDate) {
+                e.preventDefault();
+                showWarning('Due Date cannot be earlier than the creation date. Please select a valid date.');
+                dueDateInput.focus();
+                return false;
+            }
+            
+            if (start && due && due < start) {
+                e.preventDefault();
+                showWarning('Due Date cannot be before the Start Date.');
+                dueDateInput.focus();
+                return false;
+            }
+        });
+    }
+});
+</script>

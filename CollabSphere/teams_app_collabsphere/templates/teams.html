@@ -178,7 +178,7 @@ function setupSwitchTeamButtons() {
                         this.disabled = false;
                         
                         // Show error message
-                        alert('Error switching team: ' + data.error);
+                        showError('Error switching team: ' + data.error);
                     }
                 })
                 .catch(error => {
@@ -189,7 +189,7 @@ function setupSwitchTeamButtons() {
                     this.innerHTML = originalHTML;
                     this.disabled = false;
                     
-                    alert('Error switching team. Please try again.');
+                    showError('Error switching team. Please try again.');
                 });
             }
         });
@@ -303,9 +303,9 @@ document.addEventListener('DOMContentLoaded', function() {
                   for (const field in data.form_errors) {
                     errorMessage += `- ${data.form_errors[field][0].message}\n`;
                   }
-                  alert(errorMessage);
+                  showError(errorMessage);
                 } else {
-                  alert('Error creating team: ' + data.error);
+                  showError('Error creating team: ' + data.error);
                 }
                 submitButton.disabled = false;
                 submitButton.textContent = 'Create Team';
@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
               console.error('Error:', error);
-              alert('Error creating team. Please try again.');
+              showError('Error creating team. Please try again.');
               submitButton.disabled = false;
               submitButton.textContent = 'Create Team';
             });
@@ -382,14 +382,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             window.location.reload(true); // true forces reload from server, not cache
                         }, 1500);
                     } else {
-                        alert('Error updating team: ' + data.error);
+                        showError('Error updating team: ' + data.error);
                         submitButton.disabled = false;
                         submitButton.textContent = 'Update Team';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error updating team. Please try again.');
+                    showError('Error updating team. Please try again.');
                     submitButton.disabled = false;
                     submitButton.textContent = 'Update Team';
                 });
@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
           console.error('Error loading edit form:', error);
-          alert('Error loading team editor.');
+          showError('Error loading team editor.');
         });
     });
   });
@@ -444,15 +444,15 @@ viewButtons.forEach(btn => {
               .then(response => response.json())
               .then(data => {
                 if (data.success) {
-                  alert('You have left the team successfully!');
-                  window.location.reload();
+                  showSuccess('You have left the team successfully!');
+                  setTimeout(() => window.location.reload(), 1000);
                 } else {
-                  alert('Error leaving team: ' + data.error);
+                  showError('Error leaving team: ' + data.error);
                 }
               })
               .catch(error => {
                 console.error('Error:', error);
-                alert('Error leaving team. Please try again.');
+                showError('Error leaving team. Please try again.');
               });
             }
           });
@@ -460,7 +460,7 @@ viewButtons.forEach(btn => {
       })
       .catch(error => {
         console.error('Error loading view form:', error);
-        alert('Error loading team details.');
+        showError('Error loading team details.');
       });
   });
 });
@@ -482,15 +482,15 @@ viewButtons.forEach(btn => {
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('You have left the team successfully!');
-            window.location.reload();
+            showSuccess('You have left the team successfully!');
+            setTimeout(() => window.location.reload(), 1000);
           } else {
-            alert('Error leaving team: ' + data.error);
+            showError('Error leaving team: ' + data.error);
           }
         })
         .catch(error => {
           console.error('Error:', error);
-          alert('Error leaving team. Please try again.');
+          showError('Error leaving team. Please try again.');
         });
       }
     });
@@ -813,7 +813,7 @@ if (deleteBtn) {
                     this.disabled = false;
                     
                     // Show error message
-                    alert('Error deleting team: ' + (data.error || 'Unknown error'));
+                    showError('Error deleting team: ' + (data.error || 'Unknown error'));
                 }
             })
             .catch(error => {
@@ -823,7 +823,7 @@ if (deleteBtn) {
                 this.textContent = originalText;
                 this.disabled = false;
                 
-                alert('Error deleting team. Please try again.');
+                showError('Error deleting team. Please try again.');
             });
         }
     });
@@ -1006,17 +1006,17 @@ if (deleteBtn) {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Team updated successfully!');
-                    window.location.reload();
+                    showSuccess('Team updated successfully!');
+                    setTimeout(() => window.location.reload(), 1000);
                 } else {
-                    alert('Error updating team: ' + data.error);
+                    showError('Error updating team: ' + data.error);
                     submitButton.disabled = false;
                     submitButton.textContent = 'Update Team';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error updating team. Please try again.');
+                showError('Error updating team. Please try again.');
                 submitButton.disabled = false;
                 submitButton.textContent = 'Update Team';
             });
