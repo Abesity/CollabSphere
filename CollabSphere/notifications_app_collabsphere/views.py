@@ -265,3 +265,69 @@ def create_comment_reply_notification(task_data, parent_comment, sender_user=Non
     except Exception as e:
         print(f"Error creating comment reply notification: {e}")
         return None
+
+
+def create_task_status_notification(task_data, sender_user=None, new_status=None):
+    """Notify the task creator that the status changed."""
+    if not task_data:
+        return
+
+    creator_username = task_data.get('created_by')
+    if not creator_username:
+        return
+
+    recipient = _resolve_recipient(creator_username)
+    if not recipient or (sender_user and recipient.id == sender_user.id):
+        return
+
+    task_id = task_data.get('task_id')
+    task_title = task_data.get('title') or 'Task'
+    status_label = new_status or task_data.get('status') or 'updated'
+    related_url = f"/tasks/{task_id}/detail/" if task_id else None
+
+    try:
+        notification = Notification.objects.create(
+            recipient=recipient,
+            sender=sender_user,
+            notification_type='task',
+            title=f"{task_title} status updated",
+            message=f"Status changed to {status_label}",
+            related_object_id=task_id,
+            related_object_url=related_url,
+        )
+        Notification.sync_to_supabase(notification)
+    except Exception as e:
+        print(f"Error creating task status notification: {e}")
+
+
+def create_task_completion_notification(task_data, sender_user=None, completion_value=None):
+    """Notify the task creator when completion percentage changes."""
+    if not task_data:
+        return
+
+    creator_username = task_data.get('created_by')
+    if not creator_username:
+        return
+
+    recipient = _resolve_recipient(creator_username)
+    if not recipient or (sender_user and recipient.id == sender_user.id):
+        return
+
+    task_id = task_data.get('task_id')
+    task_title = task_data.get('title') or 'Task'
+    completion_label = completion_value if completion_value is not None else task_data.get('completion')
+    related_url = f"/tasks/{task_id}/detail/" if task_id else None
+
+    try:
+        notification = Notification.objects.create(
+            recipient=recipient,
+            sender=sender_user,
+            notification_type='task',
+            title=f"{task_title} progress updated",
+            message=f"Completion changed to {completion_label}%",
+            related_object_id=task_id,
+            related_object_url=related_url,
+        )
+        Notification.sync_to_supabase(notification)
+    except Exception as e:
+        print(f"Error creating task completion notification: {e}")
