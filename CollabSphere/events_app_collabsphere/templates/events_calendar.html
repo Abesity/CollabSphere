@@ -492,7 +492,8 @@ function showDayEventsModal(dateKey, events) {
 async function openEventDetailsById(eventId) {
     if (!eventId) return;
     try {
-        const response = await fetch(`${eventUrls.detailBase}/${eventId}/`);
+        const response = await fetch(`${eventUrls.detailBase}${eventId}`);
+
         const result = await response.json();
         if (result.success && result.event) {
             populateEventDetailsModal(result.event);
