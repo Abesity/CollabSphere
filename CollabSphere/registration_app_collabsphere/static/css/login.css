@@ -6,7 +6,6 @@
   --text-muted: #6c757d;
 }
 
-
 body {
   position: relative;
   margin: 0;
@@ -18,33 +17,35 @@ body {
 
 body::after {
   content: "";
-  position: fixed;             
+  position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 100%;          
+  height: 100%;
   background: url("images/bg.png") bottom / cover;
-  opacity: 0.60;                
-  z-index: -1;                
+  opacity: 0.60;
+  z-index: -1;
 }
 
 .login-container {
   justify-content: center;
   align-content: center;
   display: flex;
-  margin: auto;
+  margin: 1rem auto;
   background: #fff;
   border: 2px solid var(--card-border);
-  border-radius: 18px;
-  box-shadow: 0 4px 12px rgba(129, 137, 176, 0.18);
-  width: 680px;
-  padding: 50px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(129, 137, 176, 0.18);
+  width: calc(100% - 2rem);
+  max-width: 400px;
+  padding: 1.5rem;
   text-align: center;
 }
 
 .login-container h1 {
   color: var(--primary-color);
   margin-bottom: 1rem;
+  font-size: 1.5rem;
 }
 
 .form-group {
@@ -53,23 +54,24 @@ body::after {
 }
 
 label {
-
   font-weight: 600;
   display: block;
   margin-bottom: 0.4rem;
   color: var(--primary-color);
+  font-size: 0.9rem;
 }
 
 input[type="email"],
 input[type="password"],
 input[type="text"] {
-  width: 480px;
-  padding: 0.6rem 0.8rem;
-  border-radius: 10px;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border-radius: 8px;
   border: 1.8px solid var(--card-border);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   transition: all 0.3s ease;
   color: var(--primary-color);
+  box-sizing: border-box;
 }
 
 input:focus {
@@ -83,12 +85,13 @@ input:focus {
   color: white;
   border: none;
   width: 100%;
-  padding: 0.7rem;
-  border-radius: 10px;
+  padding: 0.75rem;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   margin-top: 0.5rem;
   transition: 0.3s ease;
+  font-size: 0.95rem;
 }
 
 .btn-login:hover {
@@ -98,11 +101,17 @@ input:focus {
 
 .checkbox-container {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-bottom: 1rem;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
+  text-align: left;
+}
+
+.checkbox-container label {
+  font-weight: normal;
+  margin-bottom: 0;
 }
 
 .checkbox-container a {
@@ -115,7 +124,8 @@ input:focus {
 }
 
 .form-options {
-  margin-top: 1.2rem;
+  margin-top: 1rem;
+  font-size: 0.9rem;
 }
 
 #register-link a {
@@ -129,7 +139,7 @@ input:focus {
 }
 
 .social-container {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
 }
 
 .divider {
@@ -147,37 +157,41 @@ input:focus {
 }
 
 .divider:not(:empty)::before {
-  margin-right: 0.75em;
+  margin-right: 0.625em;
 }
+
 .divider:not(:empty)::after {
-  margin-left: 0.75em;
+  margin-left: 0.625em;
 }
 
 .divider span {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 
 .social-login {
   display: flex;
-  justify-content: space-between;
-  gap: 0.8rem;
+  flex-direction: column;
+  gap: 0.625rem;
 }
 
 .btn-facebook,
 .btn-google {
-  flex: 1;
+  width: 100%;
   text-align: center;
   border-radius: 8px;
-  padding: 0.5rem;
+  padding: 0.625rem;
   font-weight: 500;
   text-decoration: none;
   color: white;
+  font-size: 0.9rem;
+  transition: background 0.2s ease;
 }
 
 .btn-facebook {
   background: #3b5998;
 }
+
 .btn-facebook:hover {
   background: #2e4484;
 }
@@ -185,16 +199,17 @@ input:focus {
 .btn-google {
   background: #db4437;
 }
+
 .btn-google:hover {
   background: #b6352b;
 }
 
-/* Errors */
 .errorlist {
   color: #d0453e;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   list-style: none;
   padding-left: 0;
+  margin: 0.25rem 0 0 0;
 }
 
 .is-invalid {
@@ -203,4 +218,150 @@ input:focus {
 
 .is-valid {
   border: 2px solid #5bba6f;
+}
+
+@media (min-width: 576px) {
+  .login-container {
+    max-width: 480px;
+    padding: 2rem;
+    border-radius: 14px;
+  }
+
+  .login-container h1 {
+    font-size: 1.75rem;
+  }
+
+  label {
+    font-size: 0.95rem;
+  }
+
+  input[type="email"],
+  input[type="password"],
+  input[type="text"] {
+    padding: 0.65rem 0.8rem;
+    font-size: 0.95rem;
+    border-radius: 9px;
+  }
+
+  .btn-login {
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-radius: 9px;
+  }
+
+  .checkbox-container {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+  }
+
+  .social-login {
+    flex-direction: row;
+    gap: 0.75rem;
+  }
+
+  .btn-facebook,
+  .btn-google {
+    flex: 1;
+  }
+
+  .form-options {
+    font-size: 0.95rem;
+  }
+
+  .errorlist {
+    font-size: 0.85rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .login-container {
+    max-width: 560px;
+    padding: 2.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(129, 137, 176, 0.18);
+  }
+
+  .login-container h1 {
+    font-size: 2rem;
+    margin-bottom: 1.25rem;
+  }
+
+  input[type="email"],
+  input[type="password"],
+  input[type="text"] {
+    padding: 0.7rem 0.85rem;
+    border-radius: 10px;
+  }
+
+  .btn-login {
+    padding: 0.8rem;
+    border-radius: 10px;
+  }
+
+  .social-container {
+    margin-top: 1.5rem;
+  }
+
+  .social-login {
+    gap: 0.8rem;
+  }
+
+  .btn-facebook,
+  .btn-google {
+    padding: 0.65rem;
+  }
+
+  .divider {
+    margin: 1.25rem 0;
+  }
+
+  .divider span {
+    font-size: 0.85rem;
+  }
+
+  .form-options {
+    margin-top: 1.5rem;
+  }
+}
+
+@media (min-width: 992px) {
+  .login-container {
+    max-width: 640px;
+    padding: 3rem;
+    border-radius: 18px;
+  }
+
+  .login-container h1 {
+    font-size: 2.25rem;
+  }
+
+  input[type="email"],
+  input[type="password"],
+  input[type="text"] {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .form-group label {
+    align-self: flex-start;
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto 0.4rem auto;
+  }
+}
+
+@media (min-width: 1200px) {
+  .login-container {
+    max-width: 680px;
+    padding: 3.125rem;
+  }
 }
