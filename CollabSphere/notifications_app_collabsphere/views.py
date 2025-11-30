@@ -10,7 +10,59 @@ from .models import Notification
 @login_required
 def notifications_list(request):
     notifications = Notification.objects.filter(recipient=request.user).order_by('-created_at')
-    return render(request, 'notifications_list.html', {'notifications': notifications})
+
+    def infer_category(notification):
+        combined_text = f"{notification.title or ''} {notification.message or ''}".lower()
+        if "in progress" in combined_text or "progress" in combined_text or "completion" in combined_text:
+            return 'progress'
+        if "complete" in combined_text:
+            return 'completed'
+        if "pending" in combined_text:
+            return 'pending'
+        return 'pending'
+
+    categorized = {
+        'pending': [],
+        'progress': [],
+        'completed': [],
+    }
+
+    for notification in notifications:
+        category_key = infer_category(notification)
+        categorized.setdefault(category_key, []).append(notification)
+
+    category_sections = [
+        {
+            'key': 'pending',
+            'title': 'Pending Tasks',
+            'description': 'Waiting for action to start.',
+            'accent_class': 'accent-pending'
+        },
+        {
+            'key': 'progress',
+            'title': 'In Progress Tasks',
+            'description': 'Active tasks being worked on.',
+            'accent_class': 'accent-progress'
+        },
+        {
+            'key': 'completed',
+            'title': 'Completed Tasks',
+            'description': 'Recently finished items.',
+            'accent_class': 'accent-completed'
+        },
+    ]
+
+    for section in category_sections:
+        items = categorized.get(section['key'], [])
+        section['items'] = items
+        section['count'] = len(items)
+
+    context = {
+        'notifications': notifications,
+        'categorized_notifications': categorized,
+        'category_sections': category_sections,
+    }
+    return render(request, 'notifications_list.html', context)
 
 
 @login_required
@@ -19,6 +71,18 @@ def mark_notification_read(request, notification_id):
     notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
     notification.read = True
     notification.save()
+    return JsonResponse({'status': 'success'})
+
+
+@login_required
+@require_POST
+def delete_notification(request, notification_id):
+    qs = Notification.objects.filter(id=notification_id, recipient=request.user)
+    if not qs.exists():
+        return JsonResponse({'status': 'error', 'message': 'Notification not found.'}, status=404)
+
+    Notification.delete_from_supabase(qs)
+    qs.delete()
     return JsonResponse({'status': 'success'})
 
 
