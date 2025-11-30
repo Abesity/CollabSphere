@@ -4,72 +4,165 @@
 {% block content %}
 <div class="notifications-container">
     <div class="notifications-header">
-        <h2>Inbox</h2>
         <div>
-            <button class="btn btn-outline-primary btn-sm me-2" id="mark-all-btn">Mark All Read</button>
+            <p class="subtitle text-muted mb-1">Stay on top of your task updates</p>
+            <h2 class="mb-0">Inbox</h2>
+        </div>
+        <div class="header-actions">
+            <div class="category-filter-control">
+                <select id="category-filter" class="form-select category-select" aria-label="Filter notifications by status">
+                    <option value="all" selected>All statuses</option>
+                    {% for section in category_sections %}
+                        <option value="{{ section.key }}">{{ section.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" id="mark-all-btn">Mark All Read</button>
             <button class="btn btn-outline-danger btn-sm" id="clear-inbox-btn">Clear Inbox</button>
         </div>
     </div>
 
     {% if notifications %}
-        <div class="notifications-list">
-            {% for n in notifications %}
-                <div class="notification-item {% if not n.read %}unread{% endif %}" data-id="{{ n.id }}">
-                    <div class="notification-content" data-bs-toggle="modal" data-bs-target="#notifModal{{ n.id }}">
-                        <h5>{{ n.title }}</h5>
-                        <p><small>Created by {{ n.sender.username|default:"System" }}</small></p>
-                        <p class="text-muted">{{ n.message }}</p>
-                    </div>
-                </div>
+        <div class="notification-sections">
+            {% for section in category_sections %}
+                {% if section.items %}
+                    <div class="notification-section-card" data-category="{{ section.key }}">
+                        <div class="notifications-list">
+                            {% for n in section.items %}
+                                <div class="notification-item {% if not n.read %}unread{% endif %}" data-id="{{ n.id }}">
+                                    <button type="button" class="btn-close remove-notification" aria-label="Dismiss" data-id="{{ n.id }}"></button>
+                                    <div class="notification-content" data-bs-toggle="modal" data-bs-target="#notifModal{{ n.id }}">
+                                        <h5 class="mb-1">{{ n.title }}</h5>
+                                        <p class="meta mb-1">
+                                            <small>From {{ n.sender.username|default:"System" }} · {{ n.created_at|date:"M j, g:i A" }}</small>
+                                        </p>
+                                        <p class="text-muted mb-0">{{ n.message }}</p>
+                                    </div>
+                                </div>
 
-                <!-- Modal -->
-                <div class="modal fade" id="notifModal{{ n.id }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">{{ n.title }}</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <p><strong>Created by:</strong> {{ n.sender.username|default:"System" }}</p>
-                                <p><strong>Description:</strong> {{ n.description|default:"No description" }}</p>
-                                {% if n.deadline %}
-                                <p><strong>Deadline:</strong> {{ n.deadline|date:"F j, Y" }}</p>
-                                {% endif %}
-                                <p><strong>Received:</strong> {{ n.created_at|date:"F j, Y, g:i A" }}</p>
-                            </div>
-                            <div class="modal-footer">
-                                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            </div>
+                                <!-- Modal -->
+                                <div class="modal fade" id="notifModal{{ n.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">{{ n.title }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p><strong>From:</strong> {{ n.sender.username|default:"System" }}</p>
+                                                <p><strong>Description:</strong> {{ n.description|default:"No description" }}</p>
+                                                {% if n.deadline %}
+                                                    <p><strong>Deadline:</strong> {{ n.deadline|date:"F j, Y" }}</p>
+                                                {% endif %}
+                                                {% if n.related_object_url %}
+                                                    <p><strong>Task Link:</strong> <a href="{{ n.related_object_url }}" class="link-primary">Open</a></p>
+                                                {% endif %}
+                                                <p><strong>Received:</strong> {{ n.created_at|date:"F j, Y, g:i A" }}</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
                         </div>
                     </div>
-                </div>
+                {% endif %}
             {% endfor %}
         </div>
     {% else %}
-        <p class="text-muted">Your inbox is empty.</p>
+        <div class="empty-state">
+            <img src="{% static 'images/notifications-empty.svg' %}" alt="Inbox empty" class="empty-illustration">
+            <p class="text-muted">Your inbox is empty. Task alerts will land here as your team collaborates.</p>
+        </div>
     {% endif %}
 </div>
 
+<!-- Clear Inbox Confirmation Modal -->
+<div class="modal fade" id="clearInboxModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content clear-modal">
+            <div class="modal-header border-0">
+                <div>
+                    <p class="modal-eyebrow">Inbox Maintenance</p>
+                    <h5 class="modal-title">Clear all notifications?</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1">This will permanently delete every notification in your inbox.</p>
+                <p class="text-muted mb-0">You can’t undo this action. Consider exporting important notes first.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-clear-btn">Delete Inbox</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Mark All as Read
-    document.getElementById('mark-all-btn').addEventListener('click', function() {
-        fetch('{% url "notifications:mark_all_read" %}', {
-            method: 'POST',
-            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-        }).then(res => res.json()).then(data => location.reload());
-    });
+    const csrfToken = '{{ csrf_token }}';
+    const markAllBtn = document.getElementById('mark-all-btn');
+    const clearInboxBtn = document.getElementById('clear-inbox-btn');
+    const categoryFilter = document.getElementById('category-filter');
+    const sectionCards = document.querySelectorAll('.notification-section-card');
 
-    // Clear Inbox
-    document.getElementById('clear-inbox-btn').addEventListener('click', function() {
-        if (confirm('Are you sure you want to clear your inbox?')) {
+    if (markAllBtn) {
+        markAllBtn.addEventListener('click', function() {
+            fetch('{% url "notifications:mark_all_read" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            }).then(res => res.json()).then(() => location.reload());
+        });
+    }
+
+    const clearModalEl = document.getElementById('clearInboxModal');
+    const clearModal = clearModalEl ? new bootstrap.Modal(clearModalEl) : null;
+    const confirmClearBtn = document.getElementById('confirm-clear-btn');
+
+    if (clearInboxBtn && clearModal) {
+        clearInboxBtn.addEventListener('click', function() {
+            clearModal.show();
+        });
+    }
+
+    if (confirmClearBtn) {
+        confirmClearBtn.addEventListener('click', function() {
             fetch('{% url "notifications:clear_inbox" %}', {
                 method: 'POST',
-                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-            }).then(res => res.json()).then(data => location.reload());
-        }
+                headers: { 'X-CSRFToken': csrfToken }
+            }).then(res => res.json()).then(() => window.location.reload());
+        });
+    }
+
+    function applyCategoryFilter(value) {
+        sectionCards.forEach(card => {
+            if (!card.dataset.category)
+                return;
+            const matches = value === 'all' || card.dataset.category === value;
+            card.style.display = matches ? '' : 'none';
+        });
+    }
+
+    if (categoryFilter) {
+        applyCategoryFilter(categoryFilter.value);
+        categoryFilter.addEventListener('change', function(event) {
+            applyCategoryFilter(event.target.value);
+        });
+    }
+
+    document.querySelectorAll('.remove-notification').forEach(btn => {
+        btn.addEventListener('click', function(event) {
+            event.stopPropagation();
+            const notificationId = this.dataset.id;
+            fetch('{% url "notifications:delete" notification_id=0 %}'.replace('0', notificationId), {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            }).then(res => res.json()).then(() => location.reload());
+        });
     });
 });
 </script>

@@ -49,6 +49,38 @@ body::after {
   margin-bottom: 1rem;
 }
 
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.category-filter-control {
+  min-width: 220px;
+}
+
+.category-select {
+  border-radius: 12px;
+  border: 1.5px solid #d0d5dd;
+  background: #fdfdfd;
+  color: #1d2635;
+  font-weight: 500;
+  height: 40px;
+  padding: 0.35rem 2.5rem 0.35rem 0.85rem;
+  box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.05);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.75L6 6.25L11 1.75' stroke='%23545F7A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 0.75rem) center;
+  background-size: 12px;
+}
+
+.category-select:focus {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 3px rgba(61, 116, 195, 0.15);
+  outline: none;
+}
+
 .notifications-header h2 {
   font-size: 1.25rem;
   margin: 0;
