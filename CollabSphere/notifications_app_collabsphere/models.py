@@ -14,6 +14,7 @@ class Notification(models.Model):
     NOTIFICATION_TYPES = (
         ('task', 'Task Assignment'),
         ('team', 'Team Invitation'),
+        ('event', 'Calendar Event'),
         ('comment', 'Task Comment'),
     )
 
