@@ -76,6 +76,7 @@
     <section class="upcoming-events">
       <div class="card">
         <h3>Upcoming Events</h3>
+        
         <div id="upcomingEventsList">
           {% for event in upcoming_events %}
           <div class="upcoming-item" data-event-id="{{ event.id }}">
@@ -593,7 +594,7 @@ async function finalizeDeleteRequest() {
 
 async function deleteEventById(eventId) {
     const csrfToken = getCSRFToken();
-    const response = await fetch(`${eventUrls.deleteBase}/${eventId}/`, {
+    const response = await fetch(`${eventUrls.deleteBase}${eventId}/`, {
         method: 'DELETE',
         headers: {
             'X-CSRFToken': csrfToken || ''
@@ -678,7 +679,21 @@ function getCSRFToken() {
             }
         }
     }
-    return cookieValue ? cookieValue.trim() : null;
+    if (cookieValue && cookieValue.trim().length > 0) {
+        return cookieValue.trim();
+    }
+
+    const formToken = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (formToken && formToken.value) {
+        return formToken.value.trim();
+    }
+
+    const metaToken = document.querySelector('meta[name="csrf-token"], meta[name="csrfmiddlewaretoken"]');
+    if (metaToken && metaToken.getAttribute('content')) {
+        return metaToken.getAttribute('content').trim();
+    }
+
+    return null;
 }
 
 function initializeCalendar() {
