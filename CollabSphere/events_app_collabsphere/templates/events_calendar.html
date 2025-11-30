@@ -89,7 +89,9 @@
             </div>
             <div class="upcoming-actions">
               <span class="upcoming-type team">Team</span>
-              <button type="button" class="btn-upcoming-delete" data-event-id="{{ event.id }}" aria-label="Remove event">×</button>
+              <button type="button" class="btn-upcoming-delete" data-event-id="{{ event.id }}" aria-label="Remove event">
+                <span class="btn-upcoming-delete-icon">&times;</span>
+              </button>
             </div>
           </div>
           {% empty %}
@@ -656,8 +658,11 @@ document.addEventListener('DOMContentLoaded', function() {
         upcomingList.addEventListener('click', handleUpcomingListClick);
     }
     
-    // Load events for current month
-    loadEventsForMonth();
+    // Load events for current month only if we don't already have
+    // pre-rendered events from the server payload.
+    if (!currentEvents || !Array.isArray(currentEvents) || currentEvents.length === 0) {
+        loadEventsForMonth();
+    }
 });
 
 function getCSRFToken() {
@@ -768,22 +773,37 @@ function addEventsToCalendar() {
         console.log('No events to display');
         return;
     }
-    
+
     currentEvents.forEach(event => {
-        const eventDate = new Date(event.start);
-        if (eventDate.getMonth() === currentDate.getMonth() && 
-            eventDate.getFullYear() === currentDate.getFullYear()) {
-            const dayElement = document.querySelector(`.events-container[data-date="${formatDateKey(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate())}"]`);
+        const rawDate = normalizeDateKey(event.start);
+        if (!rawDate) {
+            return;
+        }
+
+        const parts = rawDate.split('-');
+        if (parts.length !== 3) {
+            return;
+        }
+
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10); // 1-based
+        const day = parseInt(parts[2], 10);
+
+        if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
+            return;
+        }
+
+        if (year === currentDate.getFullYear() && month === (currentDate.getMonth() + 1)) {
+            const dayElement = document.querySelector(`.events-container[data-date="${rawDate}"]`);
             if (dayElement) {
                 const eventElement = document.createElement('div');
                 eventElement.className = 'event-item team-meeting';
                 if (event.id) {
                     eventElement.dataset.eventId = event.id;
                 }
-                
-                // Add recurring indicator if applicable
+
                 const recurringIcon = event.is_recurring ? '🔁 ' : '';
-                
+
                 eventElement.innerHTML = `
                     <span class="event-time">${event.start_time}</span>
                     <span class="event-title">${recurringIcon}${event.title}</span>
@@ -798,11 +818,10 @@ function addEventsToCalendar() {
             }
         }
     });
-    
-    // Show message if no events and no active team
+
     const hasEvents = currentEvents.length > 0;
     const hasActiveTeam = '{{ has_active_team|yesno:"true,false" }}' === 'true';
-    
+
     if (!hasEvents && !hasActiveTeam) {
         const calendarDays = document.getElementById('calendarDays');
         const message = document.createElement('div');
@@ -908,7 +927,7 @@ async function saveEvent() {
         const result = await response.json();
         
         if (result.success) {
-            // Close modal and refresh calendar
+            // Close modal and update calendar
             const modalElement = document.getElementById('eventModal');
             if (modalElement) {
                 const modal = bootstrap.Modal.getInstance(modalElement);
@@ -917,7 +936,6 @@ async function saveEvent() {
                 }
             }
             addNewEventToCalendarCache(formData, result.event_id);
-            loadEventsForMonth();
             
             // Show success message with recurring info
             const message = isRecurring ? 
