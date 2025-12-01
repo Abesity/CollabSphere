@@ -341,9 +341,13 @@
 
 <script>
 // Global variables
-let currentDate = new Date();
-let currentEvents = JSON.parse('{{ events_json|escapejs }}');
-const hasActiveTeam = '{{ has_active_team|yesno:"true,false" }}' === 'true';
+const initialYear = Number("{{ initial_year|default_if_none:'0' }}");
+const initialMonth = Number("{{ initial_month|default_if_none:'1' }}");
+
+let currentDate = new Date(initialYear || new Date().getFullYear(), (initialMonth || (new Date().getMonth() + 1)) - 1, 1);
+
+let currentEvents = JSON.parse("{{ events_json|escapejs }}");
+const hasActiveTeam = "{{ has_active_team|yesno:'true,false' }}" === 'true';
 let pendingDayDateKey = null;
 let pendingDeleteEventId = null;
 let deleteCallback = null;
@@ -363,6 +367,34 @@ const eventUrls = {
     detailBase: "{% url 'get_event' 0 %}".replace(/0\/$/, ''),
     deleteBase: "{% url 'delete_event' 0 %}".replace(/0\/$/, '')
 };
+const CALENDAR_VIEW_STORAGE_KEY = 'collabsphere.calendar.view';
+
+function loadStoredCalendarView() {
+    try {
+        const raw = localStorage.getItem(CALENDAR_VIEW_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (Number.isFinite(parsed?.year) && Number.isFinite(parsed?.month)) {
+            return parsed;
+        }
+    } catch (err) {
+        console.warn('Unable to read stored calendar view:', err);
+    }
+    return null;
+}
+
+function persistCalendarView(dateObj) {
+    try {
+        if (!(dateObj instanceof Date)) return;
+        const payload = {
+            year: dateObj.getFullYear(),
+            month: dateObj.getMonth() + 1,
+        };
+        localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, JSON.stringify(payload));
+    } catch (err) {
+        console.warn('Unable to persist calendar view:', err);
+    }
+}
 
 function initModalInstances() {
     if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
@@ -625,6 +657,13 @@ function showInfo(message) {
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🟢 Calendar DOM loaded');
+    const storedView = loadStoredCalendarView();
+    if (storedView) {
+        currentDate = new Date(storedView.year, storedView.month - 1, 1);
+    } else if (Number.isFinite(initialYear) && Number.isFinite(initialMonth) && initialYear > 0 && initialMonth > 0) {
+        currentDate = new Date(initialYear, initialMonth - 1, 1);
+    }
+
     initializeCalendar();
     initModalInstances();
     
@@ -660,11 +699,9 @@ document.addEventListener('DOMContentLoaded', function() {
         upcomingList.addEventListener('click', handleUpcomingListClick);
     }
     
-    // Load events for current month only if we don't already have
-    // pre-rendered events from the server payload.
-    if (!currentEvents || !Array.isArray(currentEvents) || currentEvents.length === 0) {
-        loadEventsForMonth();
-    }
+    // Always refresh the current month from the backend so the UI
+    // stays in sync with live data (even if the initial payload was empty).
+    loadEventsForMonth();
 });
 
 function getCSRFToken() {
@@ -711,6 +748,7 @@ function updateCalendarHeader() {
         currentMonthElement.textContent = 
             `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
     }
+    persistCalendarView(currentDate);
 }
 
 function renderCalendar() {

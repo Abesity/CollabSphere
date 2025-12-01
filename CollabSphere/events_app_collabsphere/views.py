@@ -22,12 +22,13 @@ def events_calendar(request):
         Team.initialize_active_team(request.user)
         active_team_id = Team.get_active_team_id(request.user)
 
+        today = datetime.now()
+        start_date = datetime(today.year, today.month, 1)
+        end_date = datetime(today.year + 1, 1, 1) if today.month == 12 else datetime(today.year, today.month + 1, 1)
+
         events = []
         upcoming_events = []
         if active_team_id:
-            today = datetime.now()
-            start_date = datetime(today.year, today.month, 1)
-            end_date = datetime(today.year + 1, 1, 1) if today.month == 12 else datetime(today.year, today.month + 1, 1)
             events = RecurringEvent.get_expanded_events_for_range(active_team_id, start_date, end_date)
             upcoming_events = Event.get_upcoming_for_team(active_team_id, limit=5)
 
@@ -74,7 +75,10 @@ def events_calendar(request):
             'active_team_id': active_team_id,
             'has_active_team': active_team_id is not None,
             'team_name': team_name,
+            'initial_year': start_date.year,
+            'initial_month': start_date.month,
         }
+
         return render(request, "events_calendar.html", context)
 
     except Exception as exc:
