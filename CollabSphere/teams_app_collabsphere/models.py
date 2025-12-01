@@ -372,7 +372,36 @@ class Team:
         except Exception as e:
             print(f"Error fetching active team members: {e}")
             return []
-                
+
+    @staticmethod
+    def get_team_members(team_ID):
+        """Get members for a specific team ID."""
+        if not team_ID:
+            return []
+
+        try:
+            members_response = Team.supabase.table('user_team')\
+                .select('user_id, user:user_id(username, profile_picture)')\
+                .eq('team_ID', team_ID)\
+                .is_('left_at', None)\
+                .execute()
+            
+            members = []
+            for member_data in members_response.data:
+                user_data = member_data.get('user', {})
+                members.append({
+                    'id': member_data.get('user_id'),
+                    'user_id': member_data.get('user_id'),
+                    'username': user_data.get('username', 'Unknown'),
+                    'profile_picture': user_data.get('profile_picture'),
+                })
+            
+            return members
+            
+        except Exception as e:
+            print(f"Error fetching team members: {e}")
+            return []
+        
     @staticmethod
     def switch_user_team(django_user, team_ID):
         """Switch user's active team"""

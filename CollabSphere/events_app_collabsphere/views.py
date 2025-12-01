@@ -9,7 +9,7 @@ import json
 from .models import Event, RecurringEvent
 from .notification_triggers import EventNotificationTriggers
 from teams_app_collabsphere.models import Team
-
+from notifications_app_collabsphere.views import create_event_notifications
 
 DEFAULT_EVENT_DURATION_MINUTES = 60
 
@@ -316,8 +316,10 @@ def create_event(request):
             print("❌ Database returned no result")
             return JsonResponse({"success": False, "error": "Failed to create event in database"})
 
+        new_event_id = result[0]['event_id'] if result and len(result) > 0 else None
+
         event_with_id = {
-            "event_ID": result[0]['event_id'] if result and len(result) > 0 else None,
+            "event_ID": new_event_id,
             "title": event_data['title'],
             "date": data.get('start_date'),
             "time": data.get('start_time')
@@ -332,10 +334,26 @@ def create_event(request):
         for trigger in triggered:
             print(f"🔔 EVENT TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
 
+        try:
+            team_members = Team.get_team_members(active_team_id)
+        except Exception as notification_err:
+            team_members = []
+            print(f"Warning: Unable to fetch team members for notifications: {notification_err}")
+
+        notification_payload = {
+            'event_id': new_event_id,
+            'title': event_data['title'],
+            'description': event_data.get('description', ''),
+            'start_date': data.get('start_date'),
+            'start_time': data.get('start_time'),
+        }
+
+        create_event_notifications(notification_payload, team_members, sender_user=request.user, action='create')
+
         return JsonResponse({
             "success": True,
             "message": "Event created successfully",
-            "event_id": result[0]['event_id'] if result and len(result) > 0 else None
+            "event_id": new_event_id
         })
 
     except Exception as e:
@@ -460,6 +478,30 @@ def delete_event(request, event_id):
         success = Event.delete(event_id)
         if not success:
             return JsonResponse({"success": False, "error": "Failed to delete event"})
+
+        try:
+            team_members = Team.get_team_members(active_team_id)
+        except Exception as notification_err:
+            team_members = []
+            print(f"Warning: Unable to fetch team members for notifications: {notification_err}")
+
+        try:
+            event_start = datetime.fromisoformat(existing_event['start_time'].replace('Z', '+00:00'))
+            start_date = event_start.strftime('%Y-%m-%d')
+            start_time = event_start.strftime('%H:%M')
+        except Exception:
+            start_date = None
+            start_time = None
+
+        notification_payload = {
+            'event_id': existing_event.get('event_id'),
+            'title': existing_event.get('title'),
+            'description': existing_event.get('description', ''),
+            'start_date': start_date,
+            'start_time': start_time,
+        }
+
+        create_event_notifications(notification_payload, team_members, sender_user=request.user, action='delete')
 
         return JsonResponse({"success": True, "message": "Event deleted successfully"})
 

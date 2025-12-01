@@ -10,8 +10,8 @@
         </div>
         <div class="header-actions">
             <div class="category-filter-control">
-                <select id="category-filter" class="form-select category-select" aria-label="Filter notifications by status">
-                    <option value="all" selected>All statuses</option>
+                <select id="category-filter" class="form-select category-select" aria-label="Filter notifications by category">
+                    <option value="all" selected>All inbox</option>
                     {% for section in category_sections %}
                         <option value="{{ section.key }}">{{ section.title }}</option>
                     {% endfor %}

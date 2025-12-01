@@ -11,44 +11,41 @@ from .models import Notification
 def notifications_list(request):
     notifications = Notification.objects.filter(recipient=request.user).order_by('-created_at')
 
-    def infer_category(notification):
-        combined_text = f"{notification.title or ''} {notification.message or ''}".lower()
-        if "in progress" in combined_text or "progress" in combined_text or "completion" in combined_text:
-            return 'progress'
-        if "complete" in combined_text:
-            return 'completed'
-        if "pending" in combined_text:
-            return 'pending'
-        return 'pending'
-
     categorized = {
-        'pending': [],
-        'progress': [],
-        'completed': [],
+        'task': [],
+        'comment': [],
+        'team': [],
+        'event': [],
     }
 
     for notification in notifications:
-        category_key = infer_category(notification)
-        categorized.setdefault(category_key, []).append(notification)
+        key = notification.notification_type or 'task'
+        categorized.setdefault(key, []).append(notification)
 
     category_sections = [
         {
-            'key': 'pending',
-            'title': 'Pending Tasks',
-            'description': 'Waiting for action to start.',
-            'accent_class': 'accent-pending'
+            'key': 'task',
+            'title': 'Tasks',
+            'description': 'Task assignments and status updates.',
+            'accent_class': 'accent-task'
         },
         {
-            'key': 'progress',
-            'title': 'In Progress Tasks',
-            'description': 'Active tasks being worked on.',
-            'accent_class': 'accent-progress'
+            'key': 'comment',
+            'title': 'Comments',
+            'description': 'New activity on your task discussions.',
+            'accent_class': 'accent-comment'
         },
         {
-            'key': 'completed',
-            'title': 'Completed Tasks',
-            'description': 'Recently finished items.',
-            'accent_class': 'accent-completed'
+            'key': 'team',
+            'title': 'Teams',
+            'description': 'Team invitations and membership updates.',
+            'accent_class': 'accent-team'
+        },
+        {
+            'key': 'event',
+            'title': 'Events',
+            'description': 'Calendar updates for your teams.',
+            'accent_class': 'accent-event'
         },
     ]
 
@@ -235,6 +232,58 @@ def create_team_notification(team_data, member_value, sender_user=None):
             Notification.sync_to_supabase(notification)
         except Exception as e:
             print(f"Error creating team notification: {e}")
+
+
+def create_event_notifications(event_data, team_members, sender_user=None, action='create'):
+    """Notify team members about calendar events."""
+    if not event_data or not team_members:
+        return
+
+    event_title = event_data.get('title') or 'Team event'
+    event_start_date = event_data.get('start_date') or event_data.get('date')
+    event_start_time = event_data.get('start_time') or event_data.get('time')
+
+    if event_start_date and event_start_time:
+        schedule_text = f"{event_start_date} at {event_start_time}"
+    elif event_start_date:
+        schedule_text = event_start_date
+    else:
+        schedule_text = 'soon'
+
+    if action == 'delete':
+        title_text = f"Event removed: {event_title}"
+        message_text = f"{event_title} was removed from the calendar."
+    else:
+        title_text = f"New event: {event_title}"
+        message_text = f"{event_title} scheduled for {schedule_text}."
+
+    related_url = f"/events/{event_data.get('event_id')}/" if event_data.get('event_id') else '/events/'
+
+    for member in team_members:
+        recipient_value = {
+            'user_ID': member.get('user_id') or member.get('id'),
+            'username': member.get('username')
+        }
+        recipient = _resolve_recipient(recipient_value)
+        if not recipient:
+            continue
+        if sender_user and recipient.id == sender_user.id:
+            continue
+
+        try:
+            notification = Notification.objects.create(
+                recipient=recipient,
+                sender=sender_user,
+                notification_type='event',
+                title=title_text,
+                message=message_text,
+                description=event_data.get('description'),
+                related_object_id=event_data.get('event_id'),
+                related_object_url=related_url,
+            )
+            Notification.sync_to_supabase(notification)
+        except Exception as e:
+            print(f"Error creating event notification: {e}")
 
 
 def create_comment_notifications(task_data, recipients, sender_user=None, comment_content="", exclude_recipient_ids=None):
