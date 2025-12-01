@@ -431,17 +431,20 @@ class RecurringEvent:
             all_events = []
             
             # Get non-recurring events in the range
-            non_recurring = (
+            non_recurring_resp = (
                 supabase.table("calendarevent")
                 .select("*")
                 .eq("team_ID", team_ID)
-                .or_("is_recurring.is.null,is_recurring.eq.false")
                 .gte("start_time", range_start.isoformat())
                 .lt("start_time", range_end.isoformat())
                 .order("start_time")
                 .execute()
             )
-            all_events.extend(getattr(non_recurring, "data", []))
+            non_recurring = [
+                event for event in getattr(non_recurring_resp, "data", [])
+                if not event.get('is_recurring')
+            ]
+            all_events.extend(non_recurring)
             
             # Get recurring events (master events that could have occurrences in range)
             recurring = RecurringEvent.get_recurring_events_for_team(team_ID)
