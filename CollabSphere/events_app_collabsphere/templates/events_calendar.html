@@ -632,6 +632,7 @@ function addNewEventToCalendarCache(formData, eventId) {
     if (!Array.isArray(currentEvents)) {
         currentEvents = [];
     }
+
     const startDate = formData.get('start_date');
     const endTime = formData.get('end_time');
     const startTime = formData.get('start_time');
@@ -645,6 +646,14 @@ function addNewEventToCalendarCache(formData, eventId) {
         is_recurring: formData.get('is_recurring') === 'on'
     });
     renderCalendar();
+}
+
+function removeEventFromCalendarCache(eventId) {
+    if (!Array.isArray(currentEvents)) {
+        return;
+    }
+    const originalLength = currentEvents.length;
+    currentEvents = currentEvents.filter(evt => String(evt.id) !== String(eventId));
 }
 
 function handleUpcomingListClick(event) {
@@ -703,8 +712,7 @@ async function deleteEventById(eventId) {
     if (!result.success) {
         throw new Error(result.error || 'Delete failed');
     }
-    currentEvents = currentEvents.filter(evt => String(evt.id) !== String(eventId));
-    renderCalendar();
+    removeEventFromCalendarCache(eventId);
     loadEventsForMonth();
     showToast('Event removed', 'success');
 }
