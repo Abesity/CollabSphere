@@ -29,6 +29,7 @@ def events_calendar(request):
         events = []
         upcoming_events = []
         if active_team_id:
+            Event.delete_expired_non_recurring_events(active_team_id)
             events = RecurringEvent.get_expanded_events_for_range(active_team_id, start_date, end_date)
             upcoming_events = Event.get_upcoming_for_team(active_team_id, limit=5)
 
@@ -99,6 +100,8 @@ def get_events(request):
         active_team_id = Team.get_active_team_id(request.user)
         if not active_team_id:
             return JsonResponse({"success": True, "events": []})
+
+        Event.delete_expired_non_recurring_events(active_team_id)
 
         try:
             year = int(request.GET.get('year', datetime.now().year))

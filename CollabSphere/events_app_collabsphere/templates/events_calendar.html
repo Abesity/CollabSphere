@@ -347,8 +347,10 @@ const initialMonth = Number("{{ initial_month|default_if_none:'1' }}");
 let currentDate = new Date(initialYear || new Date().getFullYear(), (initialMonth || (new Date().getMonth() + 1)) - 1, 1);
 
 let currentEvents = JSON.parse("{{ events_json|escapejs }}");
+let selectedDateKey = null;
 const hasActiveTeam = "{{ has_active_team|yesno:'true,false' }}" === 'true';
 let pendingDayDateKey = null;
+
 let pendingDeleteEventId = null;
 let deleteCallback = null;
 const dayActionModal = document.getElementById('dayActionModal');
@@ -418,17 +420,74 @@ function dayKeyToDate(dateKey) {
     return new Date(year, month - 1, day);
 }
 
+function formatLocalDateKey(dateObj) {
+    if (!(dateObj instanceof Date)) return '';
+    return formatDateKey(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+}
+
+function isPastDate(dateKey) {
+    if (!dateKey) return false;
+    const todayKey = formatLocalDateKey(new Date());
+    return dateKey < todayKey;
+}
+
+function setSelectedDate(dateKey) {
+    selectedDateKey = dateKey;
+    highlightSelectedDate();
+}
+
+function highlightSelectedDate() {
+    document.querySelectorAll('.calendar-day.selected').forEach(el => el.classList.remove('selected'));
+    if (!selectedDateKey) return;
+    const selectedEl = document.querySelector(`.calendar-day[data-date-key="${selectedDateKey}"]`);
+    if (selectedEl) {
+        selectedEl.classList.add('selected');
+    }
+}
+
+function getDefaultEventDateKey() {
+    if (selectedDateKey && !isPastDate(selectedDateKey)) {
+        return selectedDateKey;
+    }
+    return formatLocalDateKey(new Date());
+}
+
+function applyDateToEventForm(dateKey) {
+    const startInput = document.getElementById('eventStartDate');
+    const endInput = document.getElementById('eventEndDate');
+    if (startInput) {
+        startInput.value = dateKey;
+        startInput.min = formatLocalDateKey(new Date());
+    }
+    if (endInput) {
+        endInput.value = dateKey;
+    }
+}
+
+function resetEventTimeFields(startTime = '09:00', endTime = '10:00') {
+    const startTimeInput = document.getElementById('eventStartTime');
+    const endTimeInput = document.getElementById('eventEndTime');
+    if (startTimeInput) startTimeInput.value = startTime;
+    if (endTimeInput) endTimeInput.value = endTime;
+}
+
 function handleDaySelection(dateKey) {
     if (!hasActiveTeam) {
         showWarning('Select a team before creating events.');
         return;
     }
+    setSelectedDate(dateKey);
     const eventsForDay = getEventsForDate(dateKey);
+    const pastDate = isPastDate(dateKey);
     if (eventsForDay.length > 0) {
         showDayEventsModal(dateKey, eventsForDay);
-    } else {
-        showDayCreatePrompt(dateKey);
+        return;
     }
+    if (pastDate) {
+        showWarning('Events cannot be created before today.');
+        return;
+    }
+    showDayCreatePrompt(dateKey);
 }
 
 function getEventsForDate(dateKey) {
@@ -455,6 +514,14 @@ function showDayCreatePrompt(dateKey) {
 
 function handleConfirmedDayCreate() {
     if (!pendingDayDateKey) return;
+    if (isPastDate(pendingDayDateKey)) {
+        showWarning('Events cannot be created before today.');
+        pendingDayDateKey = null;
+        if (modalInstances.dayAction) {
+            modalInstances.dayAction.hide();
+        }
+        return;
+    }
     const dateObj = dayKeyToDate(pendingDayDateKey);
     openEventModalForDate(dateObj);
     pendingDayDateKey = null;
@@ -465,15 +532,14 @@ function handleConfirmedDayCreate() {
 
 function openEventModalForDate(dateObj) {
     if (!dateObj) return;
-    const isoDate = dateObj.toISOString().split('T')[0];
-    const eventStartDate = document.getElementById('eventStartDate');
-    const eventEndDate = document.getElementById('eventEndDate');
-    const eventStartTime = document.getElementById('eventStartTime');
-    const eventEndTime = document.getElementById('eventEndTime');
-    if (eventStartDate) eventStartDate.value = isoDate;
-    if (eventEndDate) eventEndDate.value = isoDate;
-    if (eventStartTime) eventStartTime.value = '09:00';
-    if (eventEndTime) eventEndTime.value = '10:00';
+    const dateKey = formatLocalDateKey(dateObj);
+    if (isPastDate(dateKey)) {
+        showWarning('Events cannot be created before today.');
+        return;
+    }
+    setSelectedDate(dateKey);
+    applyDateToEventForm(dateKey);
+    resetEventTimeFields();
     const modalElement = document.getElementById('eventModal');
     if (modalElement) {
         const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -788,6 +854,7 @@ function renderCalendar() {
     
     // Add events to days
     addEventsToCalendar();
+    highlightSelectedDate();
 }
 
 function createDayElement(dayNumber, isOtherMonth, isToday = false, dateKey = null) {
@@ -798,6 +865,7 @@ function createDayElement(dayNumber, isOtherMonth, isToday = false, dateKey = nu
     const dateAttr = dateKey ? `data-date="${dateKey}"` : '';
     if (dateKey) {
         dayElement.dataset.dateKey = dateKey;
+        dayElement.setAttribute('data-date-key', dateKey);
     }
 
     dayElement.innerHTML = `
@@ -898,7 +966,7 @@ function showEventModalForDay(day) {
 
 function showEventModal() {
     console.log('🟢 Showing event modal');
-    
+
     // Clear form and set default values
     const eventTitle = document.getElementById('eventTitle');
     const eventDescription = document.getElementById('eventDescription');
@@ -910,13 +978,11 @@ function showEventModal() {
     if (eventTitle) eventTitle.value = '';
     if (eventDescription) eventDescription.value = '';
     
-    const today = new Date();
-    const todayIso = today.toISOString().split('T')[0];
-    if (eventStartDate) eventStartDate.value = todayIso;
-    if (eventStartTime) eventStartTime.value = '09:00';
-    if (eventEndDate) eventEndDate.value = todayIso;
-    if (eventEndTime) eventEndTime.value = '10:00';
-    
+    const defaultDateKey = getDefaultEventDateKey();
+    setSelectedDate(defaultDateKey);
+    applyDateToEventForm(defaultDateKey);
+    resetEventTimeFields();
+
     // Reset recurring options
     const isRecurringCheckbox = document.getElementById('isRecurring');
     if (isRecurringCheckbox) {
@@ -953,6 +1019,13 @@ async function saveEvent() {
 
     const formData = new FormData(document.getElementById('eventForm'));
     applyDefaultEndFields(formData);
+
+    const startDateValue = formData.get('start_date');
+    if (isPastDate(startDateValue)) {
+        showWarning('Events cannot be created before today.');
+        resetSaveButton();
+        return;
+    }
     
     // Log recurring event data if enabled
     const isRecurring = document.getElementById('isRecurring').checked;
