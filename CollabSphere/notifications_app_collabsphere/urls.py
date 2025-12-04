@@ -10,4 +10,5 @@ urlpatterns = [
     path('mark-all-read/', views.mark_all_read, name='mark_all_read'),
     path('clear-inbox/', views.clear_inbox, name='clear_inbox'),
     path('unread-count/', views.get_unread_count, name='unread_count'),
+    path('event-feed/', views.event_notifications_feed, name='event_feed'),
 ]
