@@ -1,17 +1,113 @@
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from datetime import datetime, timedelta
 
 import json
 
-from .models import Event, RecurringEvent
+from .models import Event, RecurringEvent, supabase
 from .notification_triggers import EventNotificationTriggers
 from teams_app_collabsphere.models import Team
 from notifications_app_collabsphere.views import create_event_notifications
+from notifications_app_collabsphere.models import Notification
 
 DEFAULT_EVENT_DURATION_MINUTES = 60
+
+User = get_user_model()
+
+
+def _format_participants(participant_records, host_id=None):
+    formatted = []
+    if not participant_records:
+        return formatted
+
+    for record in participant_records:
+        user_id = record.get('user_id')
+        if host_id and user_id == host_id:
+            continue
+        username = None
+        user_meta = record.get('user')
+        if isinstance(user_meta, dict):
+            username = user_meta.get('username')
+        formatted.append({
+            'id': user_id,
+            'name': username or (f"User #{user_id}" if user_id else "Unknown member"),
+            'is_host': False
+        })
+    return formatted
+
+
+def _get_host_identity(host_id):
+    default_identity = {"name": "Host", "username": None}
+    if not host_id:
+        return default_identity
+
+    try:
+        response = (
+            supabase
+            .table("user")
+            .select("full_name, username")
+            .eq("user_ID", host_id)
+            .single()
+            .execute()
+        )
+        data = getattr(response, "data", None) or {}
+        full_name = (data.get('full_name') or '').strip()
+        username = data.get('username')
+        display_name = full_name if full_name else (username or "Host")
+        return {"name": display_name, "username": username}
+    except Exception:
+        return default_identity
+
+
+def _get_host_display_name(host_id):
+    return _get_host_identity(host_id)["name"]
+
+
+def _resolve_user_from_identifier(identifier):
+    if identifier is None:
+        return None
+
+    try:
+        user = User.objects.filter(supabase_id=str(identifier)).first()
+        if user:
+            return user
+    except Exception:
+        pass
+
+    try:
+        return User.objects.filter(pk=identifier).first()
+    except Exception:
+        return None
+
+
+def _build_event_participant_payload(event, viewer_id):
+    event_id = event.get('event_id') or event.get('id')
+    host_id = event.get('user_id')
+    host_identity = _get_host_identity(host_id)
+    host_name = host_identity['name']
+    host_username = host_identity['username']
+
+    participants_raw = Event.get_event_participants(event_id)
+    participants = _format_participants(participants_raw, host_id)
+
+    participant_ids = {participant['id'] for participant in participants if participant['id'] is not None}
+
+    is_host = host_id == viewer_id
+    has_joined = is_host or (viewer_id in participant_ids if viewer_id is not None else False)
+
+    return {
+        'event_id': event_id,
+        'host_name': host_name,
+        'host_username': host_username,
+        'host_id': host_id,
+        'participants': participants,
+        'participant_count': len(participants),
+        'is_host': is_host,
+        'has_joined': has_joined,
+    }
 
 
 @require_GET
@@ -29,6 +125,7 @@ def events_calendar(request):
         events = []
         upcoming_events = []
         if active_team_id:
+            Event.delete_expired_non_recurring_events(active_team_id)
             events = RecurringEvent.get_expanded_events_for_range(active_team_id, start_date, end_date)
             upcoming_events = Event.get_upcoming_for_team(active_team_id, limit=5)
 
@@ -99,6 +196,8 @@ def get_events(request):
         active_team_id = Team.get_active_team_id(request.user)
         if not active_team_id:
             return JsonResponse({"success": True, "events": []})
+
+        Event.delete_expired_non_recurring_events(active_team_id)
 
         try:
             year = int(request.GET.get('year', datetime.now().year))
@@ -176,6 +275,18 @@ def get_event(request, event_id):
             print(f"Error formatting event {event_id}: {e}")
             formatted_event = event
 
+        viewer_id = request.session.get("user_ID") or request.user.id
+        participant_payload = _build_event_participant_payload(event, viewer_id)
+        formatted_event.update({
+            'host_name': participant_payload['host_name'],
+            'host_username': participant_payload['host_username'],
+            'host_id': participant_payload['host_id'],
+            'participants': participant_payload['participants'],
+            'participant_count': participant_payload['participant_count'],
+            'is_host': participant_payload['is_host'],
+            'has_joined': participant_payload['has_joined']
+        })
+
         return JsonResponse({"success": True, "event": formatted_event})
 
     except Exception as e:
@@ -190,24 +301,24 @@ def get_event(request, event_id):
 def create_event(request):
     """Create a new event for the active team."""
     try:
-        print("🟢 Create event endpoint hit")
+        print(" Create event endpoint hit")
 
         active_team_id = Team.get_active_team_id(request.user)
-        print(f"🟢 Active team ID: {active_team_id}")
+        print(f" Active team ID: {active_team_id}")
         if not active_team_id:
             return JsonResponse({"success": False, "error": "No active team selected"})
 
         if request.content_type == 'application/json':
             data = json.loads(request.body)
-            print(f"🟢 JSON data received: {data}")
+            print(f" JSON data received: {data}")
         else:
             data = request.POST.dict()
-            print(f"🟢 FormData received: {data}")
+            print(f" FormData received: {data}")
 
         required_fields = ['title', 'start_date']
         for field in required_fields:
             if not data.get(field):
-                print(f"❌ Missing required field: {field}")
+                print(f" Missing required field: {field}")
                 return JsonResponse({"success": False, "error": f"{field.replace('_', ' ').title()} is required"})
 
         start_date = data.get('start_date')
@@ -217,19 +328,19 @@ def create_event(request):
         if not end_date and end_time_str:
             end_date = data.get('start_date')
 
-        print(f"🟢 Date info - Start: {start_date} {start_time_str}, End: {end_date} {end_time_str}")
+        print(f" Date info - Start: {start_date} {start_time_str}, End: {end_date} {end_time_str}")
 
         try:
             start_time = datetime.fromisoformat(f"{start_date}T{start_time_str}:00")
         except ValueError as e:
-            print(f"❌ Start date parsing error: {e}")
+            print(f" Start date parsing error: {e}")
             return JsonResponse({"success": False, "error": f"Invalid start date/time format: {str(e)}"})
 
         if end_date and end_time_str:
             try:
                 end_time = datetime.fromisoformat(f"{end_date}T{end_time_str}:00")
             except ValueError as e:
-                print(f"❌ End date parsing error: {e}")
+                print(f" End date parsing error: {e}")
                 return JsonResponse({"success": False, "error": f"Invalid end date/time format: {str(e)}"})
         else:
             duration_minutes = DEFAULT_EVENT_DURATION_MINUTES
@@ -241,17 +352,17 @@ def create_event(request):
             except (ValueError, TypeError):
                 pass
             end_time = start_time + timedelta(minutes=duration_minutes)
-            print(f"🟢 Auto-derived end time using {duration_minutes} minute buffer: {end_time}")
+            print(f" Auto-derived end time using {duration_minutes} minute buffer: {end_time}")
 
         if end_time <= start_time:
-            print("❌ End time is not after start time")
+            print(" End time is not after start time")
             return JsonResponse({"success": False, "error": "End time must be after start time"})
 
         skip_conflict_check = data.get('skip_conflict_check', False)
         if not skip_conflict_check:
             conflicts = Event.check_conflicts(active_team_id, start_time, end_time)
             if conflicts:
-                print(f"⚠️ Found {len(conflicts)} conflicting event(s)")
+                print(f" Found {len(conflicts)} conflicting event(s)")
                 return JsonResponse({
                     "success": False,
                     "error": "Event conflicts with existing events",
@@ -270,7 +381,7 @@ def create_event(request):
 
         is_recurring = data.get('is_recurring') == 'on' or data.get('is_recurring') is True
         if is_recurring:
-            print("🔁 Creating recurring event")
+            print(" Creating recurring event")
             frequency = data.get('frequency', 'weekly')
             ends_on = data.get('ends_on', 'never')
             days = []
@@ -302,18 +413,18 @@ def create_event(request):
                 except (ValueError, TypeError):
                     recurrence_rule['occurrences'] = 10
 
-            print(f"🔁 Recurrence rule: {recurrence_rule}")
+            print(f" Recurrence rule: {recurrence_rule}")
             result = RecurringEvent.create_recurring_event(event_data, recurrence_rule)
             if result:
                 result = [result]
         else:
             result = Event.create(event_data)
 
-        print(f"🟢 Event data to save: {event_data}")
-        print(f"🟢 Database result: {result}")
+        print(f" Event data to save: {event_data}")
+        print(f" Database result: {result}")
 
         if not result:
-            print("❌ Database returned no result")
+            print(" Database returned no result")
             return JsonResponse({"success": False, "error": "Failed to create event in database"})
 
         new_event_id = result[0]['event_id'] if result and len(result) > 0 else None
@@ -332,7 +443,7 @@ def create_event(request):
 
         triggered = EventNotificationTriggers.evaluate_all_triggers(event_with_id, context)
         for trigger in triggered:
-            print(f"🔔 EVENT TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+            print(f" EVENT TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
 
         try:
             team_members = Team.get_team_members(active_team_id)
@@ -357,7 +468,7 @@ def create_event(request):
         })
 
     except Exception as e:
-        print(f"❌ Error creating event: {e}")
+        print(f" Error creating event: {e}")
         import traceback
         traceback.print_exc()
         return JsonResponse({"success": False, "error": f"Server error: {str(e)}"})
@@ -368,7 +479,7 @@ def create_event(request):
 def update_event(request, event_id):
     """Update an existing event with conflict validation."""
     try:
-        print(f"🟢 Update event endpoint hit for event_id: {event_id}")
+        print(f" Update event endpoint hit for event_id: {event_id}")
 
         existing_event = Event.get_by_id(event_id)
         if not existing_event:
@@ -386,7 +497,7 @@ def update_event(request, event_id):
         else:
             data = request.POST.dict()
 
-        print(f"🟢 Update data received: {data}")
+        print(f" Update data received: {data}")
 
         update_data = {}
         if 'title' in data and data['title']:
@@ -433,7 +544,7 @@ def update_event(request, event_id):
                 exclude_event_id=event_id
             )
             if conflicts:
-                print(f"⚠️ Found {len(conflicts)} conflicting event(s)")
+                print(f" Found {len(conflicts)} conflicting event(s)")
                 return JsonResponse({
                     "success": False,
                     "error": "Event conflicts with existing events",
@@ -444,7 +555,7 @@ def update_event(request, event_id):
         if not update_data:
             return JsonResponse({"success": False, "error": "No valid fields to update"})
 
-        print(f"🟢 Update payload: {update_data}")
+        print(f" Update payload: {update_data}")
 
         result = Event.update(event_id, update_data)
         if not result:
@@ -453,7 +564,7 @@ def update_event(request, event_id):
         return JsonResponse({"success": True, "message": "Event updated successfully"})
 
     except Exception as e:
-        print(f"❌ Error updating event: {e}")
+        print(f" Error updating event: {e}")
         import traceback
         traceback.print_exc()
         return JsonResponse({"success": False, "error": str(e)})
@@ -506,11 +617,105 @@ def delete_event(request, event_id):
         return JsonResponse({"success": True, "message": "Event deleted successfully"})
 
     except Exception as e:
-        print(f"❌ Error deleting event: {e}")
+        print(f" Error deleting event: {e}")
         import traceback
         traceback.print_exc()
         return JsonResponse({"success": False, "error": str(e)})
 
+
+@login_required
+@require_http_methods(["POST"])
+def join_event(request, event_id):
+    """Allow a user to join an event as a participant."""
+    try:
+        event = Event.get_by_id(event_id)
+        if not event:
+            return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+
+        viewer_id = request.session.get("user_ID") or request.user.id
+        active_team_id = Team.get_active_team_id(request.user)
+        event_team_id = event.get('team_ID')
+
+        if event_team_id and active_team_id and event_team_id != active_team_id and event.get('user_id') != viewer_id:
+            return JsonResponse({"success": False, "error": "You don't have permission to join this event"}, status=403)
+
+        participant_payload = _build_event_participant_payload(event, viewer_id)
+        if participant_payload['has_joined']:
+            return JsonResponse({
+                "success": True,
+                "message": "Already participating",
+                "participant_data": participant_payload
+            })
+
+        result = Event.add_participant(event_id, viewer_id)
+        if result is None:
+            return JsonResponse({"success": False, "error": "Unable to join event"}, status=500)
+
+        participant_payload = _build_event_participant_payload(event, viewer_id)
+
+        host_user = _resolve_user_from_identifier(event.get('user_id'))
+        if host_user and host_user != request.user:
+            Notification.create_event_join_notification(
+                recipient=host_user,
+                sender=request.user,
+                event_title=event.get('title', 'your event'),
+                event_id=event_id
+            )
+
+        return JsonResponse({"success": True, "participant_data": participant_payload})
+
+    except Exception as e:
+        print(f"Error joining event {event_id}: {e}")
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def leave_event(request, event_id):
+    """Allow a user to leave an event they previously joined."""
+    try:
+        event = Event.get_by_id(event_id)
+        if not event:
+            return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+
+        viewer_id = request.session.get("user_ID") or request.user.id
+        active_team_id = Team.get_active_team_id(request.user)
+        event_team_id = event.get('team_ID')
+
+        if event_team_id and active_team_id and event_team_id != active_team_id and event.get('user_id') != viewer_id:
+            return JsonResponse({"success": False, "error": "You don't have permission to modify this event"}, status=403)
+
+        participant_payload = _build_event_participant_payload(event, viewer_id)
+        if participant_payload['is_host']:
+            return JsonResponse({"success": False, "error": "Hosts cannot leave their own event"}, status=400)
+
+        if not participant_payload['has_joined']:
+            return JsonResponse({
+                "success": True,
+                "message": "You are not part of this event",
+                "participant_data": participant_payload
+            })
+
+        success = Event.remove_participant(event_id, viewer_id)
+        if not success:
+            return JsonResponse({"success": False, "error": "Unable to leave event"}, status=500)
+
+        participant_payload = _build_event_participant_payload(event, viewer_id)
+
+        host_user = _resolve_user_from_identifier(event.get('user_id'))
+        if host_user and host_user != request.user:
+            Notification.create_event_leave_notification(
+                recipient=host_user,
+                sender=request.user,
+                event_title=event.get('title', 'your event'),
+                event_id=event_id
+            )
+
+        return JsonResponse({"success": True, "participant_data": participant_payload})
+
+    except Exception as e:
+        print(f"Error leaving event {event_id}: {e}")
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 @login_required
 @require_http_methods(["POST"])

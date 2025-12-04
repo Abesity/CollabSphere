@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from .models import Notification
 
@@ -10,6 +11,10 @@ from .models import Notification
 @login_required
 def notifications_list(request):
     notifications = Notification.objects.filter(recipient=request.user).order_by('-created_at')
+    event_join_notifications = Notification.objects.filter(
+        recipient=request.user,
+        notification_type='event'
+    ).order_by('-created_at')[:10]
 
     categorized = {
         'task': [],
@@ -58,6 +63,7 @@ def notifications_list(request):
         'notifications': notifications,
         'categorized_notifications': categorized,
         'category_sections': category_sections,
+        'event_join_notifications': event_join_notifications,
     }
     return render(request, 'notifications_list.html', context)
 
@@ -104,6 +110,28 @@ def clear_inbox(request):
 def get_unread_count(request):
     count = Notification.objects.filter(recipient=request.user, read=False).count()
     return JsonResponse({'count': count})
+
+
+@login_required
+def event_notifications_feed(request):
+    latest_notifications = Notification.objects.filter(
+        recipient=request.user,
+        notification_type='event'
+    ).order_by('-created_at')[:20]
+
+    payload = []
+    for notif in latest_notifications:
+        payload.append({
+            'id': notif.id,
+            'title': notif.title,
+            'message': notif.message,
+            'sender': notif.sender.get_full_name() or notif.sender.username if notif.sender else 'System',
+            'created_at': notif.created_at.isoformat(),
+            'display_time': notif.created_at.strftime('%b %d, %I:%M %p'),
+            'event_url': notif.get_absolute_url(),
+        })
+
+    return JsonResponse({'notifications': payload})
 
 
 def _resolve_recipient(value):

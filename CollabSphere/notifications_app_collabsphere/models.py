@@ -45,6 +45,42 @@ class Notification(models.Model):
         return self.related_object_url
         
     @classmethod
+    def create_event_join_notification(cls, recipient, sender, event_title, event_id):
+        title = "New participant joined your event"
+        sender_name = sender.get_full_name().strip() or sender.username if sender else "Unknown user"
+        message = f"{sender_name} just joined {event_title}."
+        notification = cls.objects.create(
+            recipient=recipient,
+            sender=sender,
+            notification_type='event',
+            title=title,
+            message=message,
+            description=f"Participant joined the event '{event_title}'.",
+            related_object_id=event_id,
+            related_object_url=f"/events/get/{event_id}/"
+        )
+        cls.sync_to_supabase(notification)
+        return notification
+
+    @classmethod
+    def create_event_leave_notification(cls, recipient, sender, event_title, event_id):
+        title = "Participant left your event"
+        sender_name = sender.get_full_name().strip() or sender.username if sender else "Unknown user"
+        message = f"{sender_name} left {event_title}."
+        notification = cls.objects.create(
+            recipient=recipient,
+            sender=sender,
+            notification_type='event',
+            title=title,
+            message=message,
+            description=f"Participant left the event '{event_title}'.",
+            related_object_id=event_id,
+            related_object_url=f"/events/get/{event_id}/"
+        )
+        cls.sync_to_supabase(notification)
+        return notification
+
+    @classmethod
     def sync_to_supabase(cls, notification):
         try:
             supabase = create_client(SUPABASE_URL, SUPABASE_KEY)

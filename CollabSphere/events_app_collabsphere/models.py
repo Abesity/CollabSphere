@@ -53,6 +53,29 @@ class Event:
             return []
 
     @staticmethod
+    def delete_expired_non_recurring_events(team_ID=None):
+        """Remove non-recurring events whose end time is in the past."""
+        try:
+            now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+            query = (
+                supabase.table("calendarevent")
+                .delete()
+                .eq("is_recurring", False)
+                .lt("end_time", now_iso)
+            )
+            if team_ID:
+                query = query.eq("team_ID", team_ID)
+
+            result = query.execute()
+            deleted = len(getattr(result, "data", []) or [])
+            if deleted:
+                print(f" Removed {deleted} expired one-time events")
+            return deleted
+        except Exception as e:
+            print("Error pruning expired events:", e)
+            return 0
+
+    @staticmethod
     def create(data):
         """Insert a new event."""
         try:  
@@ -115,6 +138,16 @@ class Event:
         except Exception as e:
             print("Error adding participant:", e)
             return None
+
+    @staticmethod
+    def remove_participant(event_id, user_id):
+        """Remove a participant from an event."""
+        try:
+            supabase.table("eventsparticipant").delete().eq("event_id", event_id).eq("user_id", user_id).execute()
+            return True
+        except Exception as e:
+            print("Error removing participant:", e)
+            return False
 
     @staticmethod
     def get_events_by_date_range(team_ID, start_date, end_date):
