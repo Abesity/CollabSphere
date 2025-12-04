@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 import json
 
-from .models import Event, RecurringEvent
+from .models import Event, RecurringEvent, supabase
 from .notification_triggers import EventNotificationTriggers
 from teams_app_collabsphere.models import Team
 from notifications_app_collabsphere.views import create_event_notifications
@@ -17,13 +17,15 @@ DEFAULT_EVENT_DURATION_MINUTES = 60
 User = get_user_model()
 
 
-def _format_participants(participant_records):
+def _format_participants(participant_records, host_id=None):
     formatted = []
     if not participant_records:
         return formatted
 
     for record in participant_records:
         user_id = record.get('user_id')
+        if host_id and user_id == host_id:
+            continue
         username = None
         user_meta = record.get('user')
         if isinstance(user_meta, dict):
@@ -36,53 +38,57 @@ def _format_participants(participant_records):
     return formatted
 
 
-def _get_host_display_name(host_id):
+def _get_host_identity(host_id):
+    default_identity = {"name": "Host", "username": None}
     if not host_id:
-        return "Host"
+        return default_identity
 
     try:
-        host = User.objects.filter(pk=host_id).first()
-        if not host:
-            return "Host"
-        full_name = (host.get_full_name() or '').strip()
-        return full_name if full_name else host.get_username()
+        response = (
+            supabase
+            .table("user")
+            .select("full_name, username")
+            .eq("user_ID", host_id)
+            .single()
+            .execute()
+        )
+        data = getattr(response, "data", None) or {}
+        full_name = (data.get('full_name') or '').strip()
+        username = data.get('username')
+        display_name = full_name if full_name else (username or "Host")
+        return {"name": display_name, "username": username}
     except Exception:
-        return "Host"
+        return default_identity
+
+
+def _get_host_display_name(host_id):
+    return _get_host_identity(host_id)["name"]
 
 
 def _build_event_participant_payload(event, viewer_id):
     event_id = event.get('event_id') or event.get('id')
     host_id = event.get('user_id')
-    host_name = _get_host_display_name(host_id)
+    host_identity = _get_host_identity(host_id)
+    host_name = host_identity['name']
+    host_username = host_identity['username']
 
     participants_raw = Event.get_event_participants(event_id)
-    participants = _format_participants(participants_raw)
-
-    host_in_list = False
-    for participant in participants:
-        if participant['id'] == host_id:
-            participant['is_host'] = True
-            host_in_list = True
-            break
-
-    if host_id and not host_in_list:
-        participants.insert(0, {
-            'id': host_id,
-            'name': host_name,
-            'is_host': True
-        })
+    participants = _format_participants(participants_raw, host_id)
 
     participant_ids = {participant['id'] for participant in participants if participant['id'] is not None}
+
     is_host = host_id == viewer_id
     has_joined = is_host or (viewer_id in participant_ids if viewer_id is not None else False)
 
     return {
         'event_id': event_id,
         'host_name': host_name,
+        'host_username': host_username,
+        'host_id': host_id,
         'participants': participants,
         'participant_count': len(participants),
         'is_host': is_host,
-        'has_joined': has_joined
+        'has_joined': has_joined,
     }
 
 
@@ -255,6 +261,8 @@ def get_event(request, event_id):
         participant_payload = _build_event_participant_payload(event, viewer_id)
         formatted_event.update({
             'host_name': participant_payload['host_name'],
+            'host_username': participant_payload['host_username'],
+            'host_id': participant_payload['host_id'],
             'participants': participant_payload['participants'],
             'participant_count': participant_payload['participant_count'],
             'is_host': participant_payload['is_host'],

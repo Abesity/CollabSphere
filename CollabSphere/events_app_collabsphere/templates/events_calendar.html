@@ -642,6 +642,9 @@ function populateEventDetailsModal(event) {
     }
     if (descEl) descEl.textContent = event.description || 'No description provided.';
     const normalized = { ...event, id: event.id || event.event_id };
+    normalized.host_name = event.host_name || event.host_username || 'Unknown Host';
+    normalized.host_username = event.host_username || null;
+    normalized.host_id = event.host_id || event.user_id || null;
     activeEventDetails = normalized;
     setHostName(normalized.host_name);
     renderParticipantsList(normalized.participants);
@@ -740,7 +743,8 @@ async function handleParticipationAction() {
             activeEventDetails.participant_count = payload.participant_count;
             activeEventDetails.is_host = payload.is_host;
             activeEventDetails.has_joined = payload.has_joined;
-            activeEventDetails.host_name = payload.host_name;
+            activeEventDetails.host_name = payload.host_name || payload.host_username;
+            activeEventDetails.host_username = payload.host_username || null;
             setHostName(activeEventDetails.host_name);
             renderParticipantsList(activeEventDetails.participants);
         }
