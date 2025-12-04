@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from datetime import datetime, timedelta
 
@@ -12,6 +13,77 @@ from teams_app_collabsphere.models import Team
 from notifications_app_collabsphere.views import create_event_notifications
 
 DEFAULT_EVENT_DURATION_MINUTES = 60
+
+User = get_user_model()
+
+
+def _format_participants(participant_records):
+    formatted = []
+    if not participant_records:
+        return formatted
+
+    for record in participant_records:
+        user_id = record.get('user_id')
+        username = None
+        user_meta = record.get('user')
+        if isinstance(user_meta, dict):
+            username = user_meta.get('username')
+        formatted.append({
+            'id': user_id,
+            'name': username or (f"User #{user_id}" if user_id else "Unknown member"),
+            'is_host': False
+        })
+    return formatted
+
+
+def _get_host_display_name(host_id):
+    if not host_id:
+        return "Unknown Host"
+
+    try:
+        host = User.objects.filter(pk=host_id).first()
+        if not host:
+            return f"Host #{host_id}"
+        full_name = (host.get_full_name() or '').strip()
+        return full_name if full_name else host.get_username()
+    except Exception:
+        return f"Host #{host_id}"
+
+
+def _build_event_participant_payload(event, viewer_id):
+    event_id = event.get('event_id') or event.get('id')
+    host_id = event.get('user_id')
+    host_name = _get_host_display_name(host_id)
+
+    participants_raw = Event.get_event_participants(event_id)
+    participants = _format_participants(participants_raw)
+
+    host_in_list = False
+    for participant in participants:
+        if participant['id'] == host_id:
+            participant['is_host'] = True
+            host_in_list = True
+            break
+
+    if host_id and not host_in_list:
+        participants.insert(0, {
+            'id': host_id,
+            'name': host_name,
+            'is_host': True
+        })
+
+    participant_ids = {participant['id'] for participant in participants if participant['id'] is not None}
+    is_host = host_id == viewer_id
+    has_joined = is_host or (viewer_id in participant_ids if viewer_id is not None else False)
+
+    return {
+        'event_id': event_id,
+        'host_name': host_name,
+        'participants': participants,
+        'participant_count': len(participants),
+        'is_host': is_host,
+        'has_joined': has_joined
+    }
 
 
 @require_GET
@@ -178,6 +250,16 @@ def get_event(request, event_id):
         except Exception as e:
             print(f"Error formatting event {event_id}: {e}")
             formatted_event = event
+
+        viewer_id = request.session.get("user_ID") or request.user.id
+        participant_payload = _build_event_participant_payload(event, viewer_id)
+        formatted_event.update({
+            'host_name': participant_payload['host_name'],
+            'participants': participant_payload['participants'],
+            'participant_count': participant_payload['participant_count'],
+            'is_host': participant_payload['is_host'],
+            'has_joined': participant_payload['has_joined']
+        })
 
         return JsonResponse({"success": True, "event": formatted_event})
 
@@ -513,6 +595,81 @@ def delete_event(request, event_id):
         import traceback
         traceback.print_exc()
         return JsonResponse({"success": False, "error": str(e)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def join_event(request, event_id):
+    """Allow a user to join an event as a participant."""
+    try:
+        event = Event.get_by_id(event_id)
+        if not event:
+            return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+
+        viewer_id = request.session.get("user_ID") or request.user.id
+        active_team_id = Team.get_active_team_id(request.user)
+        event_team_id = event.get('team_ID')
+
+        if event_team_id and active_team_id and event_team_id != active_team_id and event.get('user_id') != viewer_id:
+            return JsonResponse({"success": False, "error": "You don't have permission to join this event"}, status=403)
+
+        participant_payload = _build_event_participant_payload(event, viewer_id)
+        if participant_payload['has_joined']:
+            return JsonResponse({
+                "success": True,
+                "message": "Already participating",
+                "participant_data": participant_payload
+            })
+
+        result = Event.add_participant(event_id, viewer_id)
+        if result is None:
+            return JsonResponse({"success": False, "error": "Unable to join event"}, status=500)
+
+        participant_payload = _build_event_participant_payload(event, viewer_id)
+        return JsonResponse({"success": True, "participant_data": participant_payload})
+
+    except Exception as e:
+        print(f"Error joining event {event_id}: {e}")
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def leave_event(request, event_id):
+    """Allow a user to leave an event they previously joined."""
+    try:
+        event = Event.get_by_id(event_id)
+        if not event:
+            return JsonResponse({"success": False, "error": "Event not found"}, status=404)
+
+        viewer_id = request.session.get("user_ID") or request.user.id
+        active_team_id = Team.get_active_team_id(request.user)
+        event_team_id = event.get('team_ID')
+
+        if event_team_id and active_team_id and event_team_id != active_team_id and event.get('user_id') != viewer_id:
+            return JsonResponse({"success": False, "error": "You don't have permission to modify this event"}, status=403)
+
+        participant_payload = _build_event_participant_payload(event, viewer_id)
+        if participant_payload['is_host']:
+            return JsonResponse({"success": False, "error": "Hosts cannot leave their own event"}, status=400)
+
+        if not participant_payload['has_joined']:
+            return JsonResponse({
+                "success": True,
+                "message": "You are not part of this event",
+                "participant_data": participant_payload
+            })
+
+        success = Event.remove_participant(event_id, viewer_id)
+        if not success:
+            return JsonResponse({"success": False, "error": "Unable to leave event"}, status=500)
+
+        participant_payload = _build_event_participant_payload(event, viewer_id)
+        return JsonResponse({"success": True, "participant_data": participant_payload})
+
+    except Exception as e:
+        print(f"Error leaving event {event_id}: {e}")
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
 @login_required

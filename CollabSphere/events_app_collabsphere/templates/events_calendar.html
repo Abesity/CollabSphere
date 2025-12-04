@@ -312,6 +312,26 @@
         <h4 id="eventDetailsTitle" class="mb-2"></h4>
         <div id="eventDetailsTime" class="text-muted mb-3"></div>
         <p id="eventDetailsDescription" class="mb-0"></p>
+        <div class="event-meta mt-4">
+          <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between mb-3">
+            <div class="event-host-block">
+              <span class="text-muted text-uppercase small">Hosted by</span>
+              <div id="eventHostName" class="fw-semibold text-dark">—</div>
+            </div>  
+            <button type="button" class="btn btn-primary btn-participation" id="eventParticipationButton" disabled>
+              Join Event
+            </button>
+          </div>
+          <div class="event-participants-wrapper">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="fw-semibold">Participants</span>
+              <span id="eventParticipantsCount" class="badge rounded-pill bg-light text-dark">0</span>
+            </div>
+            <div id="eventParticipantsList" class="participant-list text-muted small">
+              No participants yet.
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -353,10 +373,15 @@ let pendingDayDateKey = null;
 
 let pendingDeleteEventId = null;
 let deleteCallback = null;
+let activeEventDetails = null;
 const dayActionModal = document.getElementById('dayActionModal');
 const dayEventsModal = document.getElementById('dayEventsModal');
 const eventDetailsModal = document.getElementById('eventDetailsModal');
 const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+const eventHostNameEl = document.getElementById('eventHostName');
+const eventParticipantsList = document.getElementById('eventParticipantsList');
+const eventParticipantsCount = document.getElementById('eventParticipantsCount');
+const eventParticipationButton = document.getElementById('eventParticipationButton');
 const modalInstances = {
     dayAction: null,
     dayEvents: null,
@@ -367,8 +392,11 @@ const eventUrls = {
     create: "{% url 'create_event' %}",
     getMonth: "{% url 'get_events' %}",
     detailBase: "{% url 'get_event' 0 %}".replace(/0\/$/, ''),
-    deleteBase: "{% url 'delete_event' 0 %}".replace(/0\/$/, '')
+    deleteBase: "{% url 'delete_event' 0 %}".replace(/0\/$/, ''),
+    join: "{% url 'join_event' 0 %}".replace(/0\/$/, ''),
+    leave: "{% url 'leave_event' 0 %}".replace(/0\/$/, '')
 };
+
 const CALENDAR_VIEW_STORAGE_KEY = 'collabsphere.calendar.view';
 
 function loadStoredCalendarView() {
@@ -613,19 +641,121 @@ function populateEventDetailsModal(event) {
         timeEl.textContent = `${event.start_date || ''} ${event.start_time || ''} - ${event.end_date || ''} ${event.end_time || ''}`.trim();
     }
     if (descEl) descEl.textContent = event.description || 'No description provided.';
+    const normalized = { ...event, id: event.id || event.event_id };
+    activeEventDetails = normalized;
+    setHostName(normalized.host_name);
+    renderParticipantsList(normalized.participants);
+    updateParticipationButtonState(normalized);
     if (modalInstances.eventDetails) {
         modalInstances.eventDetails.show();
     }
 }
 
-function formatTimeTo12Hour(timeValue) {
-    if (!timeValue) return '';
-    const [hourStr, minuteStr] = timeValue.split(':');
-    let hour = parseInt(hourStr, 10);
-    const minute = minuteStr || '00';
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    hour = hour % 12 || 12;
-    return `${hour}:${minute} ${ampm}`;
+function setHostName(name) {
+    if (eventHostNameEl) {
+        eventHostNameEl.textContent = name || 'Unknown Host';
+    }
+}
+
+function renderParticipantsList(participants) {
+    if (!eventParticipantsList || !eventParticipantsCount) return;
+    const list = Array.isArray(participants) ? participants : [];
+    eventParticipantsCount.textContent = list.length;
+    if (!list.length) {
+        eventParticipantsList.innerHTML = '<span class="text-muted">No participants yet.</span>';
+        return;
+    }
+    const markup = list.map(participant => {
+        const safeName = participant?.name || 'Unknown member';
+        const hostBadge = participant?.is_host ? '<span class="participant-host-pill">Host</span>' : '';
+        return `
+            <div class="participant-item">
+                <span class="participant-name">${safeName}</span>
+                ${hostBadge}
+            </div>
+        `;
+    }).join('');
+    eventParticipantsList.innerHTML = markup;
+}
+
+function updateParticipationButtonState(detail) {
+    if (!eventParticipationButton) return;
+    const isHost = detail?.is_host;
+    const hasJoined = detail?.has_joined;
+    eventParticipationButton.classList.remove('btn-danger', 'btn-primary', 'btn-outline-secondary');
+    const eventId = detail?.id || detail?.event_id;
+    if (eventId) {
+        eventParticipationButton.dataset.eventId = eventId;
+    }
+    if (isHost) {
+        eventParticipationButton.textContent = 'You are the host';
+        eventParticipationButton.classList.add('btn-outline-secondary');
+        eventParticipationButton.dataset.action = '';
+        eventParticipationButton.disabled = true;
+        return;
+    }
+    eventParticipationButton.disabled = false;
+    if (hasJoined) {
+        eventParticipationButton.textContent = 'Leave Event';
+        eventParticipationButton.classList.add('btn-danger');
+        eventParticipationButton.dataset.action = 'leave';
+    } else {
+        eventParticipationButton.textContent = 'Join Event';
+        eventParticipationButton.classList.add('btn-primary');
+        eventParticipationButton.dataset.action = 'join';
+    }
+}
+
+async function handleParticipationAction() {
+    if (!eventParticipationButton || !activeEventDetails) return;
+    const action = eventParticipationButton.dataset.action;
+    const eventId = activeEventDetails.id || activeEventDetails.event_id;
+    if (!action || !eventId) {
+        return;
+    }
+
+    const csrfToken = getCSRFToken();
+    const endpointBase = action === 'join' ? eventUrls.join : eventUrls.leave;
+    const url = `${endpointBase}${eventId}/`;
+    const originalText = eventParticipationButton.textContent;
+    eventParticipationButton.disabled = true;
+    eventParticipationButton.textContent = action === 'join' ? 'Joining…' : 'Leaving…';
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken || ''
+            },
+            body: JSON.stringify({})
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Unable to update participation');
+        }
+        const payload = result.participant_data;
+        if (payload) {
+            activeEventDetails.participants = payload.participants || [];
+            activeEventDetails.participant_count = payload.participant_count;
+            activeEventDetails.is_host = payload.is_host;
+            activeEventDetails.has_joined = payload.has_joined;
+            activeEventDetails.host_name = payload.host_name;
+            setHostName(activeEventDetails.host_name);
+            renderParticipantsList(activeEventDetails.participants);
+        }
+    } catch (error) {
+        console.error('Participation error:', error);
+        showError(error.message || 'Unable to update participation');
+    } finally {
+        updateParticipationButtonState(activeEventDetails);
+        if (!activeEventDetails?.is_host && eventParticipationButton) {
+            eventParticipationButton.disabled = false;
+        }
+        if (!activeEventDetails) {
+            eventParticipationButton.textContent = originalText;
+        }
+    }
 }
 
 function addNewEventToCalendarCache(formData, eventId) {
@@ -771,6 +901,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (upcomingList) {
         upcomingList.addEventListener('click', handleUpcomingListClick);
+    }
+    if (eventParticipationButton) {
+        eventParticipationButton.addEventListener('click', handleParticipationAction);
     }
     
     // Always refresh the current month from the backend so the UI

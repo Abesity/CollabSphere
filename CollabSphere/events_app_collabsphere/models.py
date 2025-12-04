@@ -140,6 +140,16 @@ class Event:
             return None
 
     @staticmethod
+    def remove_participant(event_id, user_id):
+        """Remove a participant from an event."""
+        try:
+            supabase.table("eventsparticipant").delete().eq("event_id", event_id).eq("user_id", user_id).execute()
+            return True
+        except Exception as e:
+            print("Error removing participant:", e)
+            return False
+
+    @staticmethod
     def get_events_by_date_range(team_ID, start_date, end_date):
         """Get events for a team within a date range."""
         try:

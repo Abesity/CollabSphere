@@ -480,6 +480,54 @@ body::after {
   max-width: 95%;
 }
 
+.event-meta {
+  border-top: 1px solid #e9ecf4;
+  padding-top: 1.5rem;
+}
+
+.btn-participation {
+  min-width: 140px;
+}
+
+.event-participants-wrapper {
+  border: 1px solid #e9ecf4;
+  border-radius: 12px;
+  padding: 1rem;
+  background-color: #fefefe;
+}
+
+.participant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.participant-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.2rem;
+  border-bottom: 1px dashed #e3e6ed;
+}
+
+.participant-item:last-child {
+  border-bottom: none;
+}
+
+.participant-name {
+  font-weight: 500;
+  color: #2D333A;
+}
+
+.participant-host-pill {
+  background: #e8f4ff;
+  color: #3D74C3;
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
 @media (min-width: 576px) {
   .calendar-main {
     padding: 1.5rem;

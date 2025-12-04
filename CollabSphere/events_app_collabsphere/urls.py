@@ -11,6 +11,8 @@ urlpatterns = [
     path("get/<int:event_id>/", views.get_event, name="get_event"),
     path("update/<int:event_id>/", views.update_event, name="update_event"),
     path("delete/<int:event_id>/", views.delete_event, name="delete_event"),
+    path("join/<int:event_id>/", views.join_event, name="join_event"),
+    path("leave/<int:event_id>/", views.leave_event, name="leave_event"),
     
     # Conflict checking
     path("check-conflicts/", views.check_event_conflicts, name="check_event_conflicts"),
