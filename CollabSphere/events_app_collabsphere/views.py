@@ -38,16 +38,16 @@ def _format_participants(participant_records):
 
 def _get_host_display_name(host_id):
     if not host_id:
-        return "Unknown Host"
+        return "Host"
 
     try:
         host = User.objects.filter(pk=host_id).first()
         if not host:
-            return f"Host #{host_id}"
+            return "Host"
         full_name = (host.get_full_name() or '').strip()
         return full_name if full_name else host.get_username()
     except Exception:
-        return f"Host #{host_id}"
+        return "Host"
 
 
 def _build_event_participant_payload(event, viewer_id):
