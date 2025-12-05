@@ -1012,11 +1012,31 @@ function enforceUpcomingListLimit() {
 }
 
 function removeEventFromCalendarCache(eventId) {
-    if (!Array.isArray(currentEvents)) {
+    if (!Array.isArray(currentEvents) || !eventId) {
         return;
     }
     const originalLength = currentEvents.length;
     currentEvents = currentEvents.filter(evt => String(evt.id) !== String(eventId));
+    if (currentEvents.length !== originalLength) {
+        renderCalendar();
+    }
+}
+
+function removeEventFromUpcomingList(eventId) {
+    if (!upcomingEventsListEl || !eventId) {
+        return;
+    }
+
+    const selector = `.upcoming-item[data-event-id="${CSS.escape(String(eventId))}"]`;
+    const targets = upcomingEventsListEl.querySelectorAll(selector);
+    targets.forEach(node => node.remove());
+
+    if (!upcomingEventsListEl.querySelector('.upcoming-item')) {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'no-events';
+        emptyState.textContent = hasActiveTeam ? 'No upcoming events' : 'Select a team to view events';
+        upcomingEventsListEl.appendChild(emptyState);
+    }
 }
 
 function handleUpcomingListClick(event) {
@@ -1076,6 +1096,7 @@ async function deleteEventById(eventId) {
         throw new Error(result.error || 'Delete failed');
     }
     removeEventFromCalendarCache(eventId);
+    removeEventFromUpcomingList(eventId);
     loadEventsForMonth();
     showToast('Event removed', 'success');
 }
