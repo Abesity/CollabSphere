@@ -695,13 +695,38 @@ function handleConfirmedDayCreate() {
 function openEventModalForDate(dateObj) {
     if (!dateObj) return;
     const dateKey = formatLocalDateKey(dateObj);
-    if (isPastDate(dateKey)) {
+    launchEventCreationFlow(dateKey);
+}
+
+function launchEventCreationFlow(dateKey = null) {
+    if (!hasActiveTeam) {
+        showWarning('Select a team before creating events.');
+        return;
+    }
+
+    const resolvedDateKey = dateKey || getDefaultEventDateKey();
+    if (!resolvedDateKey) {
+        return;
+    }
+
+    if (isPastDate(resolvedDateKey)) {
         showWarning('Events cannot be created before today.');
         return;
     }
-    setSelectedDate(dateKey);
-    applyDateToEventForm(dateKey);
+
+    resetEventFormFields();
+    setSelectedDate(resolvedDateKey);
+    applyDateToEventForm(resolvedDateKey);
     resetEventTimeFields();
+    syncAllHiddenTimeFields();
+
+    if (typeof toggleRecurringOptions === 'function') {
+        toggleRecurringOptions(false);
+    }
+    if (typeof updateRecurrenceSummary === 'function') {
+        updateRecurrenceSummary();
+    }
+
     const modalElement = document.getElementById('eventModal');
     if (modalElement) {
         const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -709,189 +734,18 @@ function openEventModalForDate(dateObj) {
     }
 }
 
-function showDayEventsModal(dateKey, events) {
-    const container = document.getElementById('dayEventsContainer');
-    const dateLabel = document.getElementById('dayEventsDate');
-    if (dateLabel) {
-        dateLabel.textContent = dayKeyToDate(dateKey).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    }
-    if (container) {
-        container.innerHTML = '';
-        events.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-        events.forEach(event => {
-            const card = document.createElement('div');
-            card.className = 'day-event-card';
-            card.innerHTML = `
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="mb-1">${event.title}</h6>
-                            <div class="text-muted small">${event.start_time || ''} - ${event.end_time || ''}</div>
-                        </div>
-                        <button class="btn btn-link btn-sm p-0" data-event-id="${event.id || ''}">View</button>
-                    </div>
-                    <p class="mb-0 small text-muted mt-2">${event.description || 'No description provided.'}</p>
-                </div>
-            `;
-            const viewBtn = card.querySelector('button[data-event-id]');
-            if (viewBtn) {
-                viewBtn.addEventListener('click', () => {
-                    if (event.id) {
-                        openEventDetailsById(event.id);
-                    }
-                });
-            }
-            container.appendChild(card);
-        });
-    }
-    if (modalInstances.dayEvents) {
-        modalInstances.dayEvents.show();
-    }
-}
-
-async function openEventDetailsById(eventId) {
-    if (!eventId) return;
-    try {
-        const response = await fetch(`${eventUrls.detailBase}${eventId}`);
-
-        const result = await response.json();
-        if (result.success && result.event) {
-            populateEventDetailsModal(result.event);
-        } else {
-            showError(result.error || 'Unable to load event details');
-        }
-    } catch (error) {
-        console.error('Error fetching event details:', error);
-        showError('Unable to load event details');
-    }
-}
-
-function populateEventDetailsModal(event) {
-    const titleEl = document.getElementById('eventDetailsTitle');
-    const timeEl = document.getElementById('eventDetailsTime');
-    const descEl = document.getElementById('eventDetailsDescription');
-    if (titleEl) titleEl.textContent = event.title || 'Untitled Event';
-    if (timeEl) {
-        timeEl.textContent = `${event.start_date || ''} ${event.start_time || ''} - ${event.end_date || ''} ${event.end_time || ''}`.trim();
-    }
-    if (descEl) descEl.textContent = event.description || 'No description provided.';
-    const normalized = { ...event, id: event.id || event.event_id };
-    normalized.host_name = event.host_name || event.host_username || 'Unknown Host';
-    normalized.host_username = event.host_username || null;
-    normalized.host_id = event.host_id || event.user_id || null;
-    activeEventDetails = normalized;
-    setHostName(normalized.host_name);
-    renderParticipantsList(normalized.participants);
-    updateParticipationButtonState(normalized);
-    if (modalInstances.eventDetails) {
-        modalInstances.eventDetails.show();
-    }
-}
-
-function setHostName(name) {
-    if (eventHostNameEl) {
-        eventHostNameEl.textContent = name || 'Unknown Host';
-    }
-}
-
-function renderParticipantsList(participants) {
-    if (!eventParticipantsList || !eventParticipantsCount) return;
-    const list = Array.isArray(participants) ? participants : [];
-    eventParticipantsCount.textContent = list.length;
-    if (!list.length) {
-        eventParticipantsList.innerHTML = '<span class="text-muted">No participants yet.</span>';
-        return;
-    }
-    const markup = list.map(participant => {
-        const safeName = participant?.name || 'Unknown member';
-        const hostBadge = participant?.is_host ? '<span class="participant-host-pill">Host</span>' : '';
-        return `
-            <div class="participant-item">
-                <span class="participant-name">${safeName}</span>
-                ${hostBadge}
-            </div>
-        `;
-    }).join('');
-    eventParticipantsList.innerHTML = markup;
-}
-
-function updateParticipationButtonState(detail) {
-    if (!eventParticipationButton) return;
-    const isHost = detail?.is_host;
-    const hasJoined = detail?.has_joined;
-    eventParticipationButton.classList.remove('btn-danger', 'btn-primary', 'btn-outline-secondary');
-    const eventId = detail?.id || detail?.event_id;
-    if (eventId) {
-        eventParticipationButton.dataset.eventId = eventId;
-    }
-    if (isHost) {
-        eventParticipationButton.textContent = 'You are the host';
-        eventParticipationButton.classList.add('btn-outline-secondary');
-        eventParticipationButton.dataset.action = '';
-        eventParticipationButton.disabled = true;
-        return;
-    }
-    eventParticipationButton.disabled = false;
-    if (hasJoined) {
-        eventParticipationButton.textContent = 'Leave Event';
-        eventParticipationButton.classList.add('btn-danger');
-        eventParticipationButton.dataset.action = 'leave';
+function resetEventFormFields() {
+    const eventForm = document.getElementById('eventForm');
+    if (eventForm) {
+        eventForm.reset();
     } else {
-        eventParticipationButton.textContent = 'Join Event';
-        eventParticipationButton.classList.add('btn-primary');
-        eventParticipationButton.dataset.action = 'join';
-    }
-}
-
-async function handleParticipationAction() {
-    if (!eventParticipationButton || !activeEventDetails) return;
-    const action = eventParticipationButton.dataset.action;
-    const eventId = activeEventDetails.id || activeEventDetails.event_id;
-    if (!action || !eventId) {
-        return;
-    }
-
-    const csrfToken = getCSRFToken();
-    const endpointBase = action === 'join' ? eventUrls.join : eventUrls.leave;
-    const url = `${endpointBase}${eventId}/`;
-    const originalText = eventParticipationButton.textContent;
-    eventParticipationButton.disabled = true;
-    eventParticipationButton.textContent = action === 'join' ? 'Joining…' : 'Leaving…';
-
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken || ''
-            },
-            body: JSON.stringify({})
-        });
-        const result = await response.json();
-        if (!response.ok || !result.success) {
-            throw new Error(result.error || 'Unable to update participation');
+        const titleInput = document.getElementById('eventTitle');
+        if (titleInput) {
+            titleInput.value = '';
         }
-        const payload = result.participant_data;
-        if (payload) {
-            activeEventDetails.participants = payload.participants || [];
-            activeEventDetails.participant_count = payload.participant_count;
-            activeEventDetails.is_host = payload.is_host;
-            activeEventDetails.has_joined = payload.has_joined;
-            activeEventDetails.host_name = payload.host_name || payload.host_username;
-            activeEventDetails.host_username = payload.host_username || null;
-            setHostName(activeEventDetails.host_name);
-            renderParticipantsList(activeEventDetails.participants);
-        }
-    } catch (error) {
-        console.error('Participation error:', error);
-        showError(error.message || 'Unable to update participation');
-    } finally {
-        updateParticipationButtonState(activeEventDetails);
-        if (!activeEventDetails?.is_host && eventParticipationButton) {
-            eventParticipationButton.disabled = false;
-        }
-        if (!activeEventDetails) {
-            eventParticipationButton.textContent = originalText;
+        const descriptionInput = document.getElementById('eventDescription');
+        if (descriptionInput) {
+            descriptionInput.value = '';
         }
     }
 }
@@ -1376,36 +1230,7 @@ function showEventModalForDay(day) {
 
 function showEventModal() {
     console.log('🟢 Showing event modal');
-
-    // Clear form and set default values
-    const eventTitle = document.getElementById('eventTitle');
-    const eventDescription = document.getElementById('eventDescription');
-    const eventStartDate = document.getElementById('eventStartDate');
-    const eventStartTime = document.getElementById('eventStartTime');
-    const eventEndDate = document.getElementById('eventEndDate');
-    const eventEndTime = document.getElementById('eventEndTime');
-    
-    if (eventTitle) eventTitle.value = '';
-    if (eventDescription) eventDescription.value = '';
-    
-    const defaultDateKey = getDefaultEventDateKey();
-    setSelectedDate(defaultDateKey);
-    applyDateToEventForm(defaultDateKey);
-    resetEventTimeFields();
-
-    // Reset recurring options
-    if (isRecurringCheckboxEl) {
-        isRecurringCheckboxEl.checked = false;
-    }
-    toggleRecurringOptions(false);
-    updateRecurrenceSummary();
-    resetEventTimeFields();
-    
-    const modalElement = document.getElementById('eventModal');
-    if (modalElement) {
-        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-        modal.show();
-    }
+    launchEventCreationFlow(getDefaultEventDateKey());
 }
 
 async function saveEvent() {
