@@ -12,7 +12,7 @@
     <link href="{% static 'css/notifications.css' %}" rel="stylesheet">
     <link href="{% static 'css/toast-notifications.css' %}" rel="stylesheet">
     
-    <!-- Loading Styles -->
+    <!-- Loading Styles INLINE (this ensures it always works) -->
     <style>
         /* ===== LOADING OVERLAY STYLES ===== */
         #global-loading {
@@ -21,8 +21,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.95);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -40,7 +39,7 @@
         .loading-spinner {
             width: 60px;
             height: 60px;
-            border: 4px solid rgba(0, 123, 255, 0.2);
+            border: 4px solid rgba(61, 116, 195, 0.2);
             border-radius: 50%;
             border-top-color: #3D74C3;
             animation: spin 1s ease-in-out infinite;
@@ -72,6 +71,7 @@
             left: 0;
             right: 0;
             z-index: 2000;
+            background: white !important;
         }
         
         
@@ -187,8 +187,8 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Loading Overlay -->
-    <div id="global-loading">
+    <!-- Loading Overlay - Always visible initially -->
+    <div id="global-loading" class="active">
         <div class="text-center">
             <div class="loading-spinner"></div>
             <div class="loading-text">Loading...</div>
@@ -223,10 +223,10 @@
 
             <!-- Right: Nav links -->
             <div class="d-flex align-items-center ms-auto">
-                <a class="nav-link me-3" href="{% url 'home' %}" data-turbo="true">Home</a>
-                <a class="nav-link me-3" href="{% url 'teams' %}" data-turbo="true">Teams</a>
-                <a class="nav-link me-3" href="{% url 'wellbeing_dashboard' %}" data-turbo="true">Check Ins</a>
-                <a class="nav-link me-3" href="{% url 'events_calendar' %}" data-turbo="true">Events</a>
+                <a class="nav-link me-3" href="{% url 'home' %}">Home</a>
+                <a class="nav-link me-3" href="{% url 'teams' %}">Teams</a>
+                <a class="nav-link me-3" href="{% url 'wellbeing_dashboard' %}">Check Ins</a>
+                <a class="nav-link me-3" href="{% url 'events_calendar' %}">Events</a>
 
                 <!-- User logo/avatar -->
                 <div class="dropdown">
@@ -241,8 +241,8 @@
                             onerror="this.onerror=null; this.src='/static/images/circle-user.png'">
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-                        <li><a class="dropdown-item" href="{% url 'profile' %}" data-turbo="true">Profile</a></li>
-                        <li><a class="dropdown-item position-relative" href="{% url 'notifications:list' %}" data-turbo="true">
+                        <li><a class="dropdown-item" href="{% url 'profile' %}">Profile</a></li>
+                        <li><a class="dropdown-item position-relative" href="{% url 'notifications:list' %}">
                             Notifications
                             <span class="notification-badge" id="notification-count" style="display: none;">0</span>
                         </a></li>
@@ -263,110 +263,77 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // ===== TURBO-STYLE NAVIGATION WITH LOADING =====
-        class TurboNavigation {
-            constructor() {
-                this.loadingElement = document.getElementById('global-loading');
-                this.init();
-            }
+        // ===== SIMPLE PAGE LOADING SYSTEM =====
+        (function() {
+            const loadingElement = document.getElementById('global-loading');
             
-            init() {
-                // Intercept all link clicks
-                document.addEventListener('click', (e) => {
-                    const link = e.target.closest('a[data-turbo="true"]');
-                    if (link && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
-                        e.preventDefault();
-                        this.navigate(link.href);
+            // 1. Hide loading when everything is loaded
+            window.addEventListener('load', function() {
+                setTimeout(() => {
+                    loadingElement.classList.remove('active');
+                }, 500); // Small delay for smoothness
+            });
+            
+            // 2. Show loading when ANY link is clicked (except dropdowns)
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (link && link.href && 
+                    !link.href.startsWith('javascript:') && 
+                    !link.href.includes('#') &&
+                    link.target !== '_blank' &&
+                    !link.hasAttribute('data-bs-toggle') &&
+                    link.getAttribute('href') !== '#') {
+                    
+                    // Check if it's an internal link
+                    const currentOrigin = window.location.origin;
+                    const targetOrigin = new URL(link.href, window.location.href).origin;
+                    
+                    if (currentOrigin === targetOrigin) {
+                        // Show loading immediately for internal links
+                        loadingElement.classList.add('active');
+                    } else {
+                        // For external links, show loading briefly
+                        loadingElement.classList.add('active');
+                        setTimeout(() => {
+                            loadingElement.classList.remove('active');
+                        }, 1500);
                     }
-                });
-                
-                // Show loading on browser back/forward
-                window.addEventListener('popstate', () => {
-                    this.showLoading();
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 100);
-                });
-                
-                // Hide loading when page fully loads
-                window.addEventListener('load', () => {
-                    this.hideLoading();
-                });
-                
-                // Initial page load - hide after timeout
-                setTimeout(() => this.hideLoading(), 500);
-            }
-            
-            showLoading() {
-                this.loadingElement.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
-            
-            hideLoading() {
-                this.loadingElement.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-            
-            async navigate(url) {
-                this.showLoading();
-                
-                try {
-                    // Fetch the page
-                    const response = await fetch(url, {
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-                    
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    
-                    const html = await response.text();
-                    
-                    // Parse the HTML
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    
-                    // Update page title
-                    document.title = doc.title;
-                    
-                    // Update main content
-                    const newContent = doc.querySelector('.page-container').innerHTML;
-                    document.querySelector('.page-container').innerHTML = newContent;
-                    
-                    // Update browser history
-                    window.history.pushState({}, '', url);
-                    
-                    // Re-initialize any page-specific JavaScript
-                    this.reinitializePage();
-                    
-                    // Hide loading with delay for smooth transition
-                    setTimeout(() => this.hideLoading(), 300);
-                    
-                } catch (error) {
-                    console.error('Navigation error:', error);
-                    // Fallback to regular navigation
-                    window.location.href = url;
                 }
-            }
+            });
             
-            reinitializePage() {
-                // Re-run any page-specific scripts
-                if (typeof loadNotifications === 'function') {
-                    loadNotifications();
+            // 3. Show loading for form submissions
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                if (form.method.toLowerCase() === 'post') {
+                    loadingElement.classList.add('active');
                 }
-                
-                // Re-initialize Bootstrap components
-                document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(el => {
-                    new bootstrap.Dropdown(el);
-                });
-                
-                // Dispatch a custom event for other scripts to hook into
-                window.dispatchEvent(new CustomEvent('page:loaded'));
-            }
-        }
+            });
+            
+            // 4. Show loading when browser back/forward buttons are used
+            window.addEventListener('popstate', function() {
+                loadingElement.classList.add('active');
+            });
+            
+            // 5. Fallback: hide loading after max 3 seconds
+            setTimeout(() => {
+                loadingElement.classList.remove('active');
+            }, 3000);
+            
+            // 6. Ensure loading shows when page is unloading (user navigates away)
+            window.addEventListener('beforeunload', function() {
+                loadingElement.classList.add('active');
+            });
+        })();
         
         // ===== NOTIFICATIONS =====
+        document.addEventListener('DOMContentLoaded', function() {
+            loadNotifications();
+        });
+        
         function loadNotifications() {
+            // Show mini-loading for notifications (optional)
+            const loadingElement = document.getElementById('global-loading');
+            
             fetch('/notifications/')
                 .then(response => {
                     if (!response.ok) throw new Error('Network response was not ok');
@@ -397,33 +364,76 @@
                 .catch(error => console.error('Error loading notification count:', error));
         }
         
-        // ===== INITIALIZATION =====
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize turbo navigation
-            new TurboNavigation();
+        setInterval(loadNotifications, 60000);
+        
+        // ===== IMPROVED: Track all AJAX requests =====
+        (function() {
+            const loadingElement = document.getElementById('global-loading');
+            let ajaxCount = 0;
             
-            // Load notifications
-            loadNotifications();
-            
-            // Set up notifications interval
-            setInterval(loadNotifications, 60000);
-            
-            // Show loading for form submissions
-            document.addEventListener('submit', function(e) {
-                const form = e.target;
-                if (form.method.toLowerCase() === 'post') {
-                    document.getElementById('global-loading').classList.add('active');
+            // Override fetch
+            const originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                const url = args[0];
+                
+                // Don't show loading for notifications (they're frequent)
+                if (url && (url.includes('/notifications/') || url.includes('/unread-count/'))) {
+                    return originalFetch.apply(this, args);
                 }
-            });
-            
-            // Show loading for external links (non-turbo)
-            document.addEventListener('click', function(e) {
-                const link = e.target.closest('a:not([data-turbo="true"])');
-                if (link && link.href && !link.href.includes(window.location.origin)) {
-                    document.getElementById('global-loading').classList.add('active');
+                
+                // Show loading for other AJAX calls
+                ajaxCount++;
+                if (ajaxCount === 1) {
+                    loadingElement.classList.add('active');
                 }
-            });
-        });
+                
+                return originalFetch.apply(this, args)
+                    .then(response => {
+                        ajaxCount--;
+                        if (ajaxCount === 0) {
+                            setTimeout(() => {
+                                loadingElement.classList.remove('active');
+                            }, 300);
+                        }
+                        return response;
+                    })
+                    .catch(error => {
+                        ajaxCount--;
+                        if (ajaxCount === 0) {
+                            loadingElement.classList.remove('active');
+                        }
+                        throw error;
+                    });
+            };
+            
+            // Override XMLHttpRequest
+            const originalOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(method, url) {
+                this._url = url;
+                return originalOpen.apply(this, arguments);
+            };
+            
+            const originalSend = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.send = function(...args) {
+                if (this._url && !this._url.includes('/notifications/')) {
+                    ajaxCount++;
+                    if (ajaxCount === 1) {
+                        loadingElement.classList.add('active');
+                    }
+                    
+                    this.addEventListener('loadend', () => {
+                        ajaxCount--;
+                        if (ajaxCount === 0) {
+                            setTimeout(() => {
+                                loadingElement.classList.remove('active');
+                            }, 300);
+                        }
+                    });
+                }
+                
+                return originalSend.apply(this, args);
+            };
+        })();
         
         // CSRF helper
         function getCookie(name) {
