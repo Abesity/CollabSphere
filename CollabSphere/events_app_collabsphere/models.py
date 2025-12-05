@@ -267,68 +267,96 @@ class RecurringEvent:
     
     # Maximum occurrences to generate (safety limit)
     MAX_OCCURRENCES = 365
+    DEFAULT_MONTHLY_OCCURRENCES = 12
     
     @staticmethod
-    def create_recurring_event(event_data, recurrence_rule):
-        """
-        Create a recurring event with its recurrence rule.
-        
-        Args:
-            event_data: Base event data (title, description, start_time, end_time, team_ID, user_id)
-            recurrence_rule: Dict containing recurrence settings:
-                - frequency: 'daily', 'weekly', 'monthly', 'yearly'
-                - days: List of day indices for weekly (0=Sun, 6=Sat)
-                - end_type: 'never', 'on', 'after'
-                - end_date: End date string (for 'on' type)
-                - occurrences: Number of occurrences (for 'after' type)
-                - interval: Repeat interval (default 1)
-        
-        Returns:
-            Created event with recurrence metadata, or None on failure
-        """
+    def _create_monthly_occurrences(event_data, recurrence_rule):
+        occurrences = []
         try:
-            # Add recurrence metadata to event data
-            event_data['is_recurring'] = True
-            event_data['frequency'] = recurrence_rule.get('frequency', RecurringEvent.FREQUENCY_WEEKLY)
-            
-            # Store days as JSON string
-            days = recurrence_rule.get('days', [])
-            event_data['recurrence_days'] = json.dumps(days) if days else None
-            
-            event_data['recurrence_end_type'] = recurrence_rule.get('end_type', RecurringEvent.END_TYPE_NEVER)
-            event_data['recurrence_end_date'] = recurrence_rule.get('end_date')
-            event_data['recurrence_count'] = recurrence_rule.get('occurrences')
-            event_data['recurrence_interval'] = recurrence_rule.get('interval', 1)
-            
-            # Create the master recurring event
-            result = Event.create(event_data)
-            
-            if result and len(result) > 0:
-                print(f"🔁 Created recurring event: {result[0].get('event_id')}")
-                return result[0]
-            
+            start_dt = datetime.fromisoformat(event_data['start_time'])
+            end_dt = datetime.fromisoformat(event_data['end_time'])
+        except Exception as exc:
+            print(f"❌ Invalid datetime for recurring event: {exc}")
+            single = Event.create(event_data)
+            if isinstance(single, list):
+                occurrences.extend(single)
+            elif single:
+                occurrences.append(single)
+            return occurrences
+
+        end_type = recurrence_rule.get('end_type', RecurringEvent.END_TYPE_NEVER)
+        end_date_boundary = RecurringEvent._parse_date(recurrence_rule.get('end_date')) if recurrence_rule.get('end_date') else None
+        total_instances = RecurringEvent._resolve_occurrence_limit(recurrence_rule)
+
+        for instance_index in range(total_instances):
+            occurrence_start = start_dt + relativedelta(months=instance_index)
+            if end_type == RecurringEvent.END_TYPE_ON_DATE and end_date_boundary:
+                if occurrence_start.date() > end_date_boundary:
+                    break
+
+            payload = event_data.copy()
+            payload['start_time'] = occurrence_start.isoformat()
+            payload['end_time'] = (end_dt + relativedelta(months=instance_index)).isoformat()
+
+            created = Event.create(payload)
+            if not created:
+                print(f"❌ Failed to create recurring occurrence #{instance_index + 1}")
+                continue
+
+            if isinstance(created, list):
+                occurrences.extend(created)
+            else:
+                occurrences.append(created)
+
+        return occurrences
+
+    @staticmethod
+    def _resolve_occurrence_limit(recurrence_rule):
+        end_type = recurrence_rule.get('end_type', RecurringEvent.END_TYPE_NEVER)
+        if end_type == RecurringEvent.END_TYPE_AFTER_COUNT:
+            try:
+                count = int(recurrence_rule.get('occurrences') or RecurringEvent.DEFAULT_MONTHLY_OCCURRENCES)
+                if count <= 0:
+                    return RecurringEvent.DEFAULT_MONTHLY_OCCURRENCES
+                return min(count, RecurringEvent.MAX_OCCURRENCES)
+            except (ValueError, TypeError):
+                return RecurringEvent.DEFAULT_MONTHLY_OCCURRENCES
+        return RecurringEvent.DEFAULT_MONTHLY_OCCURRENCES
+
+    @staticmethod
+    def _parse_date(date_str):
+        try:
+            parsed = datetime.fromisoformat(date_str)
+            return parsed.date()
+        except Exception:
             return None
-            
+
+    @staticmethod
+    def create_recurring_event(event_data, recurrence_rule):
+        """Create recurring occurrences by generating discrete monthly events."""
+        try:
+            frequency = recurrence_rule.get('frequency') or RecurringEvent.FREQUENCY_MONTHLY
+            if frequency != RecurringEvent.FREQUENCY_MONTHLY:
+                print(f"⚠️ Only monthly recurrence is supported currently (requested '{frequency}'). Defaulting to monthly.")
+
+            created_occurrences = RecurringEvent._create_monthly_occurrences(event_data, recurrence_rule)
+            if not created_occurrences:
+                print("❌ Failed to create any recurring occurrences; falling back to single event")
+                fallback = Event.create(event_data)
+                if isinstance(fallback, list):
+                    return fallback[0] if fallback else None
+                return fallback
+
+            return created_occurrences[0]
+
         except Exception as e:
             print(f"❌ Error creating recurring event: {e}")
             return None
     
     @staticmethod
     def get_recurring_events_for_team(team_ID):
-        """Get all recurring events (master events) for a team."""
-        try:
-            resp = (
-                supabase.table("calendarevent")
-                .select("*")
-                .eq("team_ID", team_ID)
-                .eq("is_recurring", True)
-                .order("start_time")
-                .execute()
-            )
-            return getattr(resp, "data", [])
-        except Exception as e:
-            print(f"Error fetching recurring events: {e}")
-            return []
+        """Recurring events are expanded up front, so no separate master records are stored."""
+        return []
     
     @staticmethod
     def expand_recurring_event(event, range_start, range_end):

@@ -166,6 +166,9 @@ def events_calendar(request):
 
         team_name = Team.get_team_name(active_team_id)
 
+        hour_options = [str(hour) for hour in range(1, 13)]
+        minute_options = [f"{minute:02d}" for minute in range(0, 60, 5)]
+
         context = {
             'events_json': json.dumps(formatted_events),
             'upcoming_events': formatted_upcoming,
@@ -174,6 +177,8 @@ def events_calendar(request):
             'team_name': team_name,
             'initial_year': start_date.year,
             'initial_month': start_date.month,
+            'hour_options': hour_options,
+            'minute_options': minute_options,
         }
 
         return render(request, "events_calendar.html", context)
@@ -185,6 +190,8 @@ def events_calendar(request):
             'events_json': '[]',
             'upcoming_events': [],
             'has_active_team': False,
+            'hour_options': [str(hour) for hour in range(1, 13)],
+            'minute_options': [f"{minute:02d}" for minute in range(0, 60, 5)],
         })
 
 
