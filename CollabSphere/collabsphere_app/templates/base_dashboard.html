@@ -265,16 +265,21 @@
     <script>
         // ===== SIMPLE PAGE LOADING SYSTEM =====
         (function() {
-            const loadingElement = document.getElementById('global-loading');
-            
-            // 1. Hide loading when everything is loaded
-            window.addEventListener('load', function() {
-                setTimeout(() => {
-                    loadingElement.classList.remove('active');
-                }, 500); // Small delay for smoothness
-            });
-            
-            // 2. Show loading when ANY link is clicked (except dropdowns)
+        const loadingElement = document.getElementById('global-loading');
+        
+        // Check if loading is disabled for this page
+        if (document.body.dataset.disableLoading === 'true') {
+            loadingElement.style.display = 'none';
+            return; // Skip all loading logic
+        }
+        
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                loadingElement.classList.remove('active');
+            }, 500);
+        });
+
+        // Show loading when ANY link is clicked (except dropdowns)
             document.addEventListener('click', function(e) {
                 const link = e.target.closest('a');
                 if (link && link.href && 

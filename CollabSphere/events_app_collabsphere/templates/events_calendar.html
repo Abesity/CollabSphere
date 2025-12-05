@@ -1,9 +1,9 @@
-    if (isRecurringCheckboxEl) {
-        isRecurringCheckboxEl.addEventListener('change', handleRecurringToggle);
+if (isRecurringCheckboxEl) {
+    isRecurringCheckboxEl.addEventListener('change', handleRecurringToggle);
     }
-    if (frequencySelectEl) {
-        frequencySelectEl.addEventListener('change', handleFrequencyChange);
-    }
+if (frequencySelectEl) {
+    frequencySelectEl.addEventListener('change', handleFrequencyChange);
+}
 
 {% extends "base_dashboard.html" %}
 
@@ -15,6 +15,8 @@
 <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=1.0">
 <link rel="stylesheet" href="{% static 'css/events_calendar.css' %}?v=1.0">
 <link rel="stylesheet" href="{% static 'css/recurring_events.css' %}?v=1.0">
+
+
 {% endblock %}
 
 {% block extra_js %}
@@ -23,6 +25,11 @@
 {% endblock %}
 
 {% block content %}
+<script>
+    //  data attribute to disable loading
+    document.body.dataset.disableLoading = 'true';
+</script>
+
 <div class="container-fluid calendar-container">
   <main class="calendar-main">
     
@@ -1552,40 +1559,44 @@ async function loadEventsForMonth() {
 function viewEventDetails(eventId) {
     openEventDetailsById(eventId);
 }
-
 function previousMonth() {
     currentDate.setMonth(currentDate.getMonth() - 1);
     updateCalendarHeader();
+    // Temporarily disable global loading for month change
+    disableGlobalLoadingTemporarily();
     loadEventsForMonth();
 }
 
 function nextMonth() {
     currentDate.setMonth(currentDate.getMonth() + 1);
     updateCalendarHeader();
+    // Temporarily disable global loading for month change
+    disableGlobalLoadingTemporarily();
     loadEventsForMonth();
 }
 
-function showToast(message, type = 'info') {
-    // Simple toast notification
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type} alert-dismissible fade show`;
-    toast.style.position = 'fixed';
-    toast.style.top = '20px';
-    toast.style.right = '20px';
-    toast.style.zIndex = '9999';
-    toast.style.minWidth = '300px';
-    toast.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.body.appendChild(toast);
-    
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-        }
-    }, 3000);
+// Add this new function to temporarily disable global loading
+function disableGlobalLoadingTemporarily() {
+    const loadingElement = document.getElementById('global-loading');
+    if (loadingElement) {
+        // Store the current state
+        loadingElement.dataset.originalDisplay = loadingElement.style.display;
+        loadingElement.dataset.originalClass = loadingElement.className;
+        
+        // Hide it and prevent it from showing
+        loadingElement.style.display = 'none';
+        loadingElement.classList.remove('active');
+        
+        // Re-enable after 2 seconds (should be enough for month load)
+        setTimeout(() => {
+            if (loadingElement.dataset.originalDisplay) {
+                loadingElement.style.display = loadingElement.dataset.originalDisplay;
+            }
+            if (loadingElement.dataset.originalClass) {
+                loadingElement.className = loadingElement.dataset.originalClass;
+            }
+        }, 2000);
+    }
 }
 
 </script>
