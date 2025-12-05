@@ -4,6 +4,7 @@
     if (frequencySelectEl) {
         frequencySelectEl.addEventListener('change', handleFrequencyChange);
     }
+
 {% extends "base_dashboard.html" %}
 
 {% load static %}
@@ -151,12 +152,44 @@
               <input type="date" class="form-control" id="eventStartDate" name="start_date" required>
             </div>
             <div class="col-md-4">
-              <label for="eventStartTime" class="form-label">Start Time *</label>
-              <input type="time" class="form-control" id="eventStartTime" name="start_time" value="09:00" required>
+              <label class="form-label">Start Time *</label>
+              <div class="d-flex gap-2 flex-wrap">
+                <select class="form-select" id="eventStartHour" aria-label="Start hour" required>
+                  {% for hour in hour_options %}
+                  <option value="{{ hour }}">{{ hour }}</option>
+                  {% endfor %}
+                </select>
+                <select class="form-select" id="eventStartMinute" aria-label="Start minutes" required>
+                  {% for minute in minute_options %}
+                  <option value="{{ minute }}">{{ minute }}</option>
+                  {% endfor %}
+                </select>
+                <select class="form-select" id="eventStartMeridiem" aria-label="Start meridiem" required>
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <input type="hidden" id="eventStartTime" name="start_time" value="09:00">
             </div>
             <div class="col-md-4">
-              <label for="eventEndTime" class="form-label">End Time *</label>
-              <input type="time" class="form-control" id="eventEndTime" name="end_time" value="10:00" required>
+              <label class="form-label">End Time *</label>
+              <div class="d-flex gap-2 flex-wrap">
+                <select class="form-select" id="eventEndHour" aria-label="End hour" required>
+                  {% for hour in hour_options %}
+                  <option value="{{ hour }}">{{ hour }}</option>
+                  {% endfor %}
+                </select>
+                <select class="form-select" id="eventEndMinute" aria-label="End minutes" required>
+                  {% for minute in minute_options %}
+                  <option value="{{ minute }}">{{ minute }}</option>
+                  {% endfor %}
+                </select>
+                <select class="form-select" id="eventEndMeridiem" aria-label="End meridiem" required>
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <input type="hidden" id="eventEndTime" name="end_time" value="10:00">
             </div>
           </div>
           <input type="hidden" id="eventEndDate" name="end_date">
@@ -387,6 +420,8 @@ const eventHostNameEl = document.getElementById('eventHostName');
 const eventParticipantsList = document.getElementById('eventParticipantsList');
 const eventParticipantsCount = document.getElementById('eventParticipantsCount');
 const eventParticipationButton = document.getElementById('eventParticipationButton');
+const upcomingEventsListEl = document.getElementById('upcomingEventsList');
+const MAX_UPCOMING_ITEMS = 5;
 const modalInstances = {
     dayAction: null,
     dayEvents: null,
@@ -408,6 +443,14 @@ const frequencySelectEl = document.getElementById('frequency');
 const weeklyOptionsEl = document.getElementById('weeklyOptions');
 const endsOnSelectEl = document.getElementById('endsOn');
 const isRecurringCheckboxEl = document.getElementById('isRecurring');
+const startHourSelectEl = document.getElementById('eventStartHour');
+const startMinuteSelectEl = document.getElementById('eventStartMinute');
+const startMeridiemSelectEl = document.getElementById('eventStartMeridiem');
+const endHourSelectEl = document.getElementById('eventEndHour');
+const endMinuteSelectEl = document.getElementById('eventEndMinute');
+const endMeridiemSelectEl = document.getElementById('eventEndMeridiem');
+const startTimeHiddenInput = document.getElementById('eventStartTime');
+const endTimeHiddenInput = document.getElementById('eventEndTime');
 
 const CALENDAR_VIEW_STORAGE_KEY = 'collabsphere.calendar.view';
 
@@ -505,10 +548,70 @@ function applyDateToEventForm(dateKey) {
 }
 
 function resetEventTimeFields(startTime = '09:00', endTime = '10:00') {
-    const startTimeInput = document.getElementById('eventStartTime');
-    const endTimeInput = document.getElementById('eventEndTime');
-    if (startTimeInput) startTimeInput.value = formatTimeTo12Hour(startTime);
-    if (endTimeInput) endTimeInput.value = formatTimeTo12Hour(endTime);
+    setTimeSelectorsFrom24Hour(startTime, startHourSelectEl, startMinuteSelectEl, startMeridiemSelectEl);
+    setTimeSelectorsFrom24Hour(endTime, endHourSelectEl, endMinuteSelectEl, endMeridiemSelectEl);
+    syncAllHiddenTimeFields();
+}
+
+function setTimeSelectorsFrom24Hour(timeValue = '09:00', hourSelect, minuteSelect, meridiemSelect) {
+    if (!hourSelect || !minuteSelect || !meridiemSelect) return;
+    const [rawHour = '09', rawMinute = '00'] = (timeValue || '09:00').split(':');
+    let hour24 = parseInt(rawHour, 10);
+    if (Number.isNaN(hour24)) {
+        hour24 = 9;
+    }
+    const minuteValue = rawMinute.padStart(2, '0');
+    const isPM = hour24 >= 12;
+    let hour12 = hour24 % 12;
+    if (hour12 === 0) hour12 = 12;
+    setSelectValue(hourSelect, String(hour12));
+    setSelectValue(minuteSelect, minuteValue);
+    meridiemSelect.value = isPM ? 'PM' : 'AM';
+}
+
+function setSelectValue(selectEl, value) {
+    if (!selectEl || typeof value === 'undefined' || value === null) return;
+    const exists = Array.from(selectEl.options || []).some(opt => opt.value === value);
+    if (!exists) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        selectEl.appendChild(option);
+    }
+    selectEl.value = value;
+}
+
+function convertTo24Hour(hour, minute, meridiem) {
+    let parsedHour = parseInt(hour, 10);
+    const sanitizedMinute = String(minute || '00').padStart(2, '0');
+    if (Number.isNaN(parsedHour)) {
+        parsedHour = 9;
+    }
+    if ((meridiem || 'AM').toUpperCase() === 'PM' && parsedHour !== 12) {
+        parsedHour += 12;
+    }
+    if ((meridiem || 'AM').toUpperCase() === 'AM' && parsedHour === 12) {
+        parsedHour = 0;
+    }
+    return `${String(parsedHour).padStart(2, '0')}:${sanitizedMinute}`;
+}
+
+function syncHiddenTimeField(hourSelect, minuteSelect, meridiemSelect, hiddenInput) {
+    if (!hourSelect || !minuteSelect || !meridiemSelect || !hiddenInput) return;
+    hiddenInput.value = convertTo24Hour(hourSelect.value, minuteSelect.value, meridiemSelect.value);
+}
+
+function syncStartTimeHidden() {
+    syncHiddenTimeField(startHourSelectEl, startMinuteSelectEl, startMeridiemSelectEl, startTimeHiddenInput);
+}
+
+function syncEndTimeHidden() {
+    syncHiddenTimeField(endHourSelectEl, endMinuteSelectEl, endMeridiemSelectEl, endTimeHiddenInput);
+}
+
+function syncAllHiddenTimeFields() {
+    syncStartTimeHidden();
+    syncEndTimeHidden();
 }
 
 function formatTimeTo12Hour(timeValue) {
@@ -794,7 +897,7 @@ function addNewEventToCalendarCache(formData, eventId) {
     const startDate = formData.get('start_date');
     const endTime = formData.get('end_time');
     const startTime = formData.get('start_time');
-    currentEvents.push({
+    const newEvent = {
         id: eventId,
         title: formData.get('title'),
         description: formData.get('description') || '',
@@ -802,8 +905,110 @@ function addNewEventToCalendarCache(formData, eventId) {
         start_time: formatTimeTo12Hour(startTime),
         end_time: formatTimeTo12Hour(endTime),
         is_recurring: formData.get('is_recurring') === 'on'
-    });
+    };
+    currentEvents.push(newEvent);
     renderCalendar();
+    return newEvent;
+}
+
+function addNewEventToUpcomingList(formData, eventId) {
+    if (!upcomingEventsListEl) {
+        return;
+    }
+
+    const startDateStr = formData.get('start_date');
+    const startTime = formData.get('start_time');
+    const endTime = formData.get('end_time');
+    const title = (formData.get('title') || 'Untitled Event').trim() || 'Untitled Event';
+    if (!startDateStr || !startTime) {
+        return;
+    }
+
+    const startDateObj = buildDateFromForm(startDateStr, startTime);
+    if (!startDateObj) {
+        return;
+    }
+
+    const dayLabel = startDateObj.getDate();
+    const monthLabel = startDateObj.toLocaleString(undefined, { month: 'short' });
+    const startLabel = formatTimeTo12Hour(startTime);
+    const endLabel = endTime ? formatTimeTo12Hour(endTime) : null;
+    const timeLabel = endLabel ? `${startLabel} - ${endLabel}` : startLabel;
+
+    const newItem = createUpcomingItemElement({
+        eventId,
+        day: dayLabel,
+        monthLabel,
+        title,
+        timeLabel
+    });
+
+    const emptyState = upcomingEventsListEl.querySelector('.no-events');
+    if (emptyState) {
+        emptyState.remove();
+    }
+
+    const firstExistingItem = upcomingEventsListEl.querySelector('.upcoming-item');
+    if (firstExistingItem) {
+        upcomingEventsListEl.insertBefore(newItem, firstExistingItem);
+    } else {
+        upcomingEventsListEl.appendChild(newItem);
+    }
+
+    enforceUpcomingListLimit();
+}
+
+function buildDateFromForm(dateStr, timeStr = '00:00') {
+    if (!dateStr) {
+        return null;
+    }
+    const [yearStr, monthStr, dayStr] = dateStr.split('-') || [];
+    const [hourStr = '00', minuteStr = '00'] = (timeStr || '00:00').split(':');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const day = parseInt(dayStr, 10);
+    const hour = parseInt(hourStr, 10);
+    const minute = parseInt(minuteStr, 10);
+    if ([year, month, day, hour, minute].some(val => Number.isNaN(val))) {
+        return null;
+    }
+    return new Date(year, month - 1, day, hour, minute);
+}
+
+function createUpcomingItemElement({ eventId, day, monthLabel, title, timeLabel }) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'upcoming-item';
+    if (eventId) {
+        wrapper.dataset.eventId = eventId;
+    }
+    wrapper.innerHTML = `
+        <div class="upcoming-date">
+            <div class="upcoming-day">${day}</div>
+            <div class="upcoming-month">${monthLabel}</div>
+        </div>
+        <div class="upcoming-details">
+            <div class="upcoming-title">${title}</div>
+            <div class="upcoming-time">${timeLabel}</div>
+        </div>
+        <div class="upcoming-actions">
+            <span class="upcoming-type team">Team</span>
+            <button type="button" class="btn-upcoming-delete" data-event-id="${eventId || ''}" aria-label="Remove event">
+                <span class="btn-upcoming-delete-icon">&times;</span>
+            </button>
+        </div>
+    `;
+    return wrapper;
+}
+
+function enforceUpcomingListLimit() {
+    if (!upcomingEventsListEl || !Number.isFinite(MAX_UPCOMING_ITEMS) || MAX_UPCOMING_ITEMS <= 0) {
+        return;
+    }
+    const items = Array.from(upcomingEventsListEl.querySelectorAll('.upcoming-item'));
+    if (items.length <= MAX_UPCOMING_ITEMS) {
+        return;
+    }
+    items.slice(MAX_UPCOMING_ITEMS).forEach(item => item.remove());
 }
 
 function removeEventFromCalendarCache(eventId) {
@@ -934,6 +1139,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (eventParticipationButton) {
         eventParticipationButton.addEventListener('click', handleParticipationAction);
     }
+    [startHourSelectEl, startMinuteSelectEl, startMeridiemSelectEl].forEach(el => {
+        if (el) el.addEventListener('change', syncStartTimeHidden);
+    });
+    [endHourSelectEl, endMinuteSelectEl, endMeridiemSelectEl].forEach(el => {
+        if (el) el.addEventListener('change', syncEndTimeHidden);
+    });
+    syncAllHiddenTimeFields();
     
     // Always refresh the current month from the backend so the UI
     // stays in sync with live data (even if the initial payload was empty).
@@ -1159,6 +1371,7 @@ function showEventModal() {
     }
     toggleRecurringOptions(false);
     updateRecurrenceSummary();
+    resetEventTimeFields();
     
     const modalElement = document.getElementById('eventModal');
     if (modalElement) {
@@ -1187,6 +1400,7 @@ async function saveEvent() {
         return;
     }
 
+    syncAllHiddenTimeFields();
     const formData = new FormData(document.getElementById('eventForm'));
     applyDefaultEndFields(formData);
 
@@ -1238,7 +1452,8 @@ async function saveEvent() {
                     modal.hide();
                 }
             }
-            addNewEventToCalendarCache(formData, result.event_id);
+            const newEvent = addNewEventToCalendarCache(formData, result.event_id);
+            addNewEventToUpcomingList(formData, result.event_id);
             
             // Show success message with recurring info
             const message = isRecurring ? 
