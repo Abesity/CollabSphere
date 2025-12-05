@@ -18,105 +18,172 @@ body::after {
   padding: 0;
   margin: 0;
   content: "";
-  position: fixed;             
+  position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 100%;          
+  height: 100%;
   background: url("/static/images/bg.png") bottom / cover no-repeat;
-  opacity: 0.60;                
-  z-index: -1;                
+  opacity: 0.60;
+  z-index: -1;
+}
+
+/* Updated Welcome Text Styling to match home.css */
+.welcome-text {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.welcome-text h1 {
+  color: #2D333A;
+  font-weight: 600;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.welcome-text p {
+  color: #2D333A;
+  margin-bottom: 1rem;
+  font-size: 1rem;
 }
 
 .notifications-container {
+  padding-top: 0 auto;
+  align-content: center;
+  margin: 1rem auto;
+  justify-content: center;
+  width: calc(100% - 2rem);
   background: #fff;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 2px solid var(--card-border);
-  box-shadow: 0 4px 12px rgba(129, 137, 176, 0.15);
-  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(129, 137, 176, 0.15);
+  padding: 1rem;
   color: var(--primary-color);
 }
 
 .notifications-header {
   justify-content: space-between;
   display: flex;
-  gap: 30px;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.category-filter-control {
+  min-width: 220px;
+}
+
+.category-select {
+  border-radius: 12px;
+  border: 1.5px solid #d0d5dd;
+  background: #fdfdfd;
+  color: #1d2635;
+  font-weight: 500;
+  height: 40px;
+  padding: 0.35rem 2.5rem 0.35rem 0.85rem;
+  box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.05);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.75L6 6.25L11 1.75' stroke='%23545F7A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 0.75rem) center;
+  background-size: 12px;
+}
+
+.category-select:focus {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 3px rgba(61, 116, 195, 0.15);
+  outline: none;
+}
+
+.notifications-header h2 {
+  font-size: 1.25rem;
+  margin: 0;
 }
 
 .notifications-list {
-  margin-top: 20px;
+  margin-top: 1rem;
 }
 
 .notification-item {
-  padding: 15px;
+  padding: 0.875rem;
   border: 1px solid var(--card-border);
-  border-radius: 12px;
-  margin-bottom: 12px;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
   background-color: #fff;
   transition: all 0.3s ease;
   box-shadow: 0 2px 4px rgba(129, 137, 176, 0.1);
 }
 
 .notification-item:hover {
-  box-shadow: 0 4px 12px rgba(129, 137, 176, 0.2);
-  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(129, 137, 176, 0.2);
+  transform: translateY(-1px);
   border-color: var(--secondary-color);
 }
 
 .notification-item.unread {
   background-color: #f0f7ff;
-  border-left: 4px solid var(--secondary-color);
+  border-left: 3px solid var(--secondary-color);
 }
 
 .notification-content {
   cursor: pointer;
-  padding: 5px;
+  padding: 0.25rem;
 }
 
 .notification-content h4 {
-  margin: 0 0 5px 0;
+  margin: 0 0 0.375rem 0;
   color: var(--primary-color);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .notification-content small {
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  display: block;
+  margin-top: 0.25rem;
 }
 
 .badge {
-  margin-left: 8px;
-  font-size: 0.75rem;
-  padding: 0.25em 0.6em;
-  border-radius: 8px;
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  padding: 0.2em 0.5em;
+  border-radius: 6px;
   font-weight: 500;
+  display: inline-block;
 }
 
-/* Modal styles */
 .notification-details {
-  padding: 15px;
+  padding: 0.875rem;
   background-color: #f8f9fa;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--card-border);
 }
 
 .notification-details p {
-  margin-bottom: 10px;
+  margin-bottom: 0.625rem;
   line-height: 1.5;
   color: var(--primary-color);
+  font-size: 0.9rem;
 }
 
 .notification-details strong {
   color: var(--primary-color);
 }
 
-/* Toast styles */
 .toast-container {
   z-index: 1050;
 }
 
-/* Dropdown notification styles */
 .notification-dropdown {
   position: relative;
   display: inline-block;
@@ -129,20 +196,22 @@ body::after {
   background-color: var(--secondary-color);
   color: white;
   border-radius: 50%;
-  padding: 2px 6px;
-  font-size: 12px;
-  min-width: 18px;
+  padding: 2px 5px;
+  font-size: 0.7rem;
+  min-width: 16px;
   text-align: center;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   font-weight: 500;
 }
 
-/* Modal footer buttons */
 .modal-footer .btn {
-  padding: 8px 16px;
+  padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: 500;
   transition: 0.2s ease-in-out;
+  font-size: 0.875rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
 }
 
 .modal-footer .btn-primary {
@@ -168,11 +237,11 @@ body::after {
   border-color: var(--secondary-color);
 }
 
-/* Unified button styles */
 .btn {
   font-weight: 500;
   border-radius: 8px;
   transition: 0.2s ease-in-out;
+  font-size: 0.875rem;
 }
 
 .btn-outline-primary,
@@ -194,7 +263,7 @@ body::after {
   border: none;
   color: #fff;
   border-radius: 8px;
-  padding: 0.4rem 1rem;
+  padding: 0.5rem 1rem;
   cursor: pointer;
 }
 
@@ -202,7 +271,6 @@ body::after {
   background-color: #245d8b;
 }
 
-/* Card title consistency */
 .card-title {
   color: var(--primary-color);
   font-weight: 600;
@@ -212,44 +280,49 @@ body::after {
   color: var(--text-muted) !important;
 }
 
-/* Action buttons in notifications */
 .notification-actions {
-  margin-top: 10px;
+  margin-top: 0.625rem;
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .notification-actions .btn {
-  padding: 6px 12px;
-  font-size: 0.85rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8rem;
+  width: 100%;
 }
 
-/* Empty state styling */
 .notifications-empty {
   text-align: center;
-  padding: 40px 20px;
+  padding: 2rem 1rem;
   color: var(--text-muted);
 }
 
 .notifications-empty h4 {
   color: var(--text-muted);
-  margin-bottom: 10px;
+  margin-bottom: 0.625rem;
+  font-size: 1rem;
 }
 
-/* Status indicators */
+.notifications-empty p {
+  font-size: 0.875rem;
+}
+
 .notification-status {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.8rem;
+  gap: 0.375rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background-color: var(--secondary-color);
+  flex-shrink: 0;
 }
 
 .status-dot.unread {
@@ -258,4 +331,220 @@ body::after {
 
 .status-dot.read {
   background-color: var(--text-muted);
+}
+
+@media (min-width: 576px) {
+  .notifications-container {
+    width: 90%;
+    padding: 1.25rem;
+    border-radius: 14px;
+  }
+
+  .notifications-header {
+    gap: 1rem;
+  }
+
+  .notifications-header h2 {
+    font-size: 1.4rem;
+  }
+
+  .notification-item {
+    padding: 1rem;
+    margin-bottom: 0.875rem;
+  }
+
+  .notification-content h4 {
+    font-size: 0.95rem;
+  }
+
+  .notification-content small {
+    font-size: 0.8rem;
+  }
+
+  .badge {
+    font-size: 0.725rem;
+  }
+
+  .notification-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .notification-actions .btn {
+    width: auto;
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .modal-footer .btn {
+    width: auto;
+    margin-bottom: 0;
+  }
+}
+
+@media (min-width: 768px) {
+  .notifications-container {
+    width: 85%;
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(129, 137, 176, 0.15);
+  }
+
+  .notifications-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .notifications-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .notifications-list {
+    margin-top: 1.25rem;
+  }
+
+  .notification-item {
+    padding: 1.125rem;
+    margin-bottom: 1rem;
+    border-radius: 12px;
+  }
+
+  .notification-item.unread {
+    border-left-width: 4px;
+  }
+
+  .notification-content {
+    padding: 0.375rem;
+  }
+
+  .notification-content h4 {
+    font-size: 1rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .notification-content small {
+    font-size: 0.85rem;
+  }
+
+  .badge {
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.25em 0.6em;
+    border-radius: 8px;
+  }
+
+  .notification-details {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .notification-details p {
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+  }
+
+  .notification-badge {
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    min-width: 18px;
+  }
+
+  .modal-footer .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .btn {
+    font-size: 0.9rem;
+  }
+
+  .btn-primary {
+    padding: 0.5rem 1rem;
+  }
+
+  .notification-actions {
+    margin-top: 0.75rem;
+    gap: 0.625rem;
+  }
+
+  .notification-actions .btn {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.85rem;
+  }
+
+  .notifications-empty {
+    padding: 2.5rem 1.5rem;
+  }
+
+  .notifications-empty h4 {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .notifications-empty p {
+    font-size: 0.9rem;
+  }
+
+  .notification-status {
+    font-size: 0.8rem;
+    gap: 0.375rem;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+@media (min-width: 992px) {
+  .notifications-container {
+    width: 80%;
+    border-radius: 18px;
+  }
+
+  .notifications-header {
+    gap: 2rem;
+  }
+
+  .notifications-header h2 {
+    font-size: 1.75rem;
+  }
+
+  .notifications-list {
+    margin-top: 1.5rem;
+  }
+
+  .notification-item {
+    padding: 1.125rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .notification-content {
+    padding: 0.375rem;
+  }
+
+  .notification-content h4 {
+    font-size: 1rem;
+  }
+
+  .notification-details {
+    padding: 1.125rem;
+  }
+
+  .notification-actions {
+    margin-top: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .notifications-empty {
+    padding: 3rem 2rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .notifications-container {
+    max-width: 1200px;
+  }
 }
