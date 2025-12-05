@@ -28,7 +28,29 @@ body::after {
   z-index: -1;
 }
 
+/* Updated Welcome Text Styling to match home.css */
+.welcome-text {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.welcome-text h1 {
+  color: #2D333A;
+  font-weight: 600;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.welcome-text p {
+  color: #2D333A;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
 .notifications-container {
+  padding-top: 0 auto;
   align-content: center;
   margin: 1rem auto;
   justify-content: center;

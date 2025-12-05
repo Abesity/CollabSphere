@@ -218,33 +218,7 @@
         <!-- Container where modal will be inserted -->
         <div id="wellbeingModalContainer"></div>
 
-        <!-- Team Activity -->
-        <div class="card team-activity">
-          <h3>Team Activity</h3>
-          <ul>
-            {% for activity in team_activity %}
-            <li>
-              <strong>{{ activity.user|default:"Unknown User" }}</strong>
-              {{ activity.action|default:"did something" }}
-              <em>{{ activity.item|default:"an item" }}</em>
-              <span class="time">{{ activity.time|default:"just now" }}</span>
-            </li>
-            {% empty %}
-            <li><em>No recent activity.</em></li>
-            {% endfor %}
-          </ul>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="card quick-actions">
-          <h3>Quick Actions</h3>
-          <ul>
-            {% for action in quick_actions %}
-            <li>{{ action.icon|default:"⚡" }} {{ action.label|default:"Action" }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
+        
     </section>
   </main>
 </div>
