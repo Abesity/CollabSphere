@@ -43,7 +43,16 @@ def home(request):
     print(f"DEBUG home: Username={user.username}, Tasks count={len(all_tasks)}")
     created_tasks = [task for task in all_tasks if task.get('created_by') == user.username]
     assigned_tasks = [task for task in all_tasks if task.get('assigned_to') == user.username or task.get('assigned_to_username') == user.username]
+    completed_tasks = [task for task in all_tasks if task.get("status") == "Completed"]
 
+    total_tasks = len(all_tasks)
+    completed_count = len(completed_tasks)
+
+    # Compute productivity tasks/overall
+    productivity = 0
+    if total_tasks > 0:
+        productivity = (completed_count / total_tasks) * 100
+    
     context = {
         "greeting": greeting,
         "user_name": user.username,
@@ -56,6 +65,7 @@ def home(request):
         "created_tasks_count": len(created_tasks),
         "assigned_tasks_count": len(assigned_tasks),
         "notifications": notifications,
+        "productivity": f"{productivity:.0f}%",
     }
 
     response = render(request, "home.html", context)
@@ -75,19 +85,6 @@ def verify_checkin_status(request):
 
     has_checked_in_today = SupabaseService.verify_checkin_today(user_data["user_ID"])
     return JsonResponse({"has_checked_in_today": has_checked_in_today})
-
-
-@require_GET
-@login_required
-def debug_checkins(request):
-    user = request.user
-    all_checkins = SupabaseService.get_all_checkins(user.id)
-    return JsonResponse({
-        "user_id": user.id,
-        "total_checkins": len(all_checkins),
-        "checkins": all_checkins,
-        "today_date": timezone.now().date().isoformat(),
-    })
 
 
 def admin_dashboard(request):

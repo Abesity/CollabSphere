@@ -1,3 +1,6 @@
+/*==============================
+  Root Variables
+==============================*/
 :root {
   --primary-color: #2D333A;
   --secondary-color: #3D74C3;
@@ -6,6 +9,9 @@
   --text-muted: #6c757d;
 }
 
+/*==============================
+  Base Styles
+==============================*/
 body {
   margin: 0;
   padding: 0;
@@ -18,65 +24,68 @@ body::after {
   padding: 0;
   margin: 0;
   content: "";
-  position: fixed;
+  position: fixed;             
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 100%;          
   background: url("images/bg.png") bottom / cover;
-  opacity: 0.60;
-  z-index: -1;
+  opacity: 0.60;                
+  z-index: -1;                
 }
 
+/*==============================
+  Layout
+==============================*/
 .dashboard-container {
   min-height: 100vh;
 }
 
 .dashboard-main {
-  padding: 1rem;
+  padding: 2rem 3rem;
   margin: auto;
 }
 
+/*==============================
+  Welcome Section
+==============================*/
 .welcome-text h1 {
   font-weight: 600;
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
 }
 
 .welcome-text p {
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
 }
 
+/*==============================
+  Search Section
+==============================*/
 .search-section {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .search-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  align-items: stretch;
+  gap: 0.8rem;
+  align-items: center;
 }
 
 .search-input {
-  width: 100%;
-  padding: 0.625rem 0.875rem;
+  flex: 1;
+  padding: 0.7rem 1rem;
   border: 2px solid var(--card-border);
-  border-radius: 8px;
-  font-size: 0.9rem;
-  box-sizing: border-box;
+  border-radius: 10px;
+  font-size: 1rem;
 }
 
 .search-btn {
   background: var(--secondary-color);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 0.625rem 1rem;
+  border-radius: 10px;
+  padding: 0.7rem 1.2rem;
   cursor: pointer;
   transition: background 0.2s ease;
-  font-size: 0.9rem;
 }
 
 .search-btn:hover {
@@ -91,6 +100,9 @@ body::after {
   background: #b2332e;
 }
 
+/*==============================
+  Teams Section
+==============================*/
 .teams-grid-section {
   display: flex;
   flex-direction: column;
@@ -100,73 +112,85 @@ body::after {
 .teams-header {
   display: contents;
 }
-
 .add-team-btn {
+  /* Size and positioning - match team card */
   width: 100%;
   height: 100%;
-  min-height: 200px;
+  min-height: 280px;
   margin: 0;
   padding: 0;
+  
+  /* Visual styling - dashed border, no background */
   background: transparent !important;
   border: 2px dashed #ccc !important;
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   color: #666 !important;
+  
+  /* Flexbox for centering content */
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
-  font-size: 2rem !important;
+  gap: 12px !important;
+  
+  /* Typography */
+  font-size: 3rem !important;
   font-weight: 300 !important;
   cursor: pointer !important;
   transition: all 0.2s ease-in-out !important;
+  
+  /* Remove any existing button styles */
   box-shadow: none !important;
   position: relative !important;
 }
 
+/* Add the "Add New Team" text */
 .add-team-btn::after {
   content: "Add New Team" !important;
-  font-size: 0.9rem !important;
+  font-size: 1.1rem !important;
   font-weight: 500 !important;
   color: #666 !important;
   display: block !important;
 }
 
+/* Hover effects */
 .add-team-btn:hover {
   border-color: #999 !important;
   color: #333 !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.12) !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.12) !important;
 }
 
 .add-team-btn:hover::after {
   color: #333 !important;
 }
 
+/*==============================
+  Team Grid
+==============================*/
+
 .grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
   align-items: stretch;
 }
 
 .add-team-btn {
   grid-column: auto;
 }
-
 .card.team-card {
   background: #fff;
   border: 2px solid var(--card-border);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  padding: 1rem;
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+  padding: 1.2rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  position: relative;
 }
 
 .card.team-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  transform: translateY(-4px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.12);
 }
 
 .card-header {
@@ -174,17 +198,16 @@ body::after {
   justify-content: space-between;
   align-items: center;
   border-bottom: 2px solid #eee;
-  margin-bottom: 0.625rem;
-  padding-bottom: 0.5rem;
+  margin-bottom: 0.8rem;
 }
 
 .team-name {
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: 600;
 }
 
 .team-id {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: var(--text-muted);
 }
 
@@ -192,23 +215,26 @@ body::after {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.6rem;
 }
 
 .team-icon {
-  width: 80px;
-  height: 80px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  margin: 8px;
+  margin: 10px;
 }
+
 
 .team-desc {
-  font-size: 0.85rem;
-  margin: 0.5rem 0;
-  line-height: 1.4;
+  font-size: 0.95rem;
+  margin: 0.6rem 0;
 }
 
+/*==============================
+  Team Members Avatars
+==============================*/
 .team-members {
   display: flex;
   align-items: center;
@@ -217,13 +243,13 @@ body::after {
 }
 
 .member-avatar {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 2px solid #fff;
   object-fit: cover;
   background-color: #eee;
-  margin-left: -6px;
+  margin-left: -8px;
   box-shadow: 0 0 0 1px #ccc;
   transition: transform 0.2s ease;
 }
@@ -244,15 +270,16 @@ body::after {
   background-color: #888;
   color: #fff;
   font-weight: bold;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
 }
 
+/*==============================
+  Footer & Buttons
+==============================*/
 .footer-actions {
   display: flex;
-  flex-wrap: wrap;
   justify-content: flex-end;
-  margin-top: 0.625rem;
-  gap: 0.375rem;
+  margin-top: 0.8rem;
 }
 
 .switch-team-btn,
@@ -260,39 +287,49 @@ body::after {
 .manage-members-btn,
 .btn-primary,
 .btn-secondary,
-.btn-danger,
-.view-team-btn,
-.leave-team-btn {
+.btn-danger {
   border: none;
-  border-radius: 6px;
-  padding: 0.375rem 0.75rem;
+  border-radius: 8px;
+  padding: 6px 12px;
   cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s ease;
+
 }
 
 .switch-team-btn,
 .edit-team-btn,
-.btn-primary,
-.view-team-btn {
+.btn-primary, .view-team-btn,
+.leave-team-btn {
   background: var(--secondary-color);
   color: #fff;
-}
-
-.switch-team-btn:hover,
-.edit-team-btn:hover,
-.btn-primary:hover,
-.view-team-btn:hover {
-  background: #245d8b;
+  margin-left: 5px;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-size: 0.9rem;
 }
 
 .leave-team-btn {
   background: #b2332e;
   color: #fff;
+  margin-left: 5px;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-size: 0.9rem;
 }
 
 .leave-team-btn:hover {
   background: #992c28;
+}
+
+.switch-team-btn:hover,
+.edit-team-btn:hover,
+.btn-primary:hover , .view-team-btn:hover {
+  background: #245d8b;
 }
 
 .manage-members-btn {
@@ -323,17 +360,28 @@ body::after {
   background: #b91c1c;
 }
 
+/*==============================
+  Empty State
+==============================*/
 .no-results {
   text-align: center;
   color: var(--text-muted);
-  font-size: 0.9rem;
-  padding: 1.5rem;
+  font-size: 1rem;
+  padding: 2rem;
   border-radius: 10px;
   background: #fff;
   border: 2px dashed #d8d8d8;
   grid-column: 1 / -1;
 }
 
+/*==============================
+  Modal
+==============================*/
+/*==============================
+  Modal Styles (Add these to teams.css)
+==============================*/
+
+/* Modal overlay and content */
 .modal-overlay {
   display: none;
   position: fixed;
@@ -343,36 +391,35 @@ body::after {
   align-items: center;
   z-index: 1000;
   animation: fadeIn 0.3s ease forwards;
-  padding: 1rem;
 }
 
 .modal-content {
   background: #fff;
-  border-radius: 12px;
-  padding: 1.5rem;
-  max-width: 95%;
-  width: 100%;
+  border-radius: 16px;
+  padding: 2rem 2.5rem;
+  max-width: 550px;
+  width: 90%;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.15);
   animation: slideUp 0.3s ease forwards;
 }
 
 .modal-content h2 {
   text-align: center;
-  margin-bottom: 1rem;
-  font-size: 1.25rem;
+  margin-bottom: 1.2rem;
+  font-size: 1.6rem;
   color: var(--primary-color);
 }
 
 .modal-close {
   position: absolute;
-  top: 10px;
-  right: 12px;
+  top: 14px;
+  right: 16px;
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   cursor: pointer;
   color: #555;
   transition: color 0.2s;
@@ -383,29 +430,28 @@ body::after {
   color: var(--secondary-color);
 }
 
+/* Form Elements */
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 1.2rem;
 }
 
 .form-group label {
   font-weight: 600;
   display: block;
-  margin-bottom: 0.375rem;
+  margin-bottom: 0.4rem;
   color: var(--primary-color);
-  font-size: 0.9rem;
 }
 
 .form-group input,
 .form-group textarea,
 #membersSearch {
   width: 100%;
-  padding: 0.625rem 0.875rem;
+  padding: 10px 14px;
   border: 1.8px solid var(--card-border);
-  border-radius: 8px;
-  font-size: 0.9rem;
+  border-radius: 10px;
+  font-size: 1rem;
   transition: border-color 0.2s ease;
   font-family: "Inter", sans-serif;
-  box-sizing: border-box;
 }
 
 .form-group input:focus,
@@ -415,14 +461,15 @@ body::after {
   outline: none;
 }
 
+/* Icon Preview */
 .icon-preview {
   text-align: center;
-  margin: 0.75rem 0;
+  margin: 1rem 0;
 }
 
 .icon-preview img {
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid #e5e7eb;
@@ -433,12 +480,13 @@ body::after {
   transform: scale(1.05);
 }
 
+/* Member Management Styles */
 .current-members-container,
 .selected-members-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  min-height: 40px;
+  gap: 8px;
+  min-height: 50px;
   align-items: flex-start;
 }
 
@@ -446,17 +494,17 @@ body::after {
 .selected-member-tag {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 4px 10px;
-  font-size: 0.8rem;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
 }
 
 .member-avatar-small {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -467,15 +515,14 @@ body::after {
   color: white;
   border: none;
   border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 0.7rem;
+  width: 20px;
+  height: 20px;
+  font-size: 0.8rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.2s ease;
-  flex-shrink: 0;
 }
 
 .remove-member-btn:hover,
@@ -486,17 +533,18 @@ body::after {
 .owner-badge {
   background: var(--secondary-color);
   color: white;
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
   font-weight: 600;
 }
 
+/* User Options in Search */
 .user-option {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px;
+  gap: 12px;
+  padding: 10px;
   border-bottom: 1px solid #f0f0f0;
   transition: background 0.2s ease;
 }
@@ -510,28 +558,24 @@ body::after {
 }
 
 .user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 .user-info {
   flex: 1;
-  min-width: 0;
 }
 
 .username {
   font-weight: 600;
   color: var(--primary-color);
-  font-size: 0.9rem;
 }
 
 .email {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .add-user-btn {
@@ -539,37 +583,35 @@ body::after {
   color: white;
   border: none;
   border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  font-size: 0.9rem;
+  width: 30px;
+  height: 30px;
+  font-size: 1rem;
   cursor: pointer;
   transition: background 0.2s ease;
-  flex-shrink: 0;
 }
 
 .add-user-btn:hover {
   background: #245d8b;
 }
 
+/* Modal Buttons */
 .modal-buttons {
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
-  align-items: stretch;
-  margin-top: 1.25rem;
-  gap: 0.625rem;
+  align-items: center;
+  margin-top: 1.5rem;
+  gap: 12px;
 }
 
 .modal-buttons .btn-primary,
 .modal-buttons .btn-secondary,
 .modal-buttons .btn-danger {
-  padding: 0.625rem 1.25rem;
+  padding: 10px 20px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 1rem;
   transition: all 0.2s ease;
-  width: 100%;
 }
 
 .modal-buttons .btn-primary {
@@ -600,79 +642,32 @@ body::after {
   background: #b91c1c;
 }
 
+/* Error Messages */
 .error-message {
   color: #dc2626;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   margin-top: 4px;
 }
 
-.card.team-card.active-team {
-  border: 3px solid #3b82f6 !important;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4) !important;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%) !important;
-  position: relative;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .modal-content {
+    padding: 1.5rem;
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .modal-buttons {
+    flex-direction: column;
+  }
+  
+  .modal-buttons button {
+    width: 100%;
+  }
 }
-
-.active-team-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
-  padding: 4px 10px;
-  border-radius: 16px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  z-index: 10;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
-}
-
-.active-team-btn {
-  background: linear-gradient(135deg, #10b981, #059669) !important;
-  color: white !important;
-  cursor: not-allowed !important;
-  border: none !important;
-  padding: 0.375rem 0.875rem !important;
-  border-radius: 6px !important;
-  font-weight: 600 !important;
-  opacity: 1 !important;
-  font-size: 0.8rem !important;
-}
-
-.active-team-btn:disabled {
-  background: linear-gradient(135deg, #10b981, #059669) !important;
-  color: white !important;
-}
-
-.active-indicator {
-  color: white;
-  margin-right: 4px;
-  font-size: 12px;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.card.team-card.active-team::before {
-  content: '';
-  position: absolute;
-  top: -3px;
-  left: -3px;
-  right: -3px;
-  bottom: -3px;
-  border-radius: 15px;
-  z-index: -1;
-  animation: borderGlow 3s ease-in-out infinite;
-}
-
-@keyframes borderGlow {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
+/*==============================
+  Animations
+==============================*/
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -683,337 +678,97 @@ body::after {
   to { transform: translateY(0); opacity: 1; }
 }
 
-@media (min-width: 576px) {
-  .dashboard-main {
-    padding: 1.5rem;
-  }
+/* ==============================
+   Active Team Styles 
+============================== */
 
-  .welcome-text h1 {
-    font-size: 1.75rem;
-  }
-
-  .welcome-text p {
-    font-size: 0.95rem;
-  }
-
-  .search-row {
-    flex-direction: row;
-    gap: 0.625rem;
-  }
-
-  .search-input {
-    flex: 1;
-  }
-
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1.25rem;
-  }
-
-  .add-team-btn {
-    min-height: 240px;
-    font-size: 2.5rem !important;
-  }
-
-  .add-team-btn::after {
-    font-size: 1rem !important;
-  }
-
-  .team-icon {
-    width: 100px;
-    height: 100px;
-  }
-
-  .team-name {
-    font-size: 1.1rem;
-  }
-
-  .team-desc {
-    font-size: 0.9rem;
-  }
-
-  .modal-content {
-    max-width: 500px;
-    padding: 1.75rem;
-  }
-
-  .modal-content h2 {
-    font-size: 1.4rem;
-  }
-
-  .modal-buttons {
-    flex-direction: row;
-  }
-
-  .modal-buttons .btn-primary,
-  .modal-buttons .btn-secondary,
-  .modal-buttons .btn-danger {
-    width: auto;
-  }
+/* Active team card styling */
+.card.team-card.active-team {
+    border: 3px solid #3b82f6 !important;
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4) !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%) !important;
+    position: relative;
 }
 
-@media (min-width: 768px) {
-  .dashboard-main {
-    padding: 2rem 2.5rem;
-  }
-
-  .welcome-text h1 {
-    font-size: 2rem;
-  }
-
-  .welcome-text p {
-    font-size: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .search-section {
-    margin-bottom: 1.5rem;
-  }
-
-  .search-row {
-    gap: 0.8rem;
-  }
-
-  .search-input {
-    padding: 0.7rem 1rem;
-    font-size: 1rem;
-    border-radius: 10px;
-  }
-
-  .search-btn {
-    padding: 0.7rem 1.2rem;
-    font-size: 1rem;
-    border-radius: 10px;
-  }
-
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .add-team-btn {
-    min-height: 280px;
-    font-size: 3rem !important;
-    gap: 12px !important;
-  }
-
-  .add-team-btn::after {
-    font-size: 1.1rem !important;
-  }
-
-  .card.team-card {
-    padding: 1.2rem;
-    border-radius: 14px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-  }
-
-  .card.team-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 14px rgba(0,0,0,0.12);
-  }
-
-  .team-name {
-    font-size: 1.2rem;
-  }
-
-  .team-id {
-    font-size: 0.9rem;
-  }
-
-  .team-icon {
-    width: 120px;
-    height: 120px;
-    margin: 10px;
-  }
-
-  .team-desc {
-    font-size: 0.95rem;
-    margin: 0.6rem 0;
-  }
-
-  .member-avatar {
-    width: 32px;
-    height: 32px;
-    margin-left: -8px;
-  }
-
-  .member-avatar.more {
-    font-size: 0.8rem;
-  }
-
-  .footer-actions {
-    margin-top: 0.8rem;
-  }
-
-  .switch-team-btn,
-  .edit-team-btn,
-  .manage-members-btn,
-  .btn-primary,
-  .btn-secondary,
-  .btn-danger,
-  .view-team-btn,
-  .leave-team-btn {
-    padding: 6px 12px;
-    font-size: 0.9rem;
-    border-radius: 8px;
-  }
-
-  .no-results {
-    font-size: 1rem;
-    padding: 2rem;
-  }
-
-  .modal-content {
-    max-width: 550px;
-    padding: 2rem 2.5rem;
-    border-radius: 16px;
-    box-shadow: 0 10px 28px rgba(0,0,0,0.15);
-  }
-
-  .modal-content h2 {
-    font-size: 1.6rem;
-    margin-bottom: 1.2rem;
-  }
-
-  .modal-close {
-    top: 14px;
-    right: 16px;
-    font-size: 1.8rem;
-  }
-
-  .form-group {
-    margin-bottom: 1.2rem;
-  }
-
-  .form-group label {
-    font-size: 1rem;
-  }
-
-  .form-group input,
-  .form-group textarea,
-  #membersSearch {
-    padding: 10px 14px;
-    font-size: 1rem;
-    border-radius: 10px;
-  }
-
-  .icon-preview {
-    margin: 1rem 0;
-  }
-
-  .icon-preview img {
-    width: 120px;
-    height: 120px;
-  }
-
-  .current-members-container,
-  .selected-members-container {
-    gap: 8px;
-    min-height: 50px;
-  }
-
-  .current-member-tag,
-  .selected-member-tag {
-    gap: 8px;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-  }
-
-  .member-avatar-small {
-    width: 24px;
-    height: 24px;
-  }
-
-  .remove-member-btn,
-  .remove-new-member-btn {
-    width: 20px;
-    height: 20px;
-    font-size: 0.8rem;
-  }
-
-  .owner-badge {
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.7rem;
-  }
-
-  .user-option {
-    gap: 12px;
-    padding: 10px;
-  }
-
-  .user-avatar {
-    width: 40px;
-    height: 40px;
-  }
-
-  .username {
-    font-size: 1rem;
-  }
-
-  .email {
-    font-size: 0.8rem;
-  }
-
-  .add-user-btn {
-    width: 30px;
-    height: 30px;
-    font-size: 1rem;
-  }
-
-  .modal-buttons {
-    margin-top: 1.5rem;
-    gap: 12px;
-  }
-
-  .modal-buttons .btn-primary,
-  .modal-buttons .btn-secondary,
-  .modal-buttons .btn-danger {
-    padding: 10px 20px;
-    font-size: 1rem;
-  }
-
-  .error-message {
-    font-size: 0.8rem;
-  }
-
-  .active-team-badge {
+/* Active team badge */
+.active-team-badge {
+    position: absolute;
     top: 12px;
     right: 12px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
     padding: 6px 12px;
     border-radius: 20px;
     font-size: 0.75rem;
-  }
+    font-weight: 600;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
 
-  .active-team-btn {
+/* Active team button - make it clearly different */
+.active-team-btn {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: white !important;
+    cursor: not-allowed !important;
+    border: none !important;
     padding: 8px 16px !important;
     border-radius: 8px !important;
+    font-weight: 600 !important;
+    opacity: 1 !important;
+    margin-left: 5px !important;
     font-size: 0.9rem !important;
-  }
+}
 
-  .active-indicator {
-    font-size: 14px;
+.active-team-btn:disabled {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: white !important;
+}
+
+.active-indicator {
+    color: white;
     margin-right: 6px;
-  }
+    font-size: 14px;
+    animation: pulse 2s infinite;
+}
 
-  .card.team-card.active-team::before {
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Switch team button - ensure it's properly styled */
+.switch-team-btn {
+    background: var(--secondary-color) !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+    margin-left: 5px !important;
+    font-size: 0.9rem !important;
+}
+
+.switch-team-btn:hover {
+    background: #818b94 !important;
+    transform: translateY(-1px);
+}
+
+/* active team stands out with a glow effect */
+.card.team-card.active-team::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
     border-radius: 17px;
-  }
+    z-index: -1;
+    animation: borderGlow 3s ease-in-out infinite;
 }
 
-@media (min-width: 992px) {
-  .dashboard-main {
-    padding: 2rem 3rem;
-  }
-
-  .card.team-card.active-team {
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4) !important;
-  }
-}
-
-@media (min-width: 1200px) {
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  }
+@keyframes borderGlow {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
 }

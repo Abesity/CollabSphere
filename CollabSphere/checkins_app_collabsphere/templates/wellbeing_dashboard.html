@@ -5,6 +5,202 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/wellbeing_dashboard.css' %}?v=1.0">
+<style>
+:root {
+  --primary-color: #2D333A;
+  --secondary-color: #3D74C3;
+  --bg-color: #FAFBFB;
+  --card-border: #c0c6d1;
+  --text-muted: #6c757d;
+}
+
+/* Reset default margins and padding */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Dashboard Container */
+.dashboard-container {
+  min-height: 100vh;
+  width: 100vw;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+.dashboard-main {
+  padding: 2rem;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}
+
+/* Welcome Text */
+.welcome-text {
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.welcome-text h1 {
+  color: #2D333A;
+  font-weight: 600;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.welcome-text p {
+  color: #2D333A;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+/* Single Column Layout */
+.single-column-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* Card Styles */
+.card {
+  background: #fff;
+  border-radius: 18px;
+  border: 2px solid var(--card-border);
+  box-shadow: 0 4px 12px rgba(129, 137, 176, 0.15);
+  padding: 1.5rem;
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.card-header {
+  background-color: transparent;
+  border-bottom: 1px solid var(--card-border);
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.card-header h3 {
+  color: var(--primary-color);
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Chart Container */
+.wellbeing-chart {
+  position: relative;
+  min-height: 400px;
+  width: 100%;
+}
+
+.card-content {
+  position: relative;
+  width: 100%;
+}
+
+#wellbeingChart {
+  width: 100% !important;
+  height: 250px !important;
+  display: block;
+}
+
+/* Recent Check-ins */
+.recent-checkins {
+  max-height: 600px;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.list-group {
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.list-group-item {
+  border: 1px solid var(--card-border);
+  padding: 1rem;
+  width: 100%;
+}
+
+/* Badge Styles */
+.badge {
+  font-size: 0.75rem;
+  padding: 0.35em 0.65em;
+}
+
+.bg-success { background-color: #28a745 !important; }
+.bg-warning { background-color: #ffc107 !important; color: #000 !important; }
+.bg-danger { background-color: #dc3545 !important; }
+.bg-secondary { background-color: #6c757d !important; }
+
+/* Responsive Design */
+@media (max-width: 767px) {
+  .dashboard-main {
+    padding: 1rem;
+  }
+  
+  .dashboard-container {
+    padding-top: 60px;
+  }
+  
+  .card {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+  
+  .wellbeing-chart {
+    min-height: 300px;
+  }
+  
+  #wellbeingChart {
+    height: 200px !important;
+  }
+  
+  .welcome-text h1 {
+    font-size: 1.75rem;
+  }
+}
+
+/* Extra large screens */
+@media (min-width: 1200px) {
+  .dashboard-main {
+    padding: 2rem 3rem;
+  }
+  
+  .single-column-layout {
+    max-width: 100%;
+  }
+}
+
+/* Loading State */
+.chart-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+  color: var(--text-muted);
+  width: 100%;
+}
+
+/* Empty State */
+.text-muted.text-center {
+  padding: 2rem;
+  text-align: center;
+  width: 100%;
+}
+
+/* Ensure no container constraints */
+.container, .container-fluid {
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -24,139 +220,144 @@
       {% endif %}
     </section>
 
-    <!-- Well-being Chart and Previous Check-ins -->
-    <section class="bottom-grid">
-      <div class="column-left">
-        <!-- Line chart -->
-        <div class="card wellbeing-chart mb-4">
-          <div class="card-header">
-            <h3>{% if is_team_view %}Team Well-being Trends{% else %}Your Well-being Trends{% endif %}</h3>
-          </div>
-          <div class="card-content">
-            <canvas id="wellbeingChart" height="250"></canvas>
-          </div>
+    <!-- Single Column Layout -->
+    <section class="single-column-layout">
+      <!-- Line chart -->
+      <div class="card wellbeing-chart">
+        <div class="card-header">
+          <h3>{% if is_team_view %}Team Well-being Trends{% else %}Your Well-being Trends{% endif %}</h3>
         </div>
+        <div class="card-content">
+          <canvas id="wellbeingChart" height="250"></canvas>
+        </div>
+      </div>
 
-        <!-- Previous check-ins -->
-        <div class="card recent-checkins">
-  <div class="card-header">
-    <h3>{% if is_team_view %}Team Check-ins{% else %}Your Check-ins{% endif %}</h3>
-  </div>
-  <div class="card-content">
-    {% if grouped_checkins %}
-      {% for date, checkins in grouped_checkins.items %}
-        <h5 class="mt-3 mb-2 text-primary">{{ date|date:"F j, Y" }}</h5>
-        <ul class="list-group mb-3">
-          {% for checkin in checkins %}
-            <li class="list-group-item">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <strong>
-                    {% if is_team_view and checkin.user %}
-                      {{ checkin.user.username }}
-                    {% else %}
-                      You
-                    {% endif %}
-                  </strong>
-                  {% if checkin.notes %}
-                    <br>
-                    <small class="text-muted">"{{ checkin.notes }}"</small>
-                  {% endif %}
-                </div>
-                <span class="badge 
-                  {% if checkin.status == 'Good' %}bg-success
-                  {% elif checkin.status == 'Okay' %}bg-warning
-                  {% elif checkin.status == 'Needs Support' or checkin.status == None %}bg-danger
-                  {% else %}bg-secondary
-                  {% endif %}">
-                  {{ checkin.status|default:"None" }}
-                </span>
-              </div>
-            </li>
-          {% endfor %}
-        </ul>
-      {% endfor %}
-    {% else %}
-      <p class="text-muted">
-        {% if is_team_view %}
-          No team check-ins yet.
-        {% else %}
-          No check-ins yet.
-        {% endif %}
-      </p>
-    {% endif %}
-  </div>
-</div>
-
-
+      <!-- Previous check-ins -->
+      <div class="card recent-checkins">
+        <div class="card-header">
+          <h3>{% if is_team_view %}Team Check-ins{% else %}Your Check-ins{% endif %}</h3>
+        </div>
+        <div class="card-content">
+          {% if grouped_checkins %}
+            {% for date, checkins in grouped_checkins.items %}
+              <h5 class="mt-3 mb-2 text-primary">{{ date|date:"F j, Y" }}</h5>
+              <ul class="list-group mb-3">
+                {% for checkin in checkins %}
+                  <li class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong>
+                          {% if is_team_view and checkin.user %}
+                            {{ checkin.user.username }}
+                          {% else %}
+                            You
+                          {% endif %}
+                        </strong>
+                        {% if checkin.notes %}
+                          <br>
+                          <small class="text-muted">"{{ checkin.notes }}"</small>
+                        {% endif %}
+                      </div>
+                      <span class="badge 
+                        {% if checkin.status == 'Good' %}bg-success
+                        {% elif checkin.status == 'Okay' %}bg-warning
+                        {% elif checkin.status == 'Needs Support' or checkin.status == None %}bg-danger
+                        {% else %}bg-secondary
+                        {% endif %}">
+                        {{ checkin.status|default:"None" }}
+                      </span>
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endfor %}
+          {% else %}
+            <p class="text-muted">
+              {% if is_team_view %}
+                No team check-ins yet.
+              {% else %}
+                No check-ins yet.
+              {% endif %}
+            </p>
+          {% endif %}
+        </div>
+      </div>
     </section>
   </main>
 </div>
 <script src="{% static 'js/chart.min.js' %}"></script>
 
 <script>
-// Track if chart has been created to prevent duplicates
-let chartCreated = false;
+// Track chart instance
 let wellbeingChart = null;
+let chartInitialized = false;
 
 function createWellbeingChart() {
   // Prevent multiple chart creations
-  if (chartCreated) {
-    console.log('Chart already created, skipping...');
+  if (chartInitialized) {
+    console.log('Chart already initialized, skipping...');
     return;
   }
 
   // Check if Chart.js is loaded
   if (typeof Chart === 'undefined') {
     console.error('Chart.js not loaded.');
+    setTimeout(createWellbeingChart, 100); // Retry after 100ms
     return;
   }
 
-  // Check if canvas element exists
+  // Check if canvas element exists and has dimensions
   const canvas = document.getElementById('wellbeingChart');
   if (!canvas) {
     console.error('Canvas element not found');
+    setTimeout(createWellbeingChart, 100); // Retry after 100ms
     return;
   }
 
-  // Destroy existing chart if it exists
+  // Check if canvas has valid dimensions
+  const container = canvas.parentElement;
+  if (!container || container.offsetWidth === 0 || container.offsetHeight === 0) {
+    console.log('Chart container not ready, waiting...');
+    setTimeout(createWellbeingChart, 100); // Retry after 100ms
+    return;
+  }
+
+  // Clean up existing chart
   if (wellbeingChart) {
     wellbeingChart.destroy();
+    wellbeingChart = null;
   }
 
   const chartData = {{ chart_data|safe }};
-  const individualCheckinsData = {{ individual_checkins_data|safe|default:"[]" }};
   
-  // If no data, show a message
+  // Handle no data case
   if (!chartData || chartData.length === 0) {
-    canvas.parentElement.innerHTML = 
-      '<p class="text-muted text-center p-4">No check-in data available yet. Submit your first check-in to see trends.</p>';
+    container.innerHTML = 
+      '<div class="chart-loading"><p class="text-muted">No check-in data available yet. Submit your first check-in to see trends.</p></div>';
+    chartInitialized = true;
     return;
   }
 
-  // Filter out entries with null mood and prepare data
+  // Filter and prepare data
   const validData = chartData.filter(item => item.mood !== null);
   
   if (validData.length === 0) {
-    canvas.parentElement.innerHTML = 
-      '<p class="text-muted text-center p-4">No valid check-in data available.</p>';
+    container.innerHTML = 
+      '<div class="chart-loading"><p class="text-muted">No valid check-in data available.</p></div>';
+    chartInitialized = true;
     return;
   }
 
-  // Extract labels (dates) and convert status to numerical values
+  // Prepare labels and data
   const labels = validData.map(c => {
-    const dateStr = c.date;
-    if (!dateStr) return 'Unknown Date';
-    
     try {
-      const date = new Date(dateStr);
+      const date = new Date(c.date);
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     } catch (e) {
-      return dateStr;
+      return c.date || 'Unknown Date';
     }
   });
   
-  // Convert mood status to numerical values for the chart
   const moodValues = validData.map(c => {
     switch(c.mood) {
       case 'Good': return 2;
@@ -166,11 +367,21 @@ function createWellbeingChart() {
     }
   });
 
-  // Get mood status for tooltips
   const moodStatuses = validData.map(c => c.mood);
 
   try {
     const ctx = canvas.getContext('2d');
+    
+    // Ensure canvas has proper dimensions
+    const containerStyle = getComputedStyle(container);
+    const containerWidth = parseInt(containerStyle.width);
+    const containerHeight = parseInt(containerStyle.height);
+    
+    if (containerWidth > 0 && containerHeight > 0) {
+      canvas.width = containerWidth;
+      canvas.height = containerHeight;
+    }
+
     wellbeingChart = new Chart(ctx, {
       type: 'line',
       data: {
@@ -199,8 +410,17 @@ function createWellbeingChart() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        layout: {
+          padding: {
+            top: 20,
+            bottom: 20,
+            left: 15,
+            right: 15
+          }
+        },
         scales: {
           y: {
+            beginAtZero: true,
             min: -0.5,
             max: 2.5,
             ticks: {
@@ -233,42 +453,13 @@ function createWellbeingChart() {
             display: false
           },
           tooltip: {
+            mode: 'index',
+            intersect: false,
             callbacks: {
               label: function(context) {
                 const index = context.dataIndex;
                 const mood = moodStatuses[index];
-                return `Average Mood: ${mood}`;
-              },
-              afterLabel: function(context) {
-                const index = context.dataIndex;
-                const date = validData[index].date;
-                const checkinCount = validData[index].checkin_count;
-                
-                // Get individual check-ins for this date
-                const individualCheckins = validData[index].individual_checkins || [];
-                
-                let tooltipText = `Date: ${date}\n`;
-                tooltipText += `Total Check-ins: ${checkinCount}\n\n`;
-                
-                if (individualCheckins.length > 0) {
-                  tooltipText += 'Individual Check-ins:\n';
-                  individualCheckins.forEach(checkin => {
-                    const statusEmoji = checkin.status === 'Good' ? '😊' : 
-                                      checkin.status === 'Okay' ? '😐' : '😔';
-                    tooltipText += `• ${checkin.username}: ${checkin.status} ${statusEmoji}\n`;
-                  });
-                }
-                
-                return tooltipText;
-              },
-              footer: function(context) {
-                // Add a helpful note for team view
-                const index = context[0].dataIndex;
-                const individualCheckins = validData[index].individual_checkins || [];
-                if (individualCheckins.length > 0) {
-                  return;
-                }
-                return '';
+                return `Mood: ${mood}`;
               }
             }
           }
@@ -276,19 +467,43 @@ function createWellbeingChart() {
       }
     });
     
-    chartCreated = true;
+    chartInitialized = true;
     console.log('Chart created successfully!');
   } catch (error) {
     console.error('Error creating chart:', error);
-    canvas.parentElement.innerHTML = 
-      '<p class="text-muted text-center p-4">Error creating chart. Please refresh the page.</p>';
+    container.innerHTML = 
+      '<div class="chart-loading"><p class="text-muted">Error creating chart. Please refresh the page.</p></div>';
+    chartInitialized = true;
   }
 }
 
-// Initialize only once when DOM is ready
+// Initialize when DOM is ready and container is properly sized
 document.addEventListener("DOMContentLoaded", function() {
-  console.log('DOM loaded, creating chart...');
-  createWellbeingChart();
+  console.log('DOM loaded, waiting for container to be ready...');
+  
+  // Wait a bit for the layout to settle
+  setTimeout(() => {
+    createWellbeingChart();
+  }, 300);
+});
+
+// Recreate chart on window resize (with debounce)
+let resizeTimeout;
+window.addEventListener('resize', function() {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    if (wellbeingChart) {
+      chartInitialized = false;
+      createWellbeingChart();
+    }
+  }, 250);
+});
+
+// Also try to initialize when the page is fully loaded
+window.addEventListener('load', function() {
+  if (!chartInitialized) {
+    setTimeout(createWellbeingChart, 500);
+  }
 });
 </script>
 

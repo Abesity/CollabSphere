@@ -1,5 +1,12 @@
-{% extends 'base_dashboard.html' %}
+{% extends "base_dashboard.html" %}
 {% load static %}
+
+{% block title %}Inbox – CollabSphere{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/notifications.css' %}?v=1.0">
+
+{% endblock %}
 
 {% block content %}
 <div class="notifications-container">

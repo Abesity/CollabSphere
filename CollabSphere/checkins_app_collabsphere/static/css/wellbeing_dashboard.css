@@ -1,11 +1,4 @@
-/* ============================================
-   TASK 6.1.2: RESPONSIVE CSS - MOBILE-FIRST APPROACH
-   Well-being Dashboard Styles
-   ============================================ */
 
-/* ====================================
-   CSS VARIABLES & UTILITIES
-   ==================================== */
 
 :root {
   --primary-color: #2D333A;
@@ -69,8 +62,6 @@ body::after {
    ==================================== */
 
 .dashboard-main {
-  display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 1rem; /* Mobile padding */
@@ -107,8 +98,6 @@ body::after {
    ==================================== */
 
 .bottom-grid {
-  display: flex;
-  flex-direction: column;
   gap: 1rem; /* Smaller gap on mobile */
   width: 100%;
 }
@@ -173,8 +162,6 @@ body::after {
   border-bottom: 1px solid #e9ecef;
   padding: 0.75rem; /* Reduced padding for mobile */
   font-size: 0.875rem; /* Smaller text on mobile */
-  display: flex;
-  flex-direction: column;
   gap: 0.25rem;
 }
 
@@ -202,8 +189,6 @@ body::after {
    ==================================== */
 
 .stats-container {
-  display: grid;
-  grid-template-columns: 1fr; /* Single column on mobile */
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
