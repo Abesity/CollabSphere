@@ -1,3 +1,9 @@
+    if (isRecurringCheckboxEl) {
+        isRecurringCheckboxEl.addEventListener('change', handleRecurringToggle);
+    }
+    if (frequencySelectEl) {
+        frequencySelectEl.addEventListener('change', handleFrequencyChange);
+    }
 {% extends "base_dashboard.html" %}
 
 {% load static %}
@@ -395,6 +401,13 @@ const eventUrls = {
     join: "{% url 'join_event' 0 %}".replace(/0\/$/, ''),
     leave: "{% url 'leave_event' 0 %}".replace(/0\/$/, '')
 };
+const recurrenceOptionsContainer = document.getElementById('recurringOptions');
+const recurrenceSummaryEl = document.getElementById('recurrenceSummary');
+const recurrenceSummaryTextEl = document.getElementById('summaryText');
+const frequencySelectEl = document.getElementById('frequency');
+const weeklyOptionsEl = document.getElementById('weeklyOptions');
+const endsOnSelectEl = document.getElementById('endsOn');
+const isRecurringCheckboxEl = document.getElementById('isRecurring');
 
 const CALENDAR_VIEW_STORAGE_KEY = 'collabsphere.calendar.view';
 
@@ -494,8 +507,20 @@ function applyDateToEventForm(dateKey) {
 function resetEventTimeFields(startTime = '09:00', endTime = '10:00') {
     const startTimeInput = document.getElementById('eventStartTime');
     const endTimeInput = document.getElementById('eventEndTime');
-    if (startTimeInput) startTimeInput.value = startTime;
-    if (endTimeInput) endTimeInput.value = endTime;
+    if (startTimeInput) startTimeInput.value = formatTimeTo12Hour(startTime);
+    if (endTimeInput) endTimeInput.value = formatTimeTo12Hour(endTime);
+}
+
+function formatTimeTo12Hour(timeValue) {
+    if (!timeValue) return '';
+    const [hourStr, minuteStr = '00'] = timeValue.split(':');
+    let hour = parseInt(hourStr, 10);
+    if (Number.isNaN(hour)) {
+        return timeValue || '';
+    }
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return `${hour}:${minuteStr.padStart(2, '0')} ${ampm}`;
 }
 
 function handleDaySelection(dateKey) {
@@ -894,6 +919,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (startDateInput.value) {
                 endDateInput.value = startDateInput.value;
             }
+            updateRecurrenceSummary();
         });
     }
     if (confirmDayCreateBtn) {
@@ -1128,11 +1154,11 @@ function showEventModal() {
     resetEventTimeFields();
 
     // Reset recurring options
-    const isRecurringCheckbox = document.getElementById('isRecurring');
-    if (isRecurringCheckbox) {
-        isRecurringCheckbox.checked = false;
-        document.getElementById('recurringOptions').style.display = 'none';
+    if (isRecurringCheckboxEl) {
+        isRecurringCheckboxEl.checked = false;
     }
+    toggleRecurringOptions(false);
+    updateRecurrenceSummary();
     
     const modalElement = document.getElementById('eventModal');
     if (modalElement) {
@@ -1172,13 +1198,19 @@ async function saveEvent() {
     }
     
     // Log recurring event data if enabled
-    const isRecurring = document.getElementById('isRecurring').checked;
+    const isRecurring = Boolean(isRecurringCheckboxEl && isRecurringCheckboxEl.checked);
     if (isRecurring) {
         console.log('🔁 Saving recurring event with options:', {
             frequency: formData.get('frequency'),
             ends_on: formData.get('ends_on'),
             days: formData.getAll('days[]')
         });
+        if (!formData.get('frequency')) {
+            formData.set('frequency', 'monthly');
+        }
+        if (!formData.get('ends_on')) {
+            formData.set('ends_on', 'never');
+        }
     }
     
     try {
