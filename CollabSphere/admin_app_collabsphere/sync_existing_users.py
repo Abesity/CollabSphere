@@ -3,7 +3,8 @@ import django
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'CollabSphere.settings')
+# Use the correct settings module name (lowercase package folder)
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'collabsphere.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model

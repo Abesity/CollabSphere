@@ -21,39 +21,83 @@ class Team:
     def get_supabase_user_id(django_user):
         """Get or create Supabase user ID for Django user"""
         try:
-            # Check if user exists in Supabase by email
-            existing_user = supabase.table('user')\
-                .select('user_ID, email, username')\
-                .eq('email', django_user.email)\
-                .execute()
-            
-            if existing_user.data:
-                # User exists in Supabase, return their Supabase ID
-                supabase_user_id = existing_user.data[0]['user_ID']
-                print(f"Found Supabase user ID {supabase_user_id} for Django user {django_user.id}")
-                return supabase_user_id
+            # If Django user already has a cached supabase_id, validate it first
+            supabase_id_field = getattr(django_user, 'supabase_id', None)
+            if supabase_id_field:
+                try:
+                    validated = supabase.table('user')\
+                        .select('user_ID')\
+                        .eq('user_ID', supabase_id_field)\
+                        .execute()
+                    if validated.data:
+                        return supabase_id_field
+                except Exception:
+                    # Fall through to try other lookup methods
+                    pass
+
+            # Prefer lookup by email when available
+            if getattr(django_user, 'email', None):
+                existing_user = supabase.table('user')\
+                    .select('user_ID, email, username')\
+                    .eq('email', django_user.email)\
+                    .execute()
+                if existing_user.data:
+                    supabase_user_id = existing_user.data[0]['user_ID']
+                    # Cache in Django user model when possible
+                    try:
+                        if hasattr(django_user, 'supabase_id'):
+                            django_user.supabase_id = supabase_user_id
+                            django_user.save()
+                    except Exception:
+                        pass
+                    print(f"Found Supabase user ID {supabase_user_id} for Django user {django_user.id} by email")
+                    return supabase_user_id
+
+            # Next try lookup by username (covers cases where admin created user by username)
+            if getattr(django_user, 'username', None):
+                existing_user = supabase.table('user')\
+                    .select('user_ID, username, email')\
+                    .eq('username', django_user.username)\
+                    .execute()
+                if existing_user.data:
+                    supabase_user_id = existing_user.data[0]['user_ID']
+                    try:
+                        if hasattr(django_user, 'supabase_id'):
+                            django_user.supabase_id = supabase_user_id
+                            django_user.save()
+                    except Exception:
+                        pass
+                    print(f"Found Supabase user ID {supabase_user_id} for Django user {django_user.id} by username")
+                    return supabase_user_id
             
             # User doesn't exist in Supabase, create them
             user_data = {
                 'username': django_user.username,
-                'email': django_user.email,
+                'email': getattr(django_user, 'email', None) or '',
                 'password': 'django-synced-user',  # Required field
                 'created_at': django_user.date_joined.isoformat() if hasattr(django_user, 'date_joined') and django_user.date_joined else 'now()',
                 'profile_picture': getattr(django_user, 'profile_picture', ''),
-                'full_name': f"{django_user.first_name} {django_user.last_name}".strip() or django_user.username,
+                'full_name': f"{getattr(django_user, 'first_name', '')} {getattr(django_user, 'last_name', '')}".strip() or django_user.username,
                 'title': getattr(django_user, 'title', ''),
                 'role_id': getattr(django_user, 'role_id', None)
             }
-            
+
             # Remove None values
             user_data = {k: v for k, v in user_data.items() if v is not None}
-            
+
             result = supabase.table('user')\
                 .insert(user_data)\
                 .execute()
-            
+
             if result.data:
                 supabase_user_id = result.data[0]['user_ID']
+                # Cache the created supabase_id on the Django user when possible
+                try:
+                    if hasattr(django_user, 'supabase_id'):
+                        django_user.supabase_id = supabase_user_id
+                        django_user.save()
+                except Exception:
+                    pass
                 print(f"Created new Supabase user ID {supabase_user_id} for Django user {django_user.id}")
                 return supabase_user_id
             else:
@@ -112,6 +156,7 @@ class Team:
                 .eq('user_id', supabase_user_id)\
                 .is_('left_at', None)\
                 .execute()
+            print(f"DEBUG: get_user_teams - supabase_user_id={supabase_user_id} membership rows: {len(response.data) if response.data else 0}")
             
             teams = []
             for membership in response.data:
@@ -281,7 +326,7 @@ class Team:
                     'description': description,
                     'icon_url': icon_url,
                     'user_id_owner': owner_supabase_id,
-                    'joined_at': 'now()'
+                    'joined_at': datetime.now().isoformat()
                 })\
                 .execute()
             
@@ -295,7 +340,7 @@ class Team:
                 .insert({
                     'user_id': owner_supabase_id,
                     'team_ID': team_ID,
-                    'joined_at': 'now()'
+                    'joined_at': datetime.now().isoformat()
                 })\
                 .execute()
             
@@ -321,7 +366,7 @@ class Team:
                             .insert({
                                 'user_id': supabase_member_id,
                                 'team_ID': team_ID,
-                                'joined_at': 'now()'
+                                'joined_at': datetime.now().isoformat()
                             })\
                             .execute()
                         
