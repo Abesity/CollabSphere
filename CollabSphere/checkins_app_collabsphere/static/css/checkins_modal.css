@@ -1,0 +1,430 @@
+:root {
+  --primary-color: #2D333A;
+  --secondary-color: #3D74C3;
+  --bg-color: #FAFBFB;
+  --card-border: #c0c6d1;
+  --text-muted: #6c757d;
+  --glow-color: rgba(61, 116, 195, 0.45);
+  --success-color: #5BBA6F;
+  --warning-color: #E2A743;
+  --error-color: #D0453E;
+  --light-gray: #f8f9fa; 
+  --medium-gray: #e9ecef;
+}
+
+
+/* Modal Container */
+#wellbeingModal .modal-content {
+  font-family: "Inter", sans-serif;
+  background-color: var(--bg-color);
+  border-radius: 18px;
+  border: 2px solid var(--card-border);
+  box-shadow: 0 8px 32px rgba(45, 51, 58, 0.15);
+  overflow: hidden;
+}
+
+/* Modal Header */
+#wellbeingModal .modal-header {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-bottom: 2px solid var(--card-border);
+  padding: 1.5rem 2rem;
+  position: relative;
+}
+
+#wellbeingModal .modal-top-info {
+  width: 100%;
+}
+
+#wellbeingModal .modal-title {
+  color: var(--primary-color);
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+}
+
+#wellbeingModal .modal-title:first-child {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+#wellbeingModal .modal-title:last-child {
+  font-size: 1.5rem;
+  margin-bottom: 0;
+}
+
+#wellbeingModal .modal-title strong {
+  color: var(--secondary-color);
+}
+
+#wellbeingModal .btn-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 2rem;
+  background-size: 0.8rem;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  padding: 0.5rem;
+}
+
+#wellbeingModal .btn-close:hover {
+  opacity: 1;
+}
+
+/* Modal Body */
+#wellbeingModal .modal-body {
+  padding: 2rem;
+  background-color: white;
+}
+
+#wellbeingModal .border-end {
+  border-right: 2px solid var(--medium-gray) !important;
+}
+
+/* Form Labels */
+#wellbeingModal .form-label {
+  color: var(--primary-color);
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+/* Range Input (Mood Slider) */
+#wellbeingModal .form-range {
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--medium-gray);
+  padding: 0;
+  margin: 1rem 0;
+}
+
+#wellbeingModal .form-range:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--glow-color);
+}
+
+#wellbeingModal .form-range::-webkit-slider-thumb {
+  width: 24px;
+  height: 24px;
+  background-color: var(--secondary-color);
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(45, 51, 58, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#wellbeingModal .form-range::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 10px rgba(61, 116, 195, 0.3);
+}
+
+#wellbeingModal .form-range::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background-color: var(--secondary-color);
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(45, 51, 58, 0.2);
+  cursor: pointer;
+}
+
+/* Mood Value Display */
+#wellbeingModal #moodValue {
+  display: inline-block;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--secondary-color);
+  background: linear-gradient(135deg, #3D74C3, #245d8b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+#wellbeingModal .text-end {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+/* Select Dropdown */
+#wellbeingModal .form-select {
+  border: 2px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  color: var(--primary-color);
+  background-color: white;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+#wellbeingModal .form-select:focus {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 3px var(--glow-color);
+}
+
+#wellbeingModal .form-select option {
+  padding: 0.75rem;
+  font-size: 0.95rem;
+}
+
+/* Textarea */
+#wellbeingModal textarea.form-control {
+  border: 2px solid var(--card-border);
+  border-radius: 10px;
+  padding: 1rem;
+  font-size: 0.95rem;
+  color: var(--primary-color);
+  background-color: white;
+  transition: all 0.3s ease;
+  resize: vertical;
+  min-height: 100px;
+  font-family: "Inter", sans-serif;
+}
+
+#wellbeingModal textarea.form-control:focus {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 3px var(--glow-color);
+}
+
+#wellbeingModal textarea.form-control::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* Date Input */
+#wellbeingModal input[type="date"].form-control {
+  border: 2px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  color: var(--primary-color);
+  background-color: var(--medium-gray);
+  cursor: not-allowed;
+  font-family: "Inter", sans-serif;
+}
+
+/* Recent Check-ins */
+#wellbeingModal .list-group {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid var(--medium-gray);
+}
+
+#wellbeingModal .list-group-item {
+  border: none;
+  border-bottom: 1px solid var(--medium-gray);
+  padding: 0.875rem 1rem;
+  font-size: 0.9rem;
+  color: var(--primary-color);
+  background-color: white;
+  transition: background-color 0.2s ease;
+}
+
+#wellbeingModal .list-group-item:last-child {
+  border-bottom: none;
+}
+
+#wellbeingModal .list-group-item:hover {
+  background-color: var(--light-gray);
+}
+
+#wellbeingModal .badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#wellbeingModal .badge.bg-primary {
+  background-color: var(--secondary-color) !important;
+}
+
+/* Empty state for recent check-ins */
+#wellbeingModal .text-muted {
+  color: var(--text-muted) !important;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Modal Footer */
+#wellbeingModal .modal-footer {
+  background-color: var(--light-gray);
+  border-top: 2px solid var(--card-border);
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+#wellbeingModal .modal-footer .btn {
+  border-radius: 10px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+#wellbeingModal .modal-footer .btn-secondary {
+  background-color: white;
+  color: var(--primary-color);
+  border-color: var(--card-border);
+}
+
+#wellbeingModal .modal-footer .btn-secondary:hover {
+  background-color: var(--medium-gray);
+  border-color: var(--text-muted);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(45, 51, 58, 0.1);
+}
+
+#wellbeingModal .modal-footer .btn-primary {
+  background: linear-gradient(135deg, var(--secondary-color), #245d8b);
+  color: white;
+  border: none;
+}
+
+#wellbeingModal .modal-footer .btn-primary:hover {
+  background: linear-gradient(135deg, #245d8b, #1a4163);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(61, 116, 195, 0.3);
+}
+
+#wellbeingModal .modal-footer .btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  #wellbeingModal .modal-dialog {
+    margin: 1rem;
+  }
+  
+  #wellbeingModal .modal-header {
+    padding: 1.25rem 1.5rem;
+  }
+  
+  #wellbeingModal .modal-body {
+    padding: 1.5rem;
+  }
+  
+  #wellbeingModal .modal-footer {
+    padding: 1.25rem 1.5rem;
+    flex-direction: column;
+  }
+  
+  #wellbeingModal .modal-footer .btn {
+    width: 100%;
+  }
+  
+  #wellbeingModal .border-end {
+    border-right: none !important;
+    border-bottom: 2px solid var(--medium-gray);
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  #wellbeingModal .ps-4 {
+    padding-left: 0 !important;
+  }
+  
+  #wellbeingModal .modal-title:last-child {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 576px) {
+  #wellbeingModal .modal-header {
+    padding: 1rem;
+  }
+  
+  #wellbeingModal .modal-body {
+    padding: 1rem;
+  }
+  
+  #wellbeingModal .modal-title:last-child {
+    font-size: 1.1rem;
+  }
+  
+  #wellbeingModal .form-label {
+    font-size: 0.9rem;
+  }
+  
+  #wellbeingModal .form-control,
+  #wellbeingModal .form-select {
+    font-size: 0.9rem;
+    padding: 0.625rem 0.875rem;
+  }
+  
+  #wellbeingModal .modal-footer {
+    padding: 1rem;
+  }
+}
+
+/* Status-specific colors in dropdown */
+#wellbeingModal option[value="Good"] {
+  color: var(--success-color);
+}
+
+#wellbeingModal option[value="Okay"] {
+  color: var(--warning-color);
+}
+
+#wellbeingModal option[value="Needs Support"] {
+  color: var(--error-color);
+}
+
+/* Emoji support */
+#wellbeingModal option {
+  font-size: 1.1rem;
+}
+
+/* Add subtle animation to modal appearance */
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#wellbeingModal .modal-content {
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+/* Focus states for accessibility */
+#wellbeingModal .form-control:focus,
+#wellbeingModal .form-select:focus,
+#wellbeingModal .form-range:focus {
+  outline: 2px solid var(--secondary-color);
+  outline-offset: 2px;
+}
+
+/* Custom scrollbar for textarea */
+#wellbeingModal textarea::-webkit-scrollbar {
+  width: 8px;
+}
+
+#wellbeingModal textarea::-webkit-scrollbar-track {
+  background: var(--light-gray);
+  border-radius: 4px;
+}
+
+#wellbeingModal textarea::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 4px;
+}
+
+#wellbeingModal textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

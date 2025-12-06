@@ -1,17 +1,41 @@
 :root {
   --primary-color: #2D333A;
   --secondary-color: #3D74C3;
+
+  --secondary-dark: #2C5692;
+  --secondary-light: #4A89D8;
+
   --bg-color: #FAFBFB;
   --card-border: #c0c6d1;
   --text-muted: #6c757d;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+
   --glow-color: rgba(61, 116, 195, 0.45);
   --glow-hover: rgba(61, 116, 195, 0.65);
   --glow-strong: rgba(61, 116, 195, 0.85);
+
+  --btn-bg: var(--secondary-color);
+  --btn-bg-hover: var(--secondary-dark);
+  --btn-text: #ffffff;
+  --btn-radius: var(--radius-md);
+  --btn-padding: 0.6rem 1.25rem;
+
+  --input-radius: var(--radius-md);
+  --input-border: #d7dce2;
+  --input-focus: var(--secondary-color);
 }
+
+
 
 /* ====================================
    BASE STYLES (MOBILE - 320px+)
-   ==================================== */
+==================================== */
 
 body {
   width: 100%;
@@ -63,7 +87,7 @@ body {
 
 .card {
   background: #fff;
-  border-radius: 12px; 
+  border-radius: 10px; 
   padding: 1rem; /* Reduced padding */
   margin-bottom: 1rem;
   color: #2D333A;
@@ -150,18 +174,19 @@ body {
   background-color: transparent;
 }
 
-.btn-new {
+.btn-new, .btn-checkin {
   color: white;
   background: #3D74C3;
   border: none;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  width: 100%; /* Full width on mobile */
+  width: 100%; 
   font-size: 0.9rem;
+  transition: ease 0.2s;
 }
 
-.btn-new:hover {
+.btn-new:hover, .btn-checkin:hover {
   background: #245d8b;
 }
 
@@ -267,7 +292,7 @@ body {
 /* Task Labels */
 .task-label {
   padding: 3px 8px;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 0.75rem;
   text-transform: capitalize;
   font-weight: bold;
@@ -339,29 +364,7 @@ body {
 .status.bad { background-color: #D0453E; }
 
 /* Check-in Button */
-.btn-checkin {
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  width: 100%;
-  margin-top: 10px;
-}
 
-.btn-checkin:hover {
-  background: linear-gradient(135deg, #0056b3, #004085);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-}
-
-.btn-checkin:active {
-  transform: translateY(0);
-}
 
 /* Completed State */
 .checkin-complete {
@@ -547,7 +550,7 @@ body {
   }
 
   .card {
-    border-radius: 18px;
+    border-radius: 10px;
     padding: 1.2rem;
     margin-bottom: 1.5rem;
   }

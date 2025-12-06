@@ -44,7 +44,7 @@ body {
 
 .card {
   background: #fff;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 2px solid var(--card-border);
   box-shadow: 0 2px 8px rgba(129, 137, 176, 0.15);
   padding: 1rem;
@@ -151,7 +151,7 @@ h3 {
 
 .form-control,
 .form-select {
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid var(--card-border);
   padding: 0.625rem;
   font-size: 0.9rem;
