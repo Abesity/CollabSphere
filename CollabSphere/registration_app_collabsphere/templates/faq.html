@@ -1,0 +1,445 @@
+{% extends "base_dashboard.html" %}
+{% load static %}
+
+{% block title %}FAQ – CollabSphere{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/faq.css' %}?v=1.0">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/faq.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid faq-container">
+  <main class="dashboard-main">
+    
+    <!-- FAQ Header -->
+    <div class="faq-header">
+      <div class="header-content">
+        <h2>Frequently Asked Questions</h2>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-container">
+      <div class="search-box">
+       <img class="search-icon" src="{% static 'css/images/search.png' %}" alt="Search">
+        <input 
+          type="text" 
+          id="faqSearch" 
+          placeholder="Search for questions..." 
+          class="search-input"
+        >
+      </div>
+    </div>
+
+    <!-- FAQ Categories -->
+    <div class="faq-categories">
+      
+      <!-- General Category -->
+      <div class="faq-category card">
+        <div class="category-header">
+          <div class="category-icon">
+            <img class="question-icon" src="{% static 'css/images/question.png' %}" alt="General">
+          </div>
+          <h3>General Questions</h3>
+          <span class="toggle-arrow">▼</span>
+        </div>
+        
+        <div class="category-content">
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">What is CollabSphere?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>CollabSphere is a comprehensive team management platform designed for remote and hybrid teams. It helps streamline communication, manage events, track team wellbeing, monitor check-ins, and organize tasks efficiently.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">Who can use CollabSphere?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Any team—remote, hybrid, or on-site—can use CollabSphere. It's ideal for companies, organizations, schools, and project-based teams needing structured collaboration tools. Team admins can set up and manage their teams.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">Is CollabSphere mobile-friendly?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Yes! CollabSphere is fully responsive and accessible on desktops, tablets, and mobile devices. You can manage your tasks, check-ins, and team activities from anywhere.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account & Access -->
+      <div class="faq-category card">
+        <div class="category-header">
+          <div class="category-icon">
+            <img class="account-icon" src="{% static 'images/circle-user.png' %}" alt="Account">
+          </div>
+          <h3>Account & Access</h3>
+          <span class="toggle-arrow">▼</span>
+        </div>
+        
+        <div class="category-content">
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">How do I create an account?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Users can sign up using their company email or personal email. After registration, you must verify your email to access full features. Team admins can also invite members directly.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">Can I join multiple teams?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Yes! Users can join multiple teams as long as they receive an invitation from each team admin. You can switch between teams using the team selector in the top navigation.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">How do I reset my password?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Click "Forgot Password" on the login page, enter your email, and follow the instructions sent to your inbox. Password reset links expire after 24 hours for security.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tasks & Projects -->
+      <div class="faq-category card">
+        <div class="category-header">
+          <div class="category-icon">
+            <img class="tasks-icon" src="{% static 'css/images/pen.png' %}" alt="Tasks">
+          </div>
+          <h3>Tasks & Projects</h3>
+          <span class="toggle-arrow">▼</span>
+        </div>
+        
+        <div class="category-content">
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">How do I create a new task?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Click the "+ New Task" button on the home page or Tasks page. Fill in the task title, description, assignee, due date, priority, and status. Click "Save" to create the task.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">Can I assign tasks to multiple people?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Currently, tasks can be assigned to one team member at a time. For collaborative tasks, you can mention other team members in the task description or comments.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">How do I track task progress?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Use the status indicators (Pending, In Progress, Completed) and progress slider. You can also add comments and attachments to keep track of updates and discussions.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Check-ins & Wellbeing -->
+      <div class="faq-category card">
+        <div class="category-header">
+          <div class="category-icon">
+            <img class="wellbeing-icon" src="{% static 'images/tasks.png' %}" alt="Wellbeing">
+          </div>
+          <h3>Check-ins & Wellbeing</h3>
+          <span class="toggle-arrow">▼</span>
+        </div>
+        
+        <div class="category-content">
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">What is the daily check-in?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>The daily check-in allows team members to log their mood, work status, accomplishments, and challenges. It helps managers understand team wellbeing and productivity.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">Is my wellbeing data private?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Yes! Individual responses are kept confidential. Managers only see aggregated, anonymous data to identify team trends without exposing personal information.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">Can I skip a daily check-in?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>While optional, regular check-ins help your team stay connected. You'll receive reminders, but there's no penalty for missing a day. Consistency is encouraged for best results.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Events & Meetings -->
+      <div class="faq-category card">
+        <div class="category-header">
+          <div class="category-icon">
+            <img class="event-icon" src="{% static 'css/images/event.png' %}" alt="Events">
+          </div>
+          <h3>Events & Meetings</h3>
+          <span class="toggle-arrow">▼</span>
+        </div>
+        
+        <div class="category-content">
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">How do I create a team event?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Navigate to the Events page and click "Create Event". Fill in the event details including title, date, time, description, and attendees. Team members will receive notifications.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">Can I sync events with my calendar?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Yes! You can export events to Google Calendar, Outlook, or Apple Calendar using the export feature. We're working on direct calendar sync for future updates.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">How do event reminders work?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Automatic reminders are sent via email and in-app notifications 15 minutes, 1 hour, and 1 day before the event (configurable in your notification settings).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Technical Support -->
+      <div class="faq-category card">
+        <div class="category-header">
+          <div class="category-icon">
+            <img class="support-icon" src="{% static 'css/images/bug.png' %}" alt="Support">
+          </div>
+          <h3>Technical Support</h3>
+          <span class="toggle-arrow">▼</span>
+        </div>
+        
+        <div class="category-content">
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">What browsers are supported?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>CollabSphere supports Chrome (recommended), Firefox, Edge, and Safari. For best performance, keep your browser updated to the latest version.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">Is there a mobile app?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Currently, CollabSphere is web-based but fully responsive for mobile browsers. We're developing native mobile apps for iOS and Android (coming soon).</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span class="question-text">How do I report a bug?</span>
+              <span class="toggle-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Use the "Report Issue" link in the footer or contact support@collabsphere.com. Include screenshots and steps to reproduce the issue for faster resolution.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- No Results Message -->
+    <div id="noResults" class="no-results card" style="display: none;">
+      <div class="empty-state">
+        <div class="empty-icon"><img src="{% static 'css/images/search.png' %}" alt="Search Icon"></div>
+        <h4>No matching questions found</h4>
+        <p>Try different keywords or browse the categories above</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// FAQ JavaScript functionality
+document.addEventListener('DOMContentLoaded', function() {
+  // Toggle category expansion
+  document.querySelectorAll('.category-header').forEach(header => {
+    header.addEventListener('click', function() {
+      const category = this.closest('.faq-category');
+      const content = category.querySelector('.category-content');
+      const arrow = this.querySelector('.toggle-arrow');
+      
+      category.classList.toggle('expanded');
+      content.classList.toggle('show');
+      
+      if (category.classList.contains('expanded')) {
+        arrow.textContent = '▲';
+      } else {
+        arrow.textContent = '▼';
+      }
+    });
+  });
+
+  // Toggle individual FAQ items
+  document.querySelectorAll('.faq-question').forEach(question => {
+    question.addEventListener('click', function() {
+      const item = this.closest('.faq-item');
+      const answer = item.querySelector('.faq-answer');
+      const icon = this.querySelector('.toggle-icon');
+      
+      item.classList.toggle('active');
+      
+      if (item.classList.contains('active')) {
+        answer.style.maxHeight = answer.scrollHeight + 'px';
+        icon.textContent = '−';
+      } else {
+        answer.style.maxHeight = '0';
+        icon.textContent = '+';
+      }
+    });
+  });
+
+  // Search functionality
+  const searchInput = document.getElementById('faqSearch');
+  const noResults = document.getElementById('noResults');
+  const allFAQItems = document.querySelectorAll('.faq-item');
+  
+  searchInput.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase().trim();
+    let hasResults = false;
+    
+    // Reset all items first
+    allFAQItems.forEach(item => {
+      item.style.display = 'flex';
+    });
+    
+    // Show all categories
+    document.querySelectorAll('.faq-category').forEach(category => {
+      category.style.display = 'block';
+    });
+    
+    if (searchTerm === '') {
+      noResults.style.display = 'none';
+      return;
+    }
+    
+    // Filter items
+    allFAQItems.forEach(item => {
+      const question = item.querySelector('.question-text').textContent.toLowerCase();
+      const answer = item.querySelector('.faq-answer p').textContent.toLowerCase();
+      
+      if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+        item.style.display = 'flex';
+        hasResults = true;
+        
+        // Expand parent category
+        const category = item.closest('.faq-category');
+        const content = category.querySelector('.category-content');
+        const arrow = category.querySelector('.toggle-arrow');
+        
+        category.classList.add('expanded');
+        content.classList.add('show');
+        arrow.textContent = '▲';
+        
+        // Highlight matching text
+        highlightText(item, searchTerm);
+      } else {
+        item.style.display = 'none';
+      }
+    });
+    
+    // Hide empty categories
+    document.querySelectorAll('.faq-category').forEach(category => {
+      const visibleItems = category.querySelectorAll('.faq-item[style="display: flex"]');
+      if (visibleItems.length === 0) {
+        category.style.display = 'none';
+      }
+    });
+    
+    // Show/hide no results message
+    noResults.style.display = hasResults ? 'none' : 'block';
+  });
+  
+  // Function to highlight search terms
+  function highlightText(element, term) {
+    const question = element.querySelector('.question-text');
+    const answer = element.querySelector('.faq-answer p');
+    
+    const highlight = (text, term) => {
+      if (!term) return text;
+      const regex = new RegExp(`(${term})`, 'gi');
+      return text.replace(regex, '<mark class="highlight">$1</mark>');
+    };
+    
+    question.innerHTML = highlight(question.textContent, term);
+    answer.innerHTML = highlight(answer.textContent, term);
+  }
+  
+  // Reset highlights when search is cleared
+  searchInput.addEventListener('blur', function() {
+    if (this.value === '') {
+      document.querySelectorAll('.highlight').forEach(highlight => {
+        const parent = highlight.parentNode;
+        parent.innerHTML = parent.textContent;
+      });
+    }
+  });
+  
+  // Initialize all answers as collapsed
+  document.querySelectorAll('.faq-answer').forEach(answer => {
+    answer.style.maxHeight = '0';
+  });
+});
+</script>
+{% endblock %}
