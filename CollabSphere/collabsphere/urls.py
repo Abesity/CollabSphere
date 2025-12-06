@@ -19,10 +19,13 @@ from django.urls import path, include
 from django.shortcuts import redirect
 
 def root_redirect(request):
-    # If the user is logged in, go straight to the dashboard (home)
+    # If hardcoded admin is logged in, redirect to admin dashboard
+    if request.session.get("admin_logged_in"):
+        return redirect('admin_app_collabsphere:dashboard')
+    # If a regular user is logged in, go to home
     if request.user.is_authenticated:
         return redirect('home')
-    # Otherwise, send them to the login page
+    # Otherwise, send to login
     return redirect('login')
 
 urlpatterns = [
@@ -35,4 +38,5 @@ urlpatterns = [
     path('teams/', include('teams_app_collabsphere.urls')),
     path('notifications/', include('notifications_app_collabsphere.urls')),
     path('events/', include('events_app_collabsphere.urls')),
+    path('admin_dashboard/', include('admin_app_collabsphere.urls')),
 ]

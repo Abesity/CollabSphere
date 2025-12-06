@@ -15,7 +15,22 @@
 {% block content %}
 <div class="container-fluid dashboard-container">
   <main class="dashboard-main">
-
+  <!-- Add this after the search section -->
+  {% if active_team %}
+  <section class="current-team-section">
+      <div class="current-team-header">
+          <div class="current-team-info">
+              <span class="current-team-label">Current Active Team:</span>
+              <div class="current-team-details">
+                  {% if active_team.icon_url %}
+                  <img src="{{ active_team.icon_url }}" alt="{{ active_team.team_name }}" class="current-team-icon">
+                  {% endif %}
+                  <strong class="current-team-name">{{ active_team.team_name }}</strong>
+              </div>
+          </div>
+      </div>
+  </section>
+  {% endif %}
     <!-- Header Section -->
     <section class="welcome-text">
       <h1>Your Teams</h1>
@@ -163,7 +178,7 @@ function setupSwitchTeamButtons() {
                         this.disabled = false;
                         
                         // Show error message
-                        showError('Error switching team: ' + data.error);
+                        alert('Error switching team: ' + data.error);
                     }
                 })
                 .catch(error => {
@@ -174,7 +189,7 @@ function setupSwitchTeamButtons() {
                     this.innerHTML = originalHTML;
                     this.disabled = false;
                     
-                    showError('Error switching team. Please try again.');
+                    alert('Error switching team. Please try again.');
                 });
             }
         });
@@ -288,9 +303,9 @@ document.addEventListener('DOMContentLoaded', function() {
                   for (const field in data.form_errors) {
                     errorMessage += `- ${data.form_errors[field][0].message}\n`;
                   }
-                  showError(errorMessage);
+                  alert(errorMessage);
                 } else {
-                  showError('Error creating team: ' + data.error);
+                  alert('Error creating team: ' + data.error);
                 }
                 submitButton.disabled = false;
                 submitButton.textContent = 'Create Team';
@@ -298,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
               console.error('Error:', error);
-              showError('Error creating team. Please try again.');
+              alert('Error creating team. Please try again.');
               submitButton.disabled = false;
               submitButton.textContent = 'Create Team';
             });
@@ -367,14 +382,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             window.location.reload(true); // true forces reload from server, not cache
                         }, 1500);
                     } else {
-                        showError('Error updating team: ' + data.error);
+                        alert('Error updating team: ' + data.error);
                         submitButton.disabled = false;
                         submitButton.textContent = 'Update Team';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    showError('Error updating team. Please try again.');
+                    alert('Error updating team. Please try again.');
                     submitButton.disabled = false;
                     submitButton.textContent = 'Update Team';
                 });
@@ -384,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
           console.error('Error loading edit form:', error);
-          showError('Error loading team editor.');
+          alert('Error loading team editor.');
         });
     });
   });
@@ -429,15 +444,15 @@ viewButtons.forEach(btn => {
               .then(response => response.json())
               .then(data => {
                 if (data.success) {
-                  showSuccess('You have left the team successfully!');
-                  setTimeout(() => window.location.reload(), 1000);
+                  alert('You have left the team successfully!');
+                  window.location.reload();
                 } else {
-                  showError('Error leaving team: ' + data.error);
+                  alert('Error leaving team: ' + data.error);
                 }
               })
               .catch(error => {
                 console.error('Error:', error);
-                showError('Error leaving team. Please try again.');
+                alert('Error leaving team. Please try again.');
               });
             }
           });
@@ -445,7 +460,7 @@ viewButtons.forEach(btn => {
       })
       .catch(error => {
         console.error('Error loading view form:', error);
-        showError('Error loading team details.');
+        alert('Error loading team details.');
       });
   });
 });
@@ -467,15 +482,15 @@ viewButtons.forEach(btn => {
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            showSuccess('You have left the team successfully!');
-            setTimeout(() => window.location.reload(), 1000);
+            alert('You have left the team successfully!');
+            window.location.reload();
           } else {
-            showError('Error leaving team: ' + data.error);
+            alert('Error leaving team: ' + data.error);
           }
         })
         .catch(error => {
           console.error('Error:', error);
-          showError('Error leaving team. Please try again.');
+          alert('Error leaving team. Please try again.');
         });
       }
     });
@@ -798,7 +813,7 @@ if (deleteBtn) {
                     this.disabled = false;
                     
                     // Show error message
-                    showError('Error deleting team: ' + (data.error || 'Unknown error'));
+                    alert('Error deleting team: ' + (data.error || 'Unknown error'));
                 }
             })
             .catch(error => {
@@ -808,7 +823,7 @@ if (deleteBtn) {
                 this.textContent = originalText;
                 this.disabled = false;
                 
-                showError('Error deleting team. Please try again.');
+                alert('Error deleting team. Please try again.');
             });
         }
     });
@@ -991,17 +1006,17 @@ if (deleteBtn) {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showSuccess('Team updated successfully!');
-                    setTimeout(() => window.location.reload(), 1000);
+                    alert('Team updated successfully!');
+                    window.location.reload();
                 } else {
-                    showError('Error updating team: ' + data.error);
+                    alert('Error updating team: ' + data.error);
                     submitButton.disabled = false;
                     submitButton.textContent = 'Update Team';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showError('Error updating team. Please try again.');
+                alert('Error updating team. Please try again.');
                 submitButton.disabled = false;
                 submitButton.textContent = 'Update Team';
             });

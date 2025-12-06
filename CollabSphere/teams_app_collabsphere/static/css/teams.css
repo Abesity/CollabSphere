@@ -202,6 +202,7 @@ body::after {
 }
 
 .team-name {
+  color: var(--secondary-color);
   font-size: 1.2rem;
   font-weight: 600;
 }
@@ -228,6 +229,7 @@ body::after {
 
 
 .team-desc {
+  color: var(--text-muted);
   font-size: 0.95rem;
   margin: 0.6rem 0;
 }
