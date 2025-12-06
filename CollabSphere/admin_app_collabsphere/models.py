@@ -75,6 +75,18 @@ class AdminSupabaseService:
             
             # Delete user
             response = supabase.table("user").delete().eq("user_ID", int(user_id)).execute()
+
+            # Also remove the corresponding Django user if it exists (cleanup)
+            try:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                # supabase_id is stored as a string on the Django model
+                django_user = User.objects.filter(supabase_id=str(user_id)).first()
+                if django_user:
+                    django_user.delete()
+            except Exception as e:
+                logger.warning(f"Failed to delete linked Django user for supabase id {user_id}: {e}")
+
             return True
         except Exception as e:
             logger.error(f"Error deleting user {user_id}: {str(e)}")
@@ -564,11 +576,16 @@ class AdminSupabaseService:
         # Hash password if it's not already hashed
         password = data.get('password', '')
         if password:
-            # Check if already looks like a SHA256 hash
-            if not (len(password) == 64 and all(c in '0123456789abcdef' for c in password.lower())):
-                # Hash the password
-                import hashlib
-                data['password'] = hashlib.sha256(password.encode()).hexdigest()
+            # If it's already in our PBKDF2 format (starts with 'pbkdf2$'), leave it
+            if not str(password).startswith('pbkdf2$'):
+                # Use the project's PBKDF2 hasher to produce a compatible stored hash
+                try:
+                    from registration_app_collabsphere.utils.passwords import hash_password
+                    data['password'] = hash_password(password)
+                except Exception:
+                    # Fallback: if the import fails, fall back to a SHA256 hex (less preferred)
+                    import hashlib
+                    data['password'] = hashlib.sha256(password.encode()).hexdigest()
         
         return AdminSupabaseService.create_user(data)
         

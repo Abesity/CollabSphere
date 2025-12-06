@@ -118,6 +118,8 @@ def user_create(request):
                 form_errors['password'] = "Password is required"
             elif password != confirm_password:
                 form_errors['confirm_password'] = "Passwords do not match"
+            elif len(password) < 8:
+                form_errors['password'] = "Password must be at least 8 characters long"
             
             # Check for existing users BEFORE attempting creation
             from django.contrib.auth import get_user_model

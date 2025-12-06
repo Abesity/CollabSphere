@@ -16,6 +16,9 @@ User = get_user_model()
 # LOGIN VIEW
 # -------------------------------
 def login(request):
+    # Create a bound or unbound form instance so the template can render errors and previous input
+    form = LoginForm(request.POST or None)
+
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
@@ -28,11 +31,11 @@ def login(request):
             request.session['admin_username'] = 'admin'
             messages.success(request, 'Welcome back, Admin!')
             return redirect('admin_app_collabsphere:dashboard')
-        
+
         # First try Django authentication
         print(f"DEBUG: Attempting Django authentication for {email}")
         user = authenticate(request, username=email, password=password)
-        
+
         if user is not None:
             print(f"DEBUG: Django auth SUCCESS - User: {user.username}")
             auth_login(request, user)
@@ -40,41 +43,41 @@ def login(request):
                 request.session['user_ID'] = user.supabase_id
             messages.success(request, f'Welcome back, {user.username}!')
             return redirect('home')
-        
+
         print(f"DEBUG: Django auth FAILED - trying Supabase...")
-        
+
         # Try Supabase authentication as fallback
         try:
             supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-            
+
             # Check Supabase for user
             result = supabase.table("user").select("*").eq("email", email).execute()
-            
+
             if result.data:
                 supabase_user = result.data[0]
                 print(f"DEBUG: Found Supabase user: {supabase_user.get('username')}")
-                
+
                 stored_password = supabase_user.get('password', '')
                 print(f"DEBUG: Stored password type: {stored_password[:50] if stored_password else 'EMPTY'}...")
-                
+
                 # Use your custom verify_password function
                 from .utils.passwords import verify_password
-                
+
                 if verify_password(password, stored_password):
                     print(f"DEBUG: Password verified with custom PBKDF2")
-                    
+
                     # Get or create Django user
                     try:
                         django_user = User.objects.get(email=email)
                         print(f"DEBUG: Found existing Django user: {django_user.username}")
-                        
+
                         # CRITICAL FIX: Update the Django user's password to Django's format
                         # This ensures authenticate() will work next time
                         django_user.set_password(password)
                         django_user.supabase_id = supabase_user['user_ID']
                         django_user.save()
                         print(f"DEBUG: Updated Django user password")
-                        
+
                     except User.DoesNotExist:
                         print(f"DEBUG: Creating new Django user")
                         # Create new Django user
@@ -86,11 +89,11 @@ def login(request):
                         django_user.supabase_id = supabase_user['user_ID']
                         django_user.save()
                         print(f"DEBUG: Created new Django user: {django_user.username}")
-                    
+
                     # Now authenticate with the updated password
                     print(f"DEBUG: Attempting authentication with updated password...")
                     django_user = authenticate(request, username=email, password=password)
-                    
+
                     if django_user:
                         print(f"DEBUG: Authentication SUCCESS")
                         auth_login(request, django_user)
@@ -111,17 +114,22 @@ def login(request):
                 else:
                     print(f"DEBUG: Password verification failed")
                     messages.error(request, 'Invalid email or password.')
+                    # Add to form non-field errors so template shows it
+                    form.add_error(None, 'Invalid email or password.')
             else:
                 print(f"DEBUG: User not found in Supabase")
                 messages.error(request, 'User not found.')
-                
+                form.add_error(None, 'User not found.')
+
         except Exception as e:
             print(f"DEBUG: Error: {str(e)}")
             import traceback
             traceback.print_exc()
             messages.error(request, 'Authentication error. Please try again.')
+            form.add_error(None, 'Authentication error. Please try again.')
     
-    return render(request, 'login.html')
+    # Render the login template with the form (bound or unbound)
+    return render(request, 'login.html', {'form': form})
 
 # -------------------------------
 # REGISTER VIEW
