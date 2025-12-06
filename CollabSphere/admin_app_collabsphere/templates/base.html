@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Admin Dashboard - CollabSphere{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    {% load static %}
+    <link href="{% static 'css/notifications.css' %}" rel="stylesheet">
+    <link href="{% static 'css/toast-notifications.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/admin_dashboard.css' %}?v=1.0">
+    
+    <!-- Loading Styles INLINE (this ensures it always works) -->
+    <style>
+        /* ===== LOADING OVERLAY STYLES ===== */
+        #global-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        #global-loading.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(61, 116, 195, 0.2);
+            border-radius: 50%;
+            border-top-color: #3D74C3;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 20px;
+            color: #3D74C3;
+            font-weight: 500;
+            font-size: 1.1rem;
+        }
+        
+        /* ===== EXISTING STYLES ===== */
+        body {
+            margin: 0;
+            padding-top: 0; /* Changed from 70px to 0 since we'll use sidebar layout */
+            font-family: "Inter", sans-serif;
+            color: #2D333A;
+            background-color: #FAFBFB;
+        }
+        
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2000;
+            background: white !important;
+        }
+        
+        /* Fix for admin sidebar layout */
+        .admin-wrapper {
+            display: flex;
+            min-height: 100vh;
+            padding-top: 70px; /* Add padding for the fixed navbar */
+        }
+        
+        .admin-sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #3D74C3 0%, #2A56A0 100%);
+            color: white;
+            transition: width 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: calc(100vh - 70px);
+            padding-top: 50px;
+            top: 50px;
+            left: 0;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .admin-main {
+            flex: 1;
+            margin-left: 250px;
+            transition: margin-left 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 70px);
+        }
+        
+        .admin-main.expanded {
+            margin-left: 70px;
+        }
+        
+        .admin-sidebar.collapsed {
+            width: 70px;
+        }
+        
+        .admin-sidebar.collapsed .sidebar-nav span,
+        .admin-sidebar.collapsed .user-details,
+        .admin-sidebar.collapsed .sidebar-header h2 {
+            display: none;
+        }
+        
+        .admin-sidebar.collapsed .logo-container {
+            justify-content: center;
+        }
+        
+        .admin-sidebar.collapsed .nav-item a {
+            justify-content: center;
+        }
+        
+        .admin-sidebar.collapsed .nav-item i {
+            margin-right: 0;
+        }
+        
+        /* Topbar styles */
+        .admin-topbar {
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        /* Content area */
+        .admin-content {
+            padding: 20px;
+            flex: 1;
+            background-color: #FAFBFB;
+        }
+        
+        /* Navbar link styles */
+        nav.navbar a.nav-link:not(.btn) {
+            color: #333 !important;
+            padding: 8px 12px !important;
+            border-radius: 6px !important;
+            display: inline-block !important;
+            background-color: transparent !important;
+            transition: background-color .18s ease, color .18s ease !important;
+            cursor: pointer !important;
+        }
+
+        nav.navbar a.nav-link:not(.btn):hover,
+        nav.navbar a.nav-link:not(.btn).hovering {
+            background-color: rgba(0,0,0,0.08) !important;
+            color: #3D74C3 !important;
+        }
+        
+        .active-team {
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            padding: 5px 10px;
+            color: #FAFBFB;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: default;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .active-team:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        /* Sidebar navigation styles */
+        .sidebar-nav .nav-item a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            margin: 2px 0;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        
+        .sidebar-nav .nav-item a:hover {
+            background-color: rgba(255, 255, 255, 0.82);
+        }
+        
+        .sidebar-nav .nav-item.active a {
+            background-color: rgba(255, 255, 255, 0.82);
+            font-weight: 600;
+        }
+        
+        /* Background for admin pages */
+        .admin-content::after {
+            content: "" !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: -1 !important;
+            background-image: url("/static/images/bg.png") !important;
+            background-repeat: no-repeat !important;
+            background-position: bottom center !important;
+            background-size: contain !important;
+            pointer-events: none !important;
+            opacity: 0.05 !important;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-disable-loading="true">
+    <!-- Loading Overlay - Disabled for admin -->
+    <div id="global-loading" style="display: none;">
+        <div class="text-center">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Navbar (Top Bar) -->
+    <nav class="navbar navbar-light bg-light shadow-sm px-4">
+        <div class="container-fluid">
+            <!-- Left: Logo + Name -->
+            <img src="{% static 'images/logo.png' %}" alt="CollabSphere Logo" style="height:40px; margin-right:10px;">
+            <div style="margin-right: 40px; font-size: 1.5rem; font-weight: bold; color: #3D74C3;">CollabSphere Admin</div>
+            
+            <div class="active-team" style="
+                transition: all 0.3s ease; 
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+                border-radius: 10px; 
+                padding: 5px; 
+                color: #FAFBFB;
+                margin-right: 40px; 
+                font-size: 1.0rem; 
+                font-weight: bold; 
+                cursor: default;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            "
+            onmouseover="this.style.background='linear-gradient(135deg, #059669 0%, #047857 100%)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'" 
+            onmouseout="this.style.background='linear-gradient(135deg, #10b981 0%, #059669 100%)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+                {% if active_team %}
+                    {{ active_team.team_name }}
+                {% else %}
+                    Admin Panel
+                {% endif %}
+            </div>
+
+    </nav>
+
+    <!-- Admin Layout -->
+    <div class="admin-wrapper">
+        <!-- Sidebar -->
+        <nav class="admin-sidebar">
+            <ul class="sidebar-nav flex-grow-1 px-2">
+                <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <a href="{% url 'admin_app_collabsphere:dashboard' %}" class="d-flex align-items-center px-3 py-2 text-white text-decoration-none rounded-2 mb-1">
+                        <i class="fas fa-tachometer-alt me-3"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item {% if active_page == 'users' %}active{% endif %}">
+                    <a href="{% url 'admin_app_collabsphere:user_management' %}" class="d-flex align-items-center justify-content-between px-3 py-2 text-white text-decoration-none rounded-2 mb-1">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-users me-3"></i>
+                            <span>Users</span>
+                        </div>
+                        {% if total_users %}
+                        <span class="badge bg-primary rounded-pill">{{ total_users }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                
+                <li class="nav-item {% if active_page == 'tasks' %}active{% endif %}">
+                    <a href="{% url 'admin_app_collabsphere:task_management' %}" class="d-flex align-items-center justify-content-between px-3 py-2 text-white text-decoration-none rounded-2 mb-1">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-tasks me-3"></i>
+                            <span>Tasks</span>
+                        </div>
+                        {% if total_tasks %}
+                        <span class="badge bg-warning rounded-pill">{{ total_tasks }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                
+                <li class="nav-item {% if active_page == 'teams' %}active{% endif %}">
+                    <a href="{% url 'admin_app_collabsphere:team_management' %}" class="d-flex align-items-center justify-content-between px-3 py-2 text-white text-decoration-none rounded-2 mb-1">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-users-cog me-3"></i>
+                            <span>Teams</span>
+                        </div>
+                        {% if total_teams %}
+                        <span class="badge bg-success rounded-pill">{{ total_teams }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                
+                <li class="nav-item {% if active_page == 'wellbeing' %}active{% endif %}">
+                    <a href="{% url 'admin_app_collabsphere:wellbeing_management' %}" class="d-flex align-items-center justify-content-between px-3 py-2 text-white text-decoration-none rounded-2 mb-1">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-heartbeat me-3"></i>
+                            <span>Wellbeing</span>
+                        </div>
+                        {% if total_checkins %}
+                        <span class="badge bg-info rounded-pill">{{ total_checkins }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                
+                <li class="my-3 px-3">
+                    <div class="border-top border-secondary opacity-25"></div>
+                </li>
+                
+                <li class="nav-item">
+                    <a href="{% url 'home' %}" class="d-flex align-items-center px-3 py-2 text-white text-decoration-none rounded-2 mb-1 back-to-app">
+                        <i class="fas fa-arrow-left me-3"></i>
+                        <span>Back to App</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a href="{% url 'logout' %}" class="d-flex align-items-center px-3 py-2 text-danger text-decoration-none rounded-2">
+                        <i class="fas fa-sign-out-alt me-3"></i>
+                        <span>Logout</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer px-3 py-3 border-top border-secondary">
+                <div class="user-info d-flex align-items-center">
+                    <div class="user-avatar me-2">
+                        <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" 
+                             style="width: 36px; height: 36px; background-color: #3D74C3; color: white; font-weight: bold;">
+                            {{ request.session.admin_username|default:"A"|first|upper }}
+                        </div>
+                    </div>
+                    <div class="user-details">
+                        <div class="text-white fw-bold small">{{ request.session.admin_username|default:"Admin" }}</div>
+                        <div class="text-white-50 small">Administrator</div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Top Navigation inside admin area -->
+            <div class="admin-topbar">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <button class="sidebar-toggle btn btn-outline-secondary border-0 me-3" id="sidebarToggle">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        
+                     
+                    </div>
+    
+                </div>
+            </div>
+            
+            <!-- Messages -->
+            {% if messages %}
+            <div class="messages-container px-3 pt-3">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-2" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Page Content -->
+            <div class="admin-content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal fade" id="exportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Export Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Select data to export:</p>
+                    <div class="list-group">
+                        <a href="{% url 'admin_app_collabsphere:export_users' %}?format=csv" 
+                           class="list-group-item list-group-item-action">
+                            <i class="fas fa-users me-2"></i> Export Users (CSV)
+                        </a>
+                        <a href="{% url 'admin_app_collabsphere:export_tasks' %}?format=csv" 
+                           class="list-group-item list-group-item-action">
+                            <i class="fas fa-tasks me-2"></i> Export Tasks (CSV)
+                        </a>
+                        <a href="{% url 'admin_app_collabsphere:export_users' %}" 
+                           class="list-group-item list-group-item-action">
+                            <i class="fas fa-users me-2"></i> Export Users (JSON)
+                        </a>
+                        <a href="{% url 'admin_app_collabsphere:export_tasks' %}" 
+                           class="list-group-item list-group-item-action">
+                            <i class="fas fa-tasks me-2"></i> Export Tasks (JSON)
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Toast Notifications JS -->
+    <script src="{% static 'js/toast-notifications.js' %}"></script>
+
+    <script>
+        // ===== SIDEBAR TOGGLE FUNCTIONALITY =====
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sidebar toggle
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.querySelector('.admin-sidebar');
+            const mainContent = document.querySelector('.admin-main');
+            
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                    mainContent.classList.toggle('expanded');
+                    
+                    // Save state
+                    const isCollapsed = sidebar.classList.contains('collapsed');
+                    localStorage.setItem('adminSidebarCollapsed', isCollapsed);
+                });
+                
+                // Load saved state
+                const savedState = localStorage.getItem('adminSidebarCollapsed');
+                if (savedState === 'true') {
+                    sidebar.classList.add('collapsed');
+                    mainContent.classList.add('expanded');
+                }
+            }
+            
+            // ===== SIMPLE PAGE LOADING SYSTEM (DISABLED) =====
+            const loadingElement = document.getElementById('global-loading');
+            
+            // Loading is disabled for admin pages
+            loadingElement.style.display = 'none';
+            
+            // ===== NOTIFICATIONS =====
+            loadNotifications();
+            
+            function loadNotifications() {
+                fetch('/notifications/')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.text();
+                    })
+                    .then(html => {
+                        const container = document.getElementById('notifications-container');
+                        if (container) container.innerHTML = html;
+                    })
+                    .catch(error => console.error('Error loading notifications:', error));
+            
+                fetch('/notifications/unread-count/')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const badge = document.getElementById('notification-count');
+                        if (badge) {
+                            if (data.count > 0) {
+                                badge.textContent = data.count;
+                                badge.style.display = 'inline-block';
+                            } else {
+                                badge.style.display = 'none';
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Error loading notification count:', error));
+            }
+            
+            setInterval(loadNotifications, 60000);
+        });
+        
+        // CSRF helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

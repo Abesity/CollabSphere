@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Team Details: {{ team.team_name }}{% endblock %}
+
+{% block content %}
+<div class="team-detail-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h1><i class="fas fa-users-cog me-2"></i>Team Details</h1>
+            <p class="text-muted">View team information and members</p>
+        </div>
+        <div class="header-right">
+            <a href="{% url 'admin_app_collabsphere:team_management' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Teams
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3 class="card-title">{{ team.team_name }}</h3>
+                    
+                    <div class="mb-4">
+                        <label class="text-muted small">Team ID</label>
+                        <p class="mb-0">{{ team.team_ID }}</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="text-muted small">Description</label>
+                        <p class="mb-0">{{ team.description|default:"No description" }}</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="text-muted small">Created Date</label>
+                        <p class="mb-0">{{ team.joined_at|slice:":10"|default:"Unknown" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Team Stats</h3>
+                </div>
+                <div class="card-body">
+                    <div class="stat-box text-center mb-3">
+                        <div class="stat-value">{{ members|length }}</div>
+                        <div class="stat-label">Total Members</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Members -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title mb-0">Team Members</h3>
+        </div>
+        <div class="card-body p-0">
+            {% if members %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Full Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in members %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if member.user.profile_picture %}
+                                    <img src="{{ member.user.profile_picture }}" 
+                                         alt="{{ member.user.username }}" 
+                                         class="rounded-circle me-2"
+                                         width="32" height="32"
+                                         style="object-fit: cover;">
+                                    {% else %}
+                                    <div class="avatar-placeholder-sm rounded-circle me-2 d-flex align-items-center justify-content-center"
+                                         style="width: 32px; height: 32px; background-color: #3D74C3; color: white; font-weight: bold;">
+                                        {{ member.user.username|first|upper }}
+                                    </div>
+                                    {% endif %}
+                                    <span>{{ member.user.username }}</span>
+                                </div>
+                            </td>
+                            <td>{{ member.user.email|default:"-" }}</td>
+                            <td>{{ member.user.full_name|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No members in this team.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

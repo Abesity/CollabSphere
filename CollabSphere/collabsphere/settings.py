@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'teams_app_collabsphere',
     'events_app_collabsphere',
     'notifications_app_collabsphere',
+    'admin_app_collabsphere',
 ]
 
 #Models
@@ -79,7 +80,9 @@ ROOT_URLCONF = 'collabsphere.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+                os.path.join(BASE_DIR, "admin_app_collabsphere", "templates"),
+            ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -88,6 +91,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                  "collabsphere_app.context_processors.user_profile",
                 'teams_app_collabsphere.views.active_team_context',
+                "admin_app_collabsphere.context_processors.admin_stats",
             ],
         },
     },
@@ -148,6 +152,8 @@ STATICFILES_DIRS = [
     BASE_DIR / "registration_app_collabsphere" / "static",
     BASE_DIR / "collabsphere_app" / "static",
     BASE_DIR / "notifications_app_collabsphere" / "static",
+    BASE_DIR / "admin_app_collabsphere" / "static",
+
 ]
 
 LOGIN_URL = '/login/'

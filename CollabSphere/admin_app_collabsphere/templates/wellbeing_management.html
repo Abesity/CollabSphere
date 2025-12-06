@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Wellbeing Management{% endblock %}
+
+{% block content %}
+<div class="wellbeing-management-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h1><i class="fas fa-heartbeat me-2"></i>Wellbeing Check-ins</h1>
+            <p class="text-muted">View and manage wellbeing check-ins</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ total_checkins }}</h3>
+                    <p class="text-muted mb-0">Total Check-ins</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ checkins_today }}</h3>
+                    <p class="text-muted mb-0">Today</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Recent Check-ins</h3>
+        </div>
+        <div class="card-body">
+            {% if checkins %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Mood</th>
+                            <th>Date</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for checkin in checkins %}
+                        <tr>
+                            <td>{{ checkin.checkin_id }}</td>
+                            <td>
+                                {% if checkin.user %}
+                                    {{ checkin.user.username|default:"Unknown" }}
+                                {% else %}
+                                    User {{ checkin.user_id }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if checkin.mood_rating == 5 %}
+                                <span class="badge bg-success">Excellent</span>
+                                {% elif checkin.mood_rating == 4 %}
+                                <span class="badge bg-info">Good</span>
+                                {% elif checkin.mood_rating == 3 %}
+                                <span class="badge bg-warning">Neutral</span>
+                                {% elif checkin.mood_rating == 2 %}
+                                <span class="badge bg-danger">Poor</span>
+                                {% elif checkin.mood_rating == 1 %}
+                                <span class="badge bg-dark">Very Poor</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Not Rated</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ checkin.date_submitted|slice:":10" }}</td>
+                            <td>{{ checkin.notes|truncatechars:50|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-heartbeat fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No wellbeing check-ins found.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

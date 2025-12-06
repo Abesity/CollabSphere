@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+        <h1>Admin Dashboard</h1>
+        <p class="subtitle">Welcome back, {{ request.user.username }}. Here's what's happening in your system.</p>
+    </div>
+    <!-- Recent Activity Grid -->
+    <div class="activity-grid">
+        <!-- Recent Users -->
+        <div class="activity-card">
+            <div class="card-header">
+                <h3><i class="fas fa-user-plus me-2"></i>Recent Users</h3>
+                <a href="{% url 'admin_app_collabsphere:user_management' %}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_users %}
+                <div class="user-list">
+                    {% for user in recent_users %}
+                    <div class="user-item">
+                        <div class="user-avatar">
+                            {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture }}" alt="{{ user.username }}">
+                            {% else %}
+                            <div class="avatar-placeholder">
+                                {{ user.username|first|upper }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="user-info">
+                            <strong>{{ user.username }}</strong>
+                            <small>{{ user.email }}</small>
+                            <span class="text-muted">
+                                {{ user.created_at|slice:":10" }}
+                            </span>
+                        </div>
+                        <a href="{% url 'admin_app_collabsphere:user_detail' user.user_ID %}" 
+                           class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-users fa-2x text-muted mb-3"></i>
+                    <p class="text-muted">No recent users</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Tasks -->
+        <div class="activity-card">
+            <div class="card-header">
+                <h3><i class="fas fa-tasks me-2"></i>Recent Tasks</h3>
+                <a href="{% url 'admin_app_collabsphere:task_management' %}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_tasks %}
+                <div class="task-list">
+                    {% for task in recent_tasks %}
+                    <div class="task-item">
+                        <div class="task-status {% if task.status == 'Completed' %}completed{% elif task.status == 'In Progress' %}in-progress{% else %}pending{% endif %}">
+                            <span class="status-dot"></span>
+                        </div>
+                        <div class="task-info">
+                            <strong>{{ task.title|truncatechars:40 }}</strong>
+                            <small>
+                                {% if task.assigned_to_username %}
+                                Assigned to: {{ task.assigned_to_username }}
+                                {% else %}
+                                Unassigned
+                                {% endif %}
+                            </small>
+                            <span class="text-muted">
+                                Due: {{ task.due_date|default:"No due date" }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-tasks fa-2x text-muted mb-3"></i>
+                    <p class="text-muted">No recent tasks</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Check-ins -->
+        <div class="activity-card">
+            <div class="card-header">
+                <h3><i class="fas fa-heartbeat me-2"></i>Recent Check-ins</h3>
+                <a href="{% url 'admin_app_collabsphere:wellbeing_management' %}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_checkins %}
+                <div class="checkin-list">
+                    {% for checkin in recent_checkins %}
+                    <div class="checkin-item">
+                        <div class="checkin-mood">
+                            {% if checkin.mood_rating >= 4 %}
+                            <span class="badge bg-success">😊 {{ checkin.mood_rating }}/5</span>
+                            {% elif checkin.mood_rating >= 3 %}
+                            <span class="badge bg-warning">😐 {{ checkin.mood_rating }}/5</span>
+                            {% else %}
+                            <span class="badge bg-danger">😔 {{ checkin.mood_rating }}/5</span>
+                            {% endif %}
+                        </div>
+                        <div class="checkin-info">
+                            <strong>
+                                {% if checkin.user and checkin.user.username %}
+                                    {{ checkin.user.username }}
+                                {% else %}
+                                    User #{{ checkin.user_id }}
+                                {% endif %}
+                            </strong>
+                            <small>{{ checkin.notes|truncatechars:50|default:"No notes" }}</small>
+                            <span class="text-muted">
+                                {{ checkin.date_submitted|slice:":16" }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-heartbeat fa-2x text-muted mb-3"></i>
+                    <p class="text-muted">No recent check-ins</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

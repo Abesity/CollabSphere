@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}{% if user %}Edit User{% else %}Create User{% endif %}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1>
+                <i class="fas fa-user{% if user %}-edit{% else %}-plus{% endif %} me-2"></i>
+                {% if user %}Edit User: {{ user.username }}{% else %}Create New User{% endif %}
+            </h1>
+            <p class="text-muted">
+                {% if user %}Update user information{% else %}Add a new user to CollabSphere{% endif %}
+            </p>
+        </div>
+        
+        <!-- Display messages -->
+        {% if messages %}
+        <div class="messages mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Email already exists warning (if any) -->
+        {% if email_exists %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Email <strong>{{ email_exists }}</strong> already exists in the system.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="username" class="form-label">Username *</label>
+                        <input type="text" 
+                               class="form-control {% if form_errors.username %}is-invalid{% endif %}" 
+                               id="username" 
+                               name="username" 
+                               value="{{ user.username|default:'' }}" 
+                               required>
+                        {% if form_errors.username %}
+                        <div class="invalid-feedback">
+                            {{ form_errors.username }}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Unique username for login</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email Address *</label>
+                        <input type="email" 
+                               class="form-control {% if form_errors.email %}is-invalid{% endif %}" 
+                               id="email" 
+                               name="email" 
+                               value="{{ user.email|default:'' }}" 
+                               required>
+                        {% if form_errors.email %}
+                        <div class="invalid-feedback">
+                            {{ form_errors.email }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="password" class="form-label">
+                            {% if user %}New Password{% else %}Password *{% endif %}
+                        </label>
+                        <input type="password" 
+                               class="form-control {% if form_errors.password %}is-invalid{% endif %}" 
+                               id="password" 
+                               name="password"
+                               {% if not user %}required{% endif %}>
+                        {% if form_errors.password %}
+                        <div class="invalid-feedback">
+                            {{ form_errors.password }}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">
+                            {% if user %}Leave blank to keep current password{% else %}User's initial password{% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="confirm_password" class="form-label">Confirm Password</label>
+                        <input type="password" 
+                               class="form-control {% if form_errors.confirm_password %}is-invalid{% endif %}" 
+                               id="confirm_password" 
+                               name="confirm_password">
+                        {% if form_errors.confirm_password %}
+                        <div class="invalid-feedback">
+                            {{ form_errors.confirm_password }}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Re-enter the password</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="full_name" class="form-label">Full Name</label>
+                        <input type="text" 
+                               class="form-control {% if form_errors.full_name %}is-invalid{% endif %}" 
+                               id="full_name" 
+                               name="full_name" 
+                               value="{{ user.full_name|default:'' }}">
+                        {% if form_errors.full_name %}
+                        <div class="invalid-feedback">
+                            {{ form_errors.full_name }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="title" class="form-label">Title/Position</label>
+                        <input type="text" 
+                               class="form-control {% if form_errors.title %}is-invalid{% endif %}" 
+                               id="title" 
+                               name="title" 
+                               value="{{ user.title|default:'' }}">
+                        {% if form_errors.title %}
+                        <div class="invalid-feedback">
+                            {{ form_errors.title }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="role_id" class="form-label">Role</label>
+                        <select class="form-select" id="role_id" name="role_id">
+                            <option value="">No Role</option>
+                            {% for role in roles %}
+                            <option value="{{ role.role_id }}" 
+                                    {% if user.role_id == role.role_id %}selected{% endif %}>
+                                {{ role.role_name }}
+                            </option>
+                            {% empty %}
+                            <!-- If no roles exist, show static options -->
+                            <option value="1" {% if user.role_id == 1 %}selected{% endif %}>Admin</option>
+                            <option value="3" {% if user.role_id == 3 %}selected{% endif %}>User</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            {% if not roles %}Note: Roles not configured in database. Contact administrator.{% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="profile_picture" class="form-label">Profile Picture</label>
+                        <input type="file" 
+                               class="form-control" 
+                               id="profile_picture" 
+                               name="profile_picture"
+                               accept="image/*">
+                        <div class="form-text">Optional profile image (max 5MB, JPG/PNG)</div>
+                        
+                        <!-- Current profile picture preview -->
+                        {% if user and user.profile_picture %}
+                        <div class="mt-2">
+                            <img src="{{ user.profile_picture }}" alt="Current profile" class="img-thumbnail" style="max-width: 100px;">
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="remove_picture" name="remove_picture">
+                                <label class="form-check-label" for="remove_picture">
+                                    Remove current picture
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if user %}Update User{% else %}Create User{% endif %}
+                </button>
+                <a href="{% url 'admin_app_collabsphere:user_management' %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Password validation script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+    
+    function validatePassword() {
+        if (password.value !== confirmPassword.value) {
+            confirmPassword.setCustomValidity("Passwords do not match");
+        } else {
+            confirmPassword.setCustomValidity('');
+        }
+    }
+    
+    password.addEventListener('change', validatePassword);
+    confirmPassword.addEventListener('keyup', validatePassword);
+    
+    // Profile picture preview
+    const profilePictureInput = document.getElementById('profile_picture');
+    if (profilePictureInput) {
+        profilePictureInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Check file size (5MB max)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB');
+                    this.value = '';
+                    return;
+                }
+                
+                // Check file type
+                if (!file.type.match('image.*')) {
+                    alert('Please select an image file');
+                    this.value = '';
+                    return;
+                }
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.form-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 30px;
+}
+
+.form-header {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.form-header h1 {
+    color: #3D74C3;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.form-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+</style>
+{% endblock %}

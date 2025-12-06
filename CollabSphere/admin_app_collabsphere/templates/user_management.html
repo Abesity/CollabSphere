@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="user-management-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <h1><i class="fas fa-users me-2"></i>User Management</h1>
+            <p class="text-muted">Manage all registered users in CollabSphere</p>
+        </div>
+        <div class="header-right">
+            <a href="{% url 'admin_app_collabsphere:user_create' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-1"></i> Add New User
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-label">Total Users</span>
+            <span class="stat-value">{{ total_users }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Active Today</span>
+            <span class="stat-value">{{ users_today|default:"0" }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">New This Week</span>
+            <span class="stat-value" id="weeklyUsers">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">All Users</h3>
+            <div class="card-tools">
+                <div class="input-group input-group-sm" style="width: 200px;">
+                    <input type="text" class="form-control" placeholder="Search users..." id="userSearch">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if users %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Full Name</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.user_ID }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if user.profile_picture %}
+                                    <img src="{{ user.profile_picture }}" 
+                                         alt="{{ user.username }}" 
+                                         class="rounded-circle me-2"
+                                         width="32" height="32"
+                                         style="object-fit: cover;">
+                                    {% else %}
+                                    <div class="avatar-placeholder-sm rounded-circle me-2 d-flex align-items-center justify-content-center"
+                                         style="width: 32px; height: 32px; background-color: #3D74C3; color: white; font-weight: bold;">
+                                        {{ user.username|first|upper }}
+                                    </div>
+                                    {% endif %}
+                                    <span>{{ user.username }}</span>
+                                </div>
+                            </td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.full_name|default:"-" }}</td>
+                            <td>{{ user.created_at|slice:":10" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'admin_app_collabsphere:user_detail' user.user_ID %}" 
+                                       class="btn btn-outline-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'admin_app_collabsphere:user_edit' user.user_ID %}" 
+                                       class="btn btn-outline-warning" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn btn-outline-danger delete-user-btn" 
+                                            title="Delete"
+                                            data-user-id="{{ user.user_ID }}"
+                                            data-username="{{ user.username }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No users found in the system.</p>
+                <a href="{% url 'admin_app_collabsphere:user_create' %}" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Add First User
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% if users %}
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted">
+                        Showing {{ users|length }} of {{ total_users }} users
+                    </small>
+                </div>
+                <div>
+                    <nav aria-label="User pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">Previous</a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete user <strong id="deleteUserName"></strong>?</p>
+                <p class="text-danger">
+                    <small>This action cannot be undone. All user data will be permanently removed.</small>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="" id="deleteUserForm">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete User</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // User search functionality
+    const userSearch = document.getElementById('userSearch');
+    const usersTable = document.getElementById('usersTable');
+    
+    if (userSearch && usersTable) {
+        userSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = usersTable.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+            
+            for (let row of rows) {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            }
+        });
+    }
+    
+    // Delete user confirmation
+    const deleteButtons = document.querySelectorAll('.delete-user-btn');
+    const deleteUserModal = document.getElementById('deleteUserModal');
+    const deleteUserName = document.getElementById('deleteUserName');
+    const deleteUserForm = document.getElementById('deleteUserForm');
+    
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const username = this.getAttribute('data-username');
+            
+            deleteUserName.textContent = username;
+            deleteUserForm.action = "{% url 'admin_app_collabsphere:user_delete' 0 %}".replace('0', userId);
+            
+            const modal = new bootstrap.Modal(deleteUserModal);
+            modal.show();
+        });
+    });
+    
+    // Load weekly user stats
+    fetch("{% url 'admin_app_collabsphere:api_user_stats' %}")
+        .then(response => response.json())
+        .then(data => {
+            const weeklyUsers = document.getElementById('weeklyUsers');
+            if (weeklyUsers && data.data) {
+                // Sum users from last 7 days
+                const today = new Date();
+                const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                
+                const recentUsers = data.data.filter(item => {
+                    const itemDate = new Date(item.date);
+                    return itemDate >= weekAgo;
+                });
+                
+                const weeklyCount = recentUsers.reduce((sum, item) => sum + (item.count || 0), 0);
+                weeklyUsers.textContent = weeklyCount;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading weekly stats:', error);
+        });
+});
+</script>
+{% endblock %}

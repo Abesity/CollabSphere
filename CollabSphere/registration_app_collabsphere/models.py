@@ -1,24 +1,16 @@
-
-
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser
-from django.db import models
 from supabase import create_client
 
+# Create client once
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-
 
 class CustomUser(AbstractUser):
     supabase_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
 
     def __str__(self):
         return self.username
-
-    # -------------------------------
-    # SUPABASE USER METHODS
-    # -------------------------------
 
     @classmethod
     def get_by_email(cls, email):
@@ -47,4 +39,18 @@ class CustomUser(AbstractUser):
         """Check if a username is already in Supabase."""
         result = supabase.table("user").select("user_ID").eq("username", username).execute()
         return bool(result.data)
-
+    
+    @staticmethod
+    def login_admin(email, password):
+        """
+        Only allow the hardcoded admin login:
+        email='admin@example.com', password='admin123'
+        """
+        if email == "admin@example.com" and password == "admin123":
+            return {
+                "user_ID": 0,
+                "username": "admin",
+                "email": "admin@example.com",
+                "is_admin": True
+            }
+        return None
