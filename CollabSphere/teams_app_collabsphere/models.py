@@ -3,6 +3,7 @@ from django.conf import settings
 from supabase import create_client
 import os
 import uuid
+from datetime import datetime
 
 # Get user model from settings
 User = settings.AUTH_USER_MODEL
@@ -510,13 +511,36 @@ class Team:
                         .select('*')\
                         .eq('user_id', user_id)\
                         .eq('team_ID', team_ID)\
-                        .is_('left_at', None)\
                         .execute()
                     
-                    # Only add if not already an active member
-                    if not existing_member.data:
+                    if existing_member.data:
+                        # Member exists (either active or previously removed)
+                        existing_record = existing_member.data[0]
+                        
+                        if existing_record.get('left_at') is None:
+                            # Already active member
+                            print(f"INFO: Member {user_id} is already in the team")
+                        else:
+                            # Member was previously removed - re-add them by clearing left_at
+                            try:
+                                print(f"DEBUG: Re-adding previously removed member {user_id}")
+                                update_result = supabase.table('user_team')\
+                                    .update({'left_at': None})\
+                                    .eq('user_id', user_id)\
+                                    .eq('team_ID', team_ID)\
+                                    .execute()
+                                
+                                if update_result.data:
+                                    print(f"SUCCESS: Re-added member {user_id} to team")
+                                else:
+                                    print(f"WARNING: No data returned when re-adding member {user_id}")
+                            except Exception as e:
+                                print(f"ERROR re-adding member {user_id}: {e}")
+                                continue
+                    else:
+                        # New member - insert record
                         try:
-                            print(f"DEBUG: Attempting to add member {user_id} to team")
+                            print(f"DEBUG: Attempting to add new member {user_id} to team")
                             # Add new member with better error handling
                             add_result = supabase.table('user_team')\
                                 .insert({
@@ -548,8 +572,6 @@ class Team:
                                 print(f"ERROR adding member {user_id}: {e}")
                                 # For non-duplicate errors, continue with other members
                                 continue
-                    else:
-                        print(f"INFO: Member {user_id} is already in the team")
             
             # Handle member removals
             if members_to_remove:
@@ -559,18 +581,24 @@ class Team:
                     if user_id != team_owner_id:
                         try:
                             # Mark member as left instead of deleting
+                            # Remove the .is_('left_at', None) filter from update to ensure it always updates
                             remove_result = supabase.table('user_team')\
-                                .update({'left_at': 'now()'})\
+                                .update({'left_at': datetime.now().isoformat()})\
                                 .eq('user_id', user_id)\
                                 .eq('team_ID', team_ID)\
-                                .is_('left_at', None)\
                                 .execute()
-                                
-                            if not remove_result.data:
-                                print(f"Warning: Failed to remove member {user_id} from team")
+                            
+                            print(f"DEBUG: Remove result for user {user_id}: data length={len(remove_result.data) if remove_result.data else 0}")
+                            if remove_result.data and len(remove_result.data) > 0:
+                                print(f"DEBUG: Successfully marked member {user_id} as left from team")
+                                print(f"DEBUG: Updated row: {remove_result.data[0]}")
+                            else:
+                                print(f"Warning: No rows updated for member {user_id} - user may not be in team")
                                 
                         except Exception as e:
                             print(f"Error removing member {user_id}: {e}")
+                            import traceback
+                            traceback.print_exc()
                             # Continue with other removals even if one fails
 
             return {'success': True, 'message': 'Team updated successfully'}
@@ -693,7 +721,7 @@ class UserTeam:
                 .execute()
             
             if team_ID:
-                # Get users who are in the SPECIFIC team
+                # Get users who are CURRENTLY in the SPECIFIC team (left_at IS NULL)
                 team_users_response = supabase.table('user_team')\
                     .select('user_id')\
                     .eq('team_ID', team_ID)\
@@ -702,13 +730,14 @@ class UserTeam:
                 
                 team_user_ids = {member['user_id'] for member in team_users_response.data} if team_users_response.data else set()
                 
-                # Filter users who are NOT in this specific team
+                # Filter users who are NOT currently in this specific team
+                # This allows re-adding users who left (left_at is not NULL)
                 available_users = [
                     user for user in all_users_response.data 
                     if user['user_ID'] not in team_user_ids
                 ]
             else:
-                # Original behavior: get users not in any team
+                # Original behavior: get users not in any active team
                 team_users_response = supabase.table('user_team')\
                     .select('user_id')\
                     .is_('left_at', None)\
@@ -716,7 +745,7 @@ class UserTeam:
                 
                 team_user_ids = {member['user_id'] for member in team_users_response.data} if team_users_response.data else set()
                 
-                # Filter users who are not in any team
+                # Filter users who are not in any active team
                 available_users = [
                     user for user in all_users_response.data 
                     if user['user_ID'] not in team_user_ids
