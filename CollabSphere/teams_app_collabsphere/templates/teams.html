@@ -15,22 +15,7 @@
 {% block content %}
 <div class="container-fluid dashboard-container">
   <main class="dashboard-main">
-  <!-- Add this after the search section -->
-  {% if active_team %}
-  <section class="current-team-section">
-      <div class="current-team-header">
-          <div class="current-team-info">
-              <span class="current-team-label">Current Active Team:</span>
-              <div class="current-team-details">
-                  {% if active_team.icon_url %}
-                  <img src="{{ active_team.icon_url }}" alt="{{ active_team.team_name }}" class="current-team-icon">
-                  {% endif %}
-                  <strong class="current-team-name">{{ active_team.team_name }}</strong>
-              </div>
-          </div>
-      </div>
-  </section>
-  {% endif %}
+
     <!-- Header Section -->
     <section class="welcome-text">
       <h1>Your Teams</h1>

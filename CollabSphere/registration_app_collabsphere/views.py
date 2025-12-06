@@ -89,3 +89,9 @@ def logout(request):
     auth_logout(request)
     request.session.flush()
     return redirect("login")
+
+# -------------------------------
+# FAQ
+# -------------------------------
+def faq(request):
+    return render(request, "faq.html")

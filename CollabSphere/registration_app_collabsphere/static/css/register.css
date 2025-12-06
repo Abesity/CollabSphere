@@ -34,7 +34,7 @@ body::after {
   margin: 1rem auto;
   background: #fff;
   border: 2px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: 0 2px 8px rgba(129, 137, 176, 0.18);
   width: calc(100% - 2rem);
   max-width: 400px;
@@ -66,7 +66,7 @@ input[type="password"],
 input[type="text"] {
   width: 100%;
   padding: 0.625rem 0.75rem;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1.8px solid var(--card-border);
   font-size: 0.9rem;
   transition: all 0.3s ease;
@@ -86,7 +86,7 @@ input:focus {
   border: none;
   width: 100%;
   padding: 0.75rem;
-  border-radius: 8px;
+  border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
   margin-top: 0.5rem;
@@ -155,7 +155,7 @@ input:focus {
 .btn-google {
   width: 100%;
   text-align: center;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 0.625rem;
   font-weight: 500;
   text-decoration: none;

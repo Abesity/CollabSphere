@@ -1,5 +1,8 @@
 <!-- templates/partials/checkins_modal.html -->
 {% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/checkins_modal.css' %}?v=1.0">
+{% endblock %}
 
 <div class="modal fade" id="wellbeingModal" tabindex="-1" aria-labelledby="wellbeingModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
