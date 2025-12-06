@@ -11,24 +11,70 @@
     {% load static %}
     <link href="{% static 'css/notifications.css' %}" rel="stylesheet">
     <link href="{% static 'css/toast-notifications.css' %}" rel="stylesheet">
-    {% block extra_css %}
+    
+    <!-- Loading Styles INLINE (this ensures it always works) -->
     <style>
-    body {
-        margin: 0;
-        padding-top: 70px; 
-        font-family: "Inter", sans-serif;
-        color: #2D333A;
-        background-color: #FAFBFB;
-    }
-
-    .navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 2000;
-    }
-
+        /* ===== LOADING OVERLAY STYLES ===== */
+        #global-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        #global-loading.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(61, 116, 195, 0.2);
+            border-radius: 50%;
+            border-top-color: #3D74C3;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 20px;
+            color: #3D74C3;
+            font-weight: 500;
+            font-size: 1.1rem;
+        }
+        
+        /* ===== EXISTING STYLES ===== */
+        body {
+            margin: 0;
+            padding-top: 70px; 
+            font-family: "Inter", sans-serif;
+            color: #2D333A;
+            background-color: #FAFBFB;
+        }
+        
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2000;
+            background: white !important;
+        }
+        
+        
     body {
     padding-top: 60px;
     }
@@ -46,7 +92,7 @@
     nav.navbar a.nav-link:not(.btn):hover,
     nav.navbar a.nav-link:not(.btn).hovering {
     background-color: rgba(0,0,0,0.08) !important; /* slightly darker */
-    color: #0d6efd !important;
+    color: #3D74C3 !important;
     }
     
     .page-container {
@@ -83,7 +129,7 @@
 
     .navbar a.nav-link:hover {
         background-color: rgba(0,0,0,0.08);
-        color: #0d6efd !important;
+        color: #3D74C3 !important;
     }
 
     .active-team {
@@ -137,34 +183,43 @@
         opacity: 0.1 !important;
     }
     </style>
-    {% endblock %}
+    
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- Loading Overlay - Always visible initially -->
+    <div id="global-loading" class="active">
+        <div class="text-center">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading...</div>
+        </div>
+    </div>
+
     <!-- Navbar -->
     <nav class="navbar navbar-light bg-light shadow-sm px-4">
         <div class="container-fluid">
             <!-- Left: Logo + Name -->
-          <img src="{% static 'images/logo.png' %}" alt="CollabSphere Logo" style="height:40px; margin-right:10px;">
-          <div style="margin-right: 40px; font-size: 1.5rem; font-weight: bold; color: #3D74C3;">CollabSphere</div>
+            <img src="{% static 'images/logo.png' %}" alt="CollabSphere Logo" style="height:40px; margin-right:10px;">
+            <div style="margin-right: 40px; font-size: 1.5rem; font-weight: bold; color: #3D74C3;">CollabSphere</div>
             
-        <div class="active-team" style="
-            transition: all 0.3s ease; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-            border-radius: 10px; 
-            padding: 5px; 
-            color: #FAFBFB;
-            margin-right: 40px; 
-            font-size: 1.0rem; 
-            font-weight: bold; 
-            cursor: default;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        "
-        onmouseover="this.style.background='linear-gradient(135deg, #059669 0%, #047857 100%)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'" 
-        onmouseout="this.style.background='linear-gradient(135deg, #10b981 0%, #059669 100%)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
-            {% if active_team %}
-                {{ active_team.team_name }}
-            {% endif %}
-        </div>
+            <div class="active-team" style="
+                transition: all 0.3s ease; 
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+                border-radius: 10px; 
+                padding: 5px; 
+                color: #FAFBFB;
+                margin-right: 40px; 
+                font-size: 1.0rem; 
+                font-weight: bold; 
+                cursor: default;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            "
+            onmouseover="this.style.background='linear-gradient(135deg, #059669 0%, #047857 100%)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'" 
+            onmouseout="this.style.background='linear-gradient(135deg, #10b981 0%, #059669 100%)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+                {% if active_team %}
+                    {{ active_team.team_name }}
+                {% endif %}
+            </div>
 
             <!-- Right: Nav links -->
             <div class="d-flex align-items-center ms-auto">
@@ -176,19 +231,17 @@
                 <!-- User logo/avatar -->
                 <div class="dropdown">
                     <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
-          {% load static %}
-            <img id="profile-img"
-                src="{% if user_data.profile_picture %}{{ user_data.profile_picture }}{% else %}{% static 'images/circle-user.png' %}{% endif %}"
-                alt="Profile Image"
-                class="rounded-circle border border-2 border-primary shadow-sm"
-                width="40" height="40"
-                style="object-fit: cover; cursor: pointer; "
-                onerror="this.onerror=null; this.src='/static/images/circle-user.png'">
-
-
+                        {% load static %}
+                        <img id="profile-img"
+                            src="{% if user_data.profile_picture %}{{ user_data.profile_picture }}{% else %}{% static 'images/circle-user.png' %}{% endif %}"
+                            alt="Profile Image"
+                            class="rounded-circle border border-2 border-primary shadow-sm"
+                            width="40" height="40"
+                            style="object-fit: cover; cursor: pointer; "
+                            onerror="this.onerror=null; this.src='/static/images/circle-user.png'">
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-                        <li><a class="dropdown-item"  href="{% url 'profile' %}">Profile</a></li>
+                        <li><a class="dropdown-item" href="{% url 'profile' %}">Profile</a></li>
                         <li><a class="dropdown-item position-relative" href="{% url 'notifications:list' %}">
                             Notifications
                             <span class="notification-badge" id="notification-count" style="display: none;">0</span>
@@ -201,79 +254,212 @@
         </div>
     </nav>
 
-  <!-- Page Content -->
-  <div class="page-container">
-    {% block content %}{% endblock %}
-  </div>
+    <!-- Page Content -->
+    <div class="page-container">
+        {% block content %}{% endblock %}
+    </div>
 
-</body>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ===== SIMPLE PAGE LOADING SYSTEM =====
+        (function() {
+        const loadingElement = document.getElementById('global-loading');
+        
+        // Check if loading is disabled for this page
+        if (document.body.dataset.disableLoading === 'true') {
+            loadingElement.style.display = 'none';
+            return; // Skip all loading logic
+        }
+        
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                loadingElement.classList.remove('active');
+            }, 500);
+        });
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        loadNotifications();
-    });
-
-    function loadNotifications() {
-        fetch('/notifications/')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.text();
-            })
-            .then(html => {
-                const container = document.getElementById('notifications-container');
-                if (container) {
-                    container.innerHTML = html;
-                }
-            })
-            .catch(error => {
-                console.error('Error loading notifications:', error);
-            });
-
-        fetch('/notifications/unread-count/')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                const badge = document.getElementById('notification-count');
-                if (badge) {
-                    if (data.count > 0) {
-                        badge.textContent = data.count;
-                        badge.style.display = 'inline-block';
+        // Show loading when ANY link is clicked (except dropdowns)
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (link && link.href && 
+                    !link.href.startsWith('javascript:') && 
+                    !link.href.includes('#') &&
+                    link.target !== '_blank' &&
+                    !link.hasAttribute('data-bs-toggle') &&
+                    link.getAttribute('href') !== '#') {
+                    
+                    // Check if it's an internal link
+                    const currentOrigin = window.location.origin;
+                    const targetOrigin = new URL(link.href, window.location.href).origin;
+                    
+                    if (currentOrigin === targetOrigin) {
+                        // Show loading immediately for internal links
+                        loadingElement.classList.add('active');
                     } else {
-                        badge.style.display = 'none';
+                        // For external links, show loading briefly
+                        loadingElement.classList.add('active');
+                        setTimeout(() => {
+                            loadingElement.classList.remove('active');
+                        }, 1500);
                     }
                 }
-            })
-            .catch(error => {
-                console.error('Error loading notification count:', error);
             });
-    }
-
-    setInterval(loadNotifications, 60000);
-
-    function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
+            
+            // 3. Show loading for form submissions
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                if (form.method.toLowerCase() === 'post') {
+                    loadingElement.classList.add('active');
+                }
+            });
+            
+            // 4. Show loading when browser back/forward buttons are used
+            window.addEventListener('popstate', function() {
+                loadingElement.classList.add('active');
+            });
+            
+            // 5. Fallback: hide loading after max 3 seconds
+            setTimeout(() => {
+                loadingElement.classList.remove('active');
+            }, 3000);
+            
+            // 6. Ensure loading shows when page is unloading (user navigates away)
+            window.addEventListener('beforeunload', function() {
+                loadingElement.classList.add('active');
+            });
+        })();
+        
+        // ===== NOTIFICATIONS =====
+        document.addEventListener('DOMContentLoaded', function() {
+            loadNotifications();
+        });
+        
+        function loadNotifications() {
+            // Show mini-loading for notifications (optional)
+            const loadingElement = document.getElementById('global-loading');
+            
+            fetch('/notifications/')
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(html => {
+                    const container = document.getElementById('notifications-container');
+                    if (container) container.innerHTML = html;
+                })
+                .catch(error => console.error('Error loading notifications:', error));
+        
+            fetch('/notifications/unread-count/')
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    const badge = document.getElementById('notification-count');
+                    if (badge) {
+                        if (data.count > 0) {
+                            badge.textContent = data.count;
+                            badge.style.display = 'inline-block';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => console.error('Error loading notification count:', error));
         }
-      }
-      return cookieValue;
-    }
-</script>
-
-<!-- Toast Notifications JS -->
-<script src="{% static 'js/toast-notifications.js' %}"></script>
+        
+        setInterval(loadNotifications, 60000);
+        
+        // ===== IMPROVED: Track all AJAX requests =====
+        (function() {
+            const loadingElement = document.getElementById('global-loading');
+            let ajaxCount = 0;
+            
+            // Override fetch
+            const originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                const url = args[0];
+                
+                // Don't show loading for notifications (they're frequent)
+                if (url && (url.includes('/notifications/') || url.includes('/unread-count/'))) {
+                    return originalFetch.apply(this, args);
+                }
+                
+                // Show loading for other AJAX calls
+                ajaxCount++;
+                if (ajaxCount === 1) {
+                    loadingElement.classList.add('active');
+                }
+                
+                return originalFetch.apply(this, args)
+                    .then(response => {
+                        ajaxCount--;
+                        if (ajaxCount === 0) {
+                            setTimeout(() => {
+                                loadingElement.classList.remove('active');
+                            }, 300);
+                        }
+                        return response;
+                    })
+                    .catch(error => {
+                        ajaxCount--;
+                        if (ajaxCount === 0) {
+                            loadingElement.classList.remove('active');
+                        }
+                        throw error;
+                    });
+            };
+            
+            // Override XMLHttpRequest
+            const originalOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(method, url) {
+                this._url = url;
+                return originalOpen.apply(this, arguments);
+            };
+            
+            const originalSend = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.send = function(...args) {
+                if (this._url && !this._url.includes('/notifications/')) {
+                    ajaxCount++;
+                    if (ajaxCount === 1) {
+                        loadingElement.classList.add('active');
+                    }
+                    
+                    this.addEventListener('loadend', () => {
+                        ajaxCount--;
+                        if (ajaxCount === 0) {
+                            setTimeout(() => {
+                                loadingElement.classList.remove('active');
+                            }, 300);
+                        }
+                    });
+                }
+                
+                return originalSend.apply(this, args);
+            };
+        })();
+        
+        // CSRF helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+    
+    <!-- Toast Notifications JS -->
+    <script src="{% static 'js/toast-notifications.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
