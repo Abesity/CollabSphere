@@ -365,8 +365,9 @@ class Team:
                 
                 for supabase_member_id in supabase_member_ids:
                     try:
-                        # Skip if trying to add owner again (already added above)
-                        if supabase_member_id == owner_supabase_id:
+                        # IMPORTANT: Prevent adding yourself
+                        if int(supabase_member_id) == int(owner_supabase_id):
+                            print(f"INFO: Skipping owner {supabase_member_id} - cannot add yourself")
                             continue
                             
                         # Add member to team
@@ -391,7 +392,7 @@ class Team:
         except Exception as e:
             print(f"Error creating team: {e}")
             return {'success': False, 'error': f'Database error: {str(e)}'}
-    
+      
     @staticmethod
     def get_active_team_members(django_user):
         """Get members of user's active team"""
@@ -565,9 +566,9 @@ class Team:
             if team_members:
                 print(f"DEBUG: Processing {len(team_members)} members to add")
                 for user_id in team_members:
-                    # Skip if trying to add owner (they're already a member)
-                    if user_id == team_owner_id:
-                        print(f"DEBUG: Skipping owner {user_id}")
+                    # IMPORTANT: Prevent adding yourself
+                    if int(user_id) == int(current_user_id):
+                        print(f"DEBUG: Skipping self-addition {user_id}")
                         continue
                     
                     # Verify user exists in database
@@ -788,13 +789,18 @@ class UserTeam:
     """UserTeam model handling user-team relationships"""
     
     @staticmethod
-    def get_users_without_teams(team_ID=None):
-        """Get users who don't belong to the specified team (or any team if no team_ID provided)"""
+    def get_users_without_teams(team_ID=None, exclude_user_id=None):
+        """Get users who don't belong to the specified team, excluding a specific user"""
         try:
             # Get all users from Supabase
-            all_users_response = supabase.table('user')\
-                .select('user_ID, username, email, profile_picture')\
-                .execute()
+            query = supabase.table('user')\
+                .select('user_ID, username, email, profile_picture')
+            
+            # If exclude_user_id is provided, exclude that user
+            if exclude_user_id:
+                query = query.neq('user_ID', exclude_user_id)
+                
+            all_users_response = query.execute()
             
             if team_ID:
                 # Get users who are CURRENTLY in the SPECIFIC team (left_at IS NULL)

@@ -1256,7 +1256,7 @@ def team_create(request):
     
     context = {
         'users': users,
-        'current_member_ids': [],  
+        'member_ids': [],  
         'active_page': 'teams',
     }
     return render(request, 'team_form.html', context)
@@ -1326,7 +1326,7 @@ def team_edit(request, team_id):
                     selected_member_ids.append(str(user_id_owner))
                 
                 # Update team members
-                current_member_set = set(member_ids)
+                current_member_set = set(member_ids)  # Changed from member_ids
                 new_member_set = set(selected_member_ids)
                 
                 # Members to add
@@ -1364,11 +1364,10 @@ def team_edit(request, team_id):
             logger.error(f"Error updating team: {str(e)}")
             messages.error(request, f"Error updating team: {str(e)}")
     
-    # Update context to use 'current_member_ids' which is what the template expects
     context = {
         'team': team,
         'users': users,
-        'current_member_ids': member_ids,  # Changed from 'member_ids' to 'current_member_ids'
+        'member_ids': member_ids, 
         'active_page': 'teams',
     }
     return render(request, 'team_form.html', context)
