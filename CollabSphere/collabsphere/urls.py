@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
+from admin_app_collabsphere import views as admin_views
 
 def root_redirect(request):
     # If hardcoded admin is logged in, redirect to admin dashboard

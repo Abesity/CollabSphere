@@ -6,6 +6,7 @@ from django.utils import timezone
 import json
 from .models import AdminSupabaseService
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +45,12 @@ def admin_dashboard(request):
         'total_teams': stats.get('total_teams', 0),
         'total_checkins': stats.get('total_checkins', 0),
         'users_today': stats.get('users_today', 0),
+        'total_events': stats.get('total_events', 0), 
         'tasks_today': stats.get('tasks_today', 0),
         'recent_users': stats.get('recent_users', []),
         'recent_tasks': stats.get('recent_tasks', []),
+        'recent_checkins': stats.get('recent_checkins', []),
+        'recent_events': stats.get('recent_events', []), 
         'active_page': 'dashboard',
     }
     return render(request, 'dashboard.html', context)
@@ -396,10 +400,12 @@ def task_management(request):
 
 @admin_required
 def task_detail(request, task_id):
-    """View task details."""
+    """View task details. Returns modal for AJAX, full page for regular requests."""
     task = AdminSupabaseService.get_task_by_id(task_id)
     
     if not task:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'Task not found'}, status=404)
         messages.error(request, f"Task with ID {task_id} not found.")
         return redirect('admin_app_collabsphere:task_management')
     
@@ -407,6 +413,11 @@ def task_detail(request, task_id):
         'task': task,
         'active_page': 'tasks',
     }
+    
+    # Return modal markup for AJAX requests, full page for regular requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'task_detail_modal.html', context)
+    
     return render(request, 'task_detail.html', context)
 
 # -------------------------------
@@ -438,9 +449,26 @@ def team_detail(request, team_id):
     
     members = AdminSupabaseService.get_team_members(team_id)
     
+    # Normalize member IDs safely — some member entries may not include a nested 'user_id'
+    member_ids = []
+    for member in (members or []):
+        user = member.get('user') if isinstance(member, dict) else None
+        if not user:
+            continue
+        # accept several possible key names for the ID and skip if missing
+        uid = user.get('user_id') if isinstance(user, dict) else None
+        if uid is None:
+            uid = user.get('id') if isinstance(user, dict) else None
+        if uid is None:
+            uid = user.get('userID') if isinstance(user, dict) else None
+        if uid is None:
+            continue
+        member_ids.append(str(uid))
+
     context = {
         'team': team,
         'members': members,
+        'member_ids': member_ids,
         'active_page': 'teams',
     }
     return render(request, 'team_detail.html', context)
@@ -493,6 +521,49 @@ def search(request):
     return render(request, 'search_results.html', context)
 
 # -------------------------------
+# Event MANAGEMENT VIEWS
+# -------------------------------
+@admin_required
+def event_management(request):
+    """List all calendar events."""
+    events = AdminSupabaseService.get_all_events()
+    # Compute simple stats expected by the template
+    today = timezone.now().date()
+    events_today = 0
+    upcoming_count = 0
+    completed_count = 0
+    for ev in (events or []):
+        try:
+            st = ev.get('start_time')
+            en = ev.get('end_time')
+            if hasattr(st, 'date') and st.date() == today:
+                events_today += 1
+            if hasattr(st, 'date') and st.date() > today:
+                upcoming_count += 1
+            if hasattr(en, 'date') and en.date() < today:
+                completed_count += 1
+        except Exception:
+            continue
+
+    # Provide list of all users for the Create Event modal attendees
+    try:
+        all_users = AdminSupabaseService.get_all_users()
+    except Exception:
+        all_users = []
+
+    context = {
+        'events': events,
+        'total_events': len(events),
+        'events_today': events_today,
+        'upcoming_events': upcoming_count,
+        'completed_events': completed_count,
+        'all_users': all_users,
+        'active_page': 'events',
+    }
+    return render(request, 'event_management.html', context)
+
+
+# -------------------------------
 # API VIEWS (JSON endpoints)
 # -------------------------------
 
@@ -519,6 +590,134 @@ def api_checkin_stats(request):
     """API endpoint for check-in statistics."""
     stats = AdminSupabaseService.get_checkin_stats()
     return JsonResponse(stats)
+
+@admin_required
+@require_GET
+def api_event_details(request, event_id):
+    """API endpoint for event details."""
+    try:
+        event = AdminSupabaseService.get_event_by_id(event_id)
+        if not event:
+            return JsonResponse({'error': 'Event not found'}, status=404)
+        
+        # Format response for the modal
+        data = {
+            'id': event['event_id'],
+            'title': event.get('title', ''),
+            'description': event.get('description', ''),
+            'event_type': event.get('event_type', 'meeting'),
+            'priority': event.get('priority', 'medium'),
+            'status': event.get('status', 'upcoming'),
+            'start_date': event.get('start_time', '').strftime('%Y-%m-%d') if event.get('start_time') else '',
+            'start_time': event.get('start_time', '').strftime('%H:%M') if event.get('start_time') else '',
+            'end_date': event.get('end_time', '').strftime('%Y-%m-%d') if event.get('end_time') else '',
+            'end_time': event.get('end_time', '').strftime('%H:%M') if event.get('end_time') else '',
+            'location': event.get('location', ''),
+            'organizer': event.get('user', {}).get('username', 'Unknown') if isinstance(event.get('user'), dict) else 'Unknown',
+            'organizer_initial': (event.get('user', {}).get('username', 'U')[0].upper()) if isinstance(event.get('user'), dict) else 'U',
+            'organizer_email': event.get('user', {}).get('email', '') if isinstance(event.get('user'), dict) else '',
+            'attendees': []  # You'll need to implement attendee fetching
+        }
+        return JsonResponse(data)
+    except Exception as e:
+        logger.error(f"Error fetching event details: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# -------------------------------
+# ADDITIONAL API VIEWS
+# -------------------------------
+
+
+@admin_required
+@require_GET
+def api_teams(request):
+    """Return all teams as JSON."""
+    try:
+        teams = AdminSupabaseService.get_all_teams() or []
+        return JsonResponse({'teams': teams})
+    except Exception as e:
+        logger.error(f"Error fetching teams: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@admin_required
+@require_GET
+def api_team_detail(request, team_id):
+    """Return a single team by ID as JSON."""
+    try:
+        team = AdminSupabaseService.get_team_by_id(team_id)
+        if not team:
+            return JsonResponse({'error': 'Team not found'}, status=404)
+        return JsonResponse({'team': team})
+    except Exception as e:
+        logger.error(f"Error fetching team {team_id}: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@admin_required
+@require_GET
+def api_events(request):
+    """Return all events as JSON."""
+    try:
+        events = AdminSupabaseService.get_all_events() or []
+        return JsonResponse({'events': events})
+    except Exception as e:
+        logger.error(f"Error fetching events: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@admin_required
+@require_GET
+def api_tasks(request):
+    """Return all tasks as JSON."""
+    try:
+        tasks = AdminSupabaseService.get_all_tasks() or []
+        return JsonResponse({'tasks': tasks})
+    except Exception as e:
+        logger.error(f"Error fetching tasks: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@admin_required
+@require_GET
+def api_task_detail(request, task_id):
+    """Return a single task by ID as JSON."""
+    try:
+        task = AdminSupabaseService.get_task_by_id(task_id)
+        if not task:
+            return JsonResponse({'error': 'Task not found'}, status=404)
+        return JsonResponse({'task': task})
+    except Exception as e:
+        logger.error(f"Error fetching task {task_id}: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@admin_required
+@require_GET
+def api_checkins(request):
+    """Return all wellbeing check-ins as JSON."""
+    try:
+        checkins = AdminSupabaseService.get_all_checkins() or []
+        return JsonResponse({'checkins': checkins})
+    except Exception as e:
+        logger.error(f"Error fetching checkins: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@admin_required
+@require_GET
+def api_checkin_detail(request, checkin_id):
+    """Return a single check-in by ID as JSON."""
+    try:
+        checkin = AdminSupabaseService.get_checkin_by_id(checkin_id)
+        if not checkin:
+            return JsonResponse({'error': 'Checkin not found'}, status=404)
+        return JsonResponse({'checkin': checkin})
+    except Exception as e:
+        logger.error(f"Error fetching checkin {checkin_id}: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+    
 
 # -------------------------------
 # EXPORT VIEWS
@@ -555,3 +754,652 @@ def export_tasks(request):
     else:
         data = AdminSupabaseService.export_tasks(format='json')
         return JsonResponse({'tasks': data})
+    
+
+# -------------------------------
+# TASK CRUD VIEWS (Complete)
+# -------------------------------
+
+@admin_required
+def task_create(request):
+    """Create a new task."""
+    users = AdminSupabaseService.get_all_users()
+    
+    if request.method == 'POST':
+        try:
+            task_data = {
+                'title': request.POST.get('title'),
+                'description': request.POST.get('description', ''),
+                'date_created': timezone.now().isoformat(),
+                'status': 'Pending',
+                'completion': 0,
+                'is_archived': False,
+            }
+            
+            # Handle assigned user
+            assigned_to = request.POST.get('assigned_to')
+            if assigned_to:
+                task_data['assigned_to'] = int(assigned_to)
+                user = AdminSupabaseService.get_user_by_id(assigned_to)
+                if user:
+                    task_data['assigned_to_username'] = user.get('username')
+            
+            # Handle start and due dates
+            start_date = request.POST.get('start_date')
+            if start_date:
+                task_data['start_date'] = start_date
+
+            due_date = request.POST.get('due_date')
+            if due_date:
+                task_data['due_date'] = due_date
+            
+            # Handle priority
+            task_data['priority'] = 'priority' in request.POST
+            
+            created_task = AdminSupabaseService.create_task(task_data)
+            
+            if created_task:
+                messages.success(request, f"Task '{created_task['title']}' created successfully.")
+                return redirect('admin_app_collabsphere:task_detail', task_id=created_task['task_id'])
+            else:
+                messages.error(request, "Failed to create task.")
+                
+        except Exception as e:
+            logger.error(f"Error creating task: {str(e)}")
+            messages.error(request, f"Error creating task: {str(e)}")
+    
+    context = {
+        'users': users,
+        'active_page': 'tasks',
+    }
+    return render(request, 'task_form.html', context)
+
+@admin_required
+def task_edit(request, task_id):
+    """Edit an existing task."""
+    task = AdminSupabaseService.get_task_by_id(task_id)
+    users = AdminSupabaseService.get_all_users()
+    
+    if not task:
+        messages.error(request, f"Task with ID {task_id} not found.")
+        return redirect('admin_app_collabsphere:task_management')
+    
+    if request.method == 'POST':
+        try:
+            update_data = {
+                'title': request.POST.get('title'),
+                'description': request.POST.get('description', ''),
+                'status': request.POST.get('status', 'Pending'),
+            }
+            
+            # Handle assigned user
+            assigned_to = request.POST.get('assigned_to')
+            if assigned_to:
+                update_data['assigned_to'] = int(assigned_to)
+                user = AdminSupabaseService.get_user_by_id(assigned_to)
+                if user:
+                    update_data['assigned_to_username'] = user.get('username')
+            elif assigned_to == '':
+                update_data['assigned_to'] = None
+                update_data['assigned_to_username'] = None
+            
+            # Handle start and due dates
+            start_date = request.POST.get('start_date')
+            if start_date:
+                update_data['start_date'] = start_date
+            elif start_date == '':
+                update_data['start_date'] = None
+
+            due_date = request.POST.get('due_date')
+            if due_date:
+                update_data['due_date'] = due_date
+            elif due_date == '':
+                update_data['due_date'] = None
+            
+            # Handle priority
+            update_data['priority'] = 'priority' in request.POST
+            
+            # Handle completion
+            completion = request.POST.get('completion')
+            if completion:
+                update_data['completion'] = int(completion)
+            
+            updated_task = AdminSupabaseService.update_task(task_id, update_data)
+            
+            if updated_task:
+                messages.success(request, f"Task '{updated_task['title']}' updated successfully.")
+                return redirect('admin_app_collabsphere:task_detail', task_id=task_id)
+            else:
+                messages.error(request, "Failed to update task.")
+                
+        except Exception as e:
+            logger.error(f"Error updating task: {str(e)}")
+            messages.error(request, f"Error updating task: {str(e)}")
+    
+    context = {
+        'task': task,
+        'users': users,
+        'active_page': 'tasks',
+    }
+    return render(request, 'task_form.html', context)
+
+@admin_required
+@require_POST
+def task_delete(request, task_id):
+    """Delete a task."""
+    try:
+        success = AdminSupabaseService.delete_task(task_id)
+        
+        if success:
+            messages.success(request, "Task deleted successfully.")
+        else:
+            messages.error(request, "Failed to delete task.")
+    except Exception as e:
+        messages.error(request, f"Error deleting task: {str(e)}")
+    
+    return redirect('admin_app_collabsphere:task_management')
+
+# -------------------------------
+# EVENT CRUD VIEWS
+# -------------------------------
+
+@admin_required
+def event_create(request):
+    """Create a new event."""
+    users = AdminSupabaseService.get_all_users()
+    teams = AdminSupabaseService.get_all_teams()
+    
+    if request.method == 'POST':
+        try:
+            event_data = {
+                'title': request.POST.get('title'),
+                'description': request.POST.get('description', ''),
+                'created_at': timezone.now().isoformat(),
+            }
+            
+            # Handle start and end times
+            start_date = request.POST.get('start_date')
+            start_time = request.POST.get('start_time')
+            if start_date and start_time:
+                event_data['start_time'] = f"{start_date}T{start_time}:00"
+            
+            end_date = request.POST.get('end_date')
+            end_time = request.POST.get('end_time')
+            if end_date and end_time:
+                event_data['end_time'] = f"{end_date}T{end_time}:00"
+            
+            # Handle user
+            user_id = request.POST.get('user_id')
+            if user_id:
+                event_data['user_id'] = int(user_id)
+            
+            # Handle team
+            team_id = request.POST.get('team_id')
+            if team_id:
+                event_data['team_ID'] = int(team_id)
+            
+            created_event = AdminSupabaseService.create_event(event_data)
+            
+            if created_event:
+                messages.success(request, f"Event '{created_event['title']}' created successfully.")
+                return redirect('admin_app_collabsphere:event_detail', event_id=created_event['event_id'])
+            else:
+                messages.error(request, "Failed to create event.")
+                
+        except Exception as e:
+            logger.error(f"Error creating event: {str(e)}")
+            messages.error(request, f"Error creating event: {str(e)}")
+    
+    context = {
+        'users': users,
+        'teams': teams,
+        'active_page': 'events',
+    }
+    return render(request, 'event_form.html', context)
+
+@admin_required
+def event_detail(request, event_id):
+    """View event details."""
+    event = AdminSupabaseService.get_event_by_id(event_id)
+    
+    if not event:
+        messages.error(request, f"Event with ID {event_id} not found.")
+        return redirect('admin_app_collabsphere:event_management')
+    
+    context = {
+        'event': event,
+        'active_page': 'events',
+    }
+    return render(request, 'event_detail.html', context)
+
+
+@admin_required
+@require_POST
+def delete_event(request, event_id):
+    """Delete an event."""
+    try:
+        success = AdminSupabaseService.delete_event(event_id)
+        
+        if success:
+            messages.success(request, "Event deleted successfully.")
+        else:
+            messages.error(request, "Failed to delete event.")
+    except Exception as e:
+        messages.error(request, f"Error deleting event: {str(e)}")
+    
+    return redirect('admin_app_collabsphere:event_management')
+
+@admin_required
+def event_edit(request, event_id):
+    """Edit an existing event."""
+    event = AdminSupabaseService.get_event_by_id(event_id)
+    users = AdminSupabaseService.get_all_users()
+    teams = AdminSupabaseService.get_all_teams()
+    
+    if not event:
+        messages.error(request, f"Event with ID {event_id} not found.")
+        return redirect('admin_app_collabsphere:event_management')
+    
+    # Format dates for form
+    if event.get('start_time'):
+        if isinstance(event['start_time'], datetime):
+            event['form_start_date'] = event['start_time'].date().isoformat()
+            event['form_start_time'] = event['start_time'].time().strftime('%H:%M')
+    
+    if event.get('end_time'):
+        if isinstance(event['end_time'], datetime):
+            event['form_end_date'] = event['end_time'].date().isoformat()
+            event['form_end_time'] = event['end_time'].time().strftime('%H:%M')
+    
+    if request.method == 'POST':
+        try:
+            update_data = {
+                'title': request.POST.get('title'),
+                'description': request.POST.get('description', ''),
+            }
+            
+            # Handle start and end times
+            start_date = request.POST.get('start_date')
+            start_time = request.POST.get('start_time')
+            if start_date and start_time:
+                update_data['start_time'] = f"{start_date}T{start_time}:00"
+            
+            end_date = request.POST.get('end_date')
+            end_time = request.POST.get('end_time')
+            if end_date and end_time:
+                update_data['end_time'] = f"{end_date}T{end_time}:00"
+            
+            # Handle user
+            user_id = request.POST.get('user_id')
+            if user_id:
+                update_data['user_id'] = int(user_id)
+            elif user_id == '':
+                update_data['user_id'] = None
+            
+            # Handle team
+            team_id = request.POST.get('team_id')
+            if team_id:
+                update_data['team_ID'] = int(team_id)
+            elif team_id == '':
+                update_data['team_ID'] = None
+            
+            updated_event = AdminSupabaseService.update_event(event_id, update_data)
+            
+            if updated_event:
+                messages.success(request, f"Event '{updated_event['title']}' updated successfully.")
+                return redirect('admin_app_collabsphere:event_detail', event_id=event_id)
+            else:
+                messages.error(request, "Failed to update event.")
+                
+        except Exception as e:
+            logger.error(f"Error updating event: {str(e)}")
+            messages.error(request, f"Error updating event: {str(e)}")
+    
+    context = {
+        'event': event,
+        'users': users,
+        'teams': teams,
+        'active_page': 'events',
+    }
+    return render(request, 'event_form.html', context)
+
+# -------------------------------
+# CHECKIN CRUD VIEWS
+# -------------------------------
+
+# Add this function to your views.py (somewhere after wellbeing_management)
+
+@admin_required
+def create_checkin(request):
+    """Create a new check-in."""
+    users = AdminSupabaseService.get_all_users()
+    
+    if request.method == 'POST':
+        try:
+            user_id = request.POST.get('user_id')
+            mood_rating = request.POST.get('mood_rating')
+            status = request.POST.get('status', 'Okay')
+            notes = request.POST.get('notes', '')
+            date_submitted = request.POST.get('date_submitted') or timezone.now().date().isoformat()
+            
+            checkin_data = {
+                'user_id': int(user_id),
+                'mood_rating': int(mood_rating) if mood_rating else None,
+                'status': status,
+                'notes': notes,
+                'date_submitted': date_submitted,
+            }
+            
+            created_checkin = AdminSupabaseService.create_checkin(user_id, mood_rating, status, notes)
+            
+            if created_checkin:
+                messages.success(request, "Check-in created successfully.")
+                return redirect('admin_app_collabsphere:checkin_detail', checkin_id=created_checkin['checkin_id'])
+            else:
+                messages.error(request, "Failed to create check-in.")
+                
+        except Exception as e:
+            logger.error(f"Error creating check-in: {str(e)}")
+            messages.error(request, f"Error creating check-in: {str(e)}")
+    
+    context = {
+        'users': users,
+        'active_page': 'wellbeing',
+    }
+    return render(request, 'checkin_form.html', context)
+
+
+@admin_required
+def checkin_detail(request, checkin_id):
+    """View check-in details."""
+    checkin = AdminSupabaseService.get_checkin_by_id(checkin_id)
+    
+    if not checkin:
+        messages.error(request, f"Check-in with ID {checkin_id} not found.")
+        return redirect('admin_app_collabsphere:wellbeing_management')
+    
+    context = {
+        'checkin': checkin,
+        'active_page': 'wellbeing',
+    }
+    return render(request, 'checkin_detail.html', context)
+
+@admin_required
+def checkin_edit(request, checkin_id):
+    """Edit an existing check-in."""
+    checkin = AdminSupabaseService.get_checkin_by_id(checkin_id)
+    users = AdminSupabaseService.get_all_users()
+    
+    if not checkin:
+        messages.error(request, f"Check-in with ID {checkin_id} not found.")
+        return redirect('admin_app_collabsphere:wellbeing_management')
+    
+    if request.method == 'POST':
+        try:
+            update_data = {
+                'mood_rating': int(request.POST.get('mood_rating')) if request.POST.get('mood_rating') else None,
+                'notes': request.POST.get('notes', ''),
+                'status': request.POST.get('status', 'Okay'),
+                'date_submitted': request.POST.get('date_submitted') or timezone.now().date().isoformat(),
+            }
+            
+            # Handle user change
+            user_id = request.POST.get('user_id')
+            if user_id:
+                update_data['user_id'] = int(user_id)
+            
+            updated_checkin = AdminSupabaseService.update_checkin(checkin_id, update_data)
+            
+            if updated_checkin:
+                messages.success(request, "Check-in updated successfully.")
+                return redirect('admin_app_collabsphere:checkin_detail', checkin_id=checkin_id)
+            else:
+                messages.error(request, "Failed to update check-in.")
+                
+        except Exception as e:
+            logger.error(f"Error updating check-in: {str(e)}")
+            messages.error(request, f"Error updating check-in: {str(e)}")
+    
+    context = {
+        'checkin': checkin,
+        'users': users,
+        'active_page': 'wellbeing',
+    }
+    return render(request, 'checkin_form.html', context)
+
+@admin_required
+@require_POST
+def delete_checkin(request, checkin_id):
+    """Delete a check-in."""
+    try:
+        success = AdminSupabaseService.delete_checkin(checkin_id)
+        
+        if success:
+            messages.success(request, "Check-in deleted successfully.")
+        else:
+            messages.error(request, "Failed to delete check-in.")
+    except Exception as e:
+        messages.error(request, f"Error deleting check-in: {str(e)}")
+    
+    return redirect('admin_app_collabsphere:wellbeing_management')
+
+# -------------------------------
+# TEAM CRUD VIEWS
+# -------------------------------
+
+@admin_required
+def team_create(request):
+    """Create a new team."""
+    users = AdminSupabaseService.get_all_users()
+    
+    if request.method == 'POST':
+        try:
+            team_data = {
+                'team_name': request.POST.get('team_name'),
+                'description': request.POST.get('description', ''),
+                'joined_at': timezone.now().isoformat(),
+                'icon_url': request.POST.get('icon_url', 'https://example.com/default-team-icon.png'),
+            }
+            
+            # Handle owner
+            user_id_owner = request.POST.get('user_id_owner')
+            if user_id_owner:
+                team_data['user_id_owner'] = int(user_id_owner)
+            
+            created_team = AdminSupabaseService.create_team(team_data)
+            
+            if created_team:
+                # initial members if specified
+                members = request.POST.getlist('members')
+                for member_id in members:
+                    if member_id:
+                        AdminSupabaseService.add_team_member(created_team['team_ID'], int(member_id))
+                
+                messages.success(request, f"Team '{created_team['team_name']}' created successfully.")
+                return redirect('admin_app_collabsphere:team_detail', team_id=created_team['team_ID'])
+            else:
+                messages.error(request, "Failed to create team.")
+                
+        except Exception as e:
+            logger.error(f"Error creating team: {str(e)}")
+            messages.error(request, f"Error creating team: {str(e)}")
+    
+    context = {
+        'users': users,
+        'active_page': 'teams',
+    }
+    return render(request, 'team_form.html', context)
+
+@admin_required
+def team_edit(request, team_id):
+    """Edit an existing team."""
+    team = AdminSupabaseService.get_team_by_id(team_id)
+    users = AdminSupabaseService.get_all_users()
+    
+    if not team:
+        messages.error(request, f"Team with ID {team_id} not found.")
+        return redirect('admin_app_collabsphere:team_management')
+    
+    # Get current team members
+    members = AdminSupabaseService.get_team_members(team_id)
+    
+    # Convert member IDs to strings for template comparison
+    current_member_ids = []  # Store as integers for cleaner comparison
+
+    
+    for member in (members or []):
+        try:
+            # Check different possible structures
+            if isinstance(member, dict):
+                # Direct user data
+                user_id = member.get('user_ID') or member.get('user_id') or member.get('id')
+                
+                # If not found, check nested user object
+                if not user_id and isinstance(member.get('user'), dict):
+                    user_data = member['user']
+                    user_id = user_data.get('user_ID') or user_data.get('user_id') or user_data.get('id')
+                
+                if user_id:
+                    current_member_ids.append(str(user_id))
+        except Exception as e:
+            logger.warning(f"Error extracting user ID from member: {e}")
+            continue
+    
+    # Ensure owner is included
+    if team.get('user_id_owner'):
+        owner_id = str(team['user_id_owner'])
+        if owner_id not in current_member_ids:
+            current_member_ids.append(owner_id)
+    
+    logger.debug(f"Team {team_id} - Current members: {current_member_ids}")
+    
+    if request.method == 'POST':
+        try:
+            update_data = {
+                'team_name': request.POST.get('team_name'),
+                'description': request.POST.get('description', ''),
+            }
+            
+            # Handle team icon upload
+            team_icon = request.FILES.get('team_icon')
+            if team_icon:
+                try:
+                    # Fix: Pass filename parameter properly
+                    import os
+                    file_name = team_icon.name
+                    
+                    # Upload new team icon
+                    icon_url = AdminSupabaseService.upload_team_icon(team_icon, team_id)
+                    update_data['icon_url'] = icon_url
+                    logger.info(f"Uploaded new team icon for team {team_id}")
+                except Exception as e:
+                    logger.error(f"Error uploading team icon: {str(e)}")
+                    messages.warning(request, f"Could not upload team icon: {str(e)}")
+            elif request.POST.get('remove_icon'):
+                # Remove current team icon
+                if team.get('icon_url') and team['icon_url'] != 'https://example.com/default-team-icon.png':
+                    try:
+                        AdminSupabaseService.delete_team_icon(team['icon_url'])
+                    except:
+                        pass  # Ignore deletion errors
+                update_data['icon_url'] = 'https://example.com/default-team-icon.png'
+            
+            # Handle owner change
+            user_id_owner = request.POST.get('user_id_owner')
+            if user_id_owner:
+                update_data['user_id_owner'] = int(user_id_owner)
+            
+            # Update team info
+            updated_team = AdminSupabaseService.update_team(team_id, update_data)
+            
+            if updated_team:
+                # FIX: Get members from hidden input, not getlist
+                members_input = request.POST.get('members', '')
+                if members_input:
+                    # Split by comma to get individual IDs
+                    new_member_ids = [mid.strip() for mid in members_input.split(',') if mid.strip()]
+                else:
+                    new_member_ids = []
+                
+                current_member_set = set(current_member_ids)
+                new_member_set = set(new_member_ids)
+                
+                logger.debug(f"Current members: {current_member_set}")
+                logger.debug(f"New members: {new_member_set}")
+                
+                # Remove members not in new list (except owner)
+                members_to_remove = current_member_set - new_member_set
+                for member_id in members_to_remove:
+                    if member_id and int(member_id) != updated_team.get('user_id_owner'):
+                        try:
+                            AdminSupabaseService.remove_member_from_team(team_id, int(member_id))
+                            logger.info(f"Removed member {member_id} from team {team_id}")
+                        except Exception as e:
+                            error_msg = str(e)
+                            if "not an active member" in error_msg.lower():
+                                logger.warning(f"Member {member_id} already not in team {team_id}")
+                            else:
+                                logger.error(f"Error removing member {member_id}: {e}")
+                                messages.warning(request, f"Error removing member {member_id}: {error_msg}")
+                
+                # Add new members that aren't already in the team
+                members_to_add = new_member_set - current_member_set
+                for member_id in members_to_add:
+                    if member_id:
+                        try:
+                            user_id_int = int(member_id)
+                            
+                            # Check if user exists
+                            user = AdminSupabaseService.get_user_by_id(user_id_int)
+                            if not user:
+                                logger.warning(f"User {user_id_int} not found, skipping")
+                                continue
+                            
+                            # Add to team
+                            AdminSupabaseService.add_member_to_team(team_id, user_id_int)
+                            logger.info(f"Added member {member_id} to team {team_id}")
+                        except Exception as e:
+                            error_msg = str(e)
+                            if "already exists" in error_msg.lower() or "already a member" in error_msg.lower():
+                                logger.warning(f"Member {member_id} already in team")
+                            elif "already a member of another active team" in error_msg.lower():
+                                logger.warning(f"User {member_id} is already in another team")
+                                messages.warning(request, f"User {user.get('username', member_id)} is already a member of another active team")
+                            else:
+                                logger.error(f"Error adding member {member_id}: {e}")
+                                messages.warning(request, f"Error adding member {member_id}: {error_msg}")
+                
+                messages.success(request, f"Team '{updated_team['team_name']}' updated successfully.")
+                return redirect('admin_app_collabsphere:team_detail', team_id=team_id)
+            else:
+                messages.error(request, "Failed to update team.")
+                
+        except Exception as e:
+            logger.error(f"Error updating team: {str(e)}")
+            messages.error(request, f"Error updating team: {str(e)}")
+    
+    # Format context for template
+    context = {
+        'team': team,
+        'users': users,
+        'member_ids': current_member_ids,
+        'current_member_ids': current_member_ids,
+        'active_page': 'teams',
+    }
+    return render(request, 'team_form.html', context)
+
+@admin_required
+@require_POST
+def team_delete(request, team_id):
+    """Delete a team."""
+    try:
+        success = AdminSupabaseService.delete_team(team_id)
+        
+        if success:
+            messages.success(request, "Team deleted successfully.")
+        else:
+            messages.error(request, "Failed to delete team.")
+    except Exception as e:
+        messages.error(request, f"Error deleting team: {str(e)}")
+    
+    return redirect('admin_app_collabsphere:team_management')

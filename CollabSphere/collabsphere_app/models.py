@@ -2,6 +2,9 @@ from django.conf import settings
 from supabase import create_client
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+import logging
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()  # CustomUser from registration_app_collabsphere
 
@@ -85,17 +88,30 @@ class SupabaseService:
             supabase.table("tasks").select("*").eq("created_by", username).execute().data or []
         )
         print(f"DEBUG get_user_tasks: Created tasks count={len(created_tasks)}")
-
-        assigned_tasks = (
+        # Build a safe OR clause: check numeric assigned_to, string-assigned_to, and assigned_to_username
+        try:
+            # Quote string comparisons properly for Supabase filter syntax
+            username_quoted = f"'" + str(username).replace("'", "\\'") + f"'"
+            # Only check numeric assigned_to and assigned_to_username (avoid quoted numeric forms)
+            or_clause = f"assigned_to.eq.{int(user_id)},assigned_to_username.eq.{username_quoted}"
+        except Exception:
+            # Fallback: conservative OR clause using username only
+            username_quoted = f"'" + str(username).replace("'", "\\'") + f"'"
+            or_clause = f"assigned_to_username.eq.{username_quoted}"
+        logger.debug(f"get_user_tasks: Supabase OR clause -> {or_clause}")
+        # Fetch assigned tasks via OR clause, then filter out tasks the user created
+        assigned_response = (
             supabase.table("tasks")
             .select("*")
-            .or_(f"assigned_to.eq.{user_id},assigned_to_username.eq.{username}")
-            .neq("created_by", username)
+            .or_(or_clause)
             .execute()
-            .data
-            or []
         )
-        print(f"DEBUG get_user_tasks: Assigned tasks count={len(assigned_tasks)}")
+        assigned_tasks_raw = assigned_response.data or []
+        # Some PostgREST filter combinations can behave unexpectedly; do the final
+        # exclusion of user-created tasks in Python to ensure correct results.
+        assigned_tasks = [t for t in assigned_tasks_raw if t.get("created_by") != username]
+        print(f"DEBUG get_user_tasks: Assigned tasks raw count={len(assigned_tasks_raw)}")
+        print(f"DEBUG get_user_tasks: Assigned tasks filtered count={len(assigned_tasks)}")
 
         all_tasks = created_tasks + assigned_tasks
         all_tasks.sort(key=lambda x: x.get("date_created", ""), reverse=True)

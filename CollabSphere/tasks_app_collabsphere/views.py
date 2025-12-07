@@ -174,9 +174,13 @@ def task_detail(request, task_id):
 
     task_data = Task.get(task_id)
     if not task_data:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'Task not found'}, status=404)
         return redirect("home")
 
     if not TaskPermissions.user_can_access(task_data, username, user_id):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'Not authorized to view this task'}, status=403)
         return redirect("home")
 
     for key in ("date_created", "start_date", "due_date"):
@@ -207,7 +211,12 @@ def task_detail(request, task_id):
         "team_name": team_name,     # Add this
         "has_active_team": active_team_id is not None  # Add this
     }
-    return render(request, "task_detail.html", context)
+    
+    # Return modal-only markup for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, "task_detail_edit.html", context)
+    
+    return render(request, "task_detail_edit.html", context)
 
 # UPDATE TASK
 @login_required

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load custom_filters %}
 
 {% block title %}Team Details: {{ team.team_name }}{% endblock %}
 
@@ -10,9 +11,17 @@
             <p class="text-muted">View team information and members</p>
         </div>
         <div class="header-right">
-            <a href="{% url 'admin_app_collabsphere:team_management' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back to Teams
-            </a>
+            <div class="btn-group">
+                <a href="{% url 'admin_app_collabsphere:team_edit' team.team_ID %}" class="btn btn-warning">
+                    <i class="fas fa-edit me-1"></i> Edit
+                </a>
+                <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteTeamModal">
+                    <i class="fas fa-trash me-1"></i> Delete
+                </button>
+                <a href="{% url 'admin_app_collabsphere:team_management' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Teams
+                </a>
+            </div>
         </div>
     </div>
 
@@ -20,21 +29,56 @@
         <div class="col-md-8">
             <div class="card mb-4">
                 <div class="card-body">
-                    <h3 class="card-title">{{ team.team_name }}</h3>
-                    
-                    <div class="mb-4">
-                        <label class="text-muted small">Team ID</label>
-                        <p class="mb-0">{{ team.team_ID }}</p>
+                    <div class="d-flex align-items-center mb-4">
+                        {% if team.icon_url and team.icon_url != 'https://example.com/default-team-icon.png' %}
+                        <img src="{{ team.icon_url }}" alt="Team Icon" 
+                             class="rounded-circle me-3 border" width="80" height="80"
+                             style="object-fit: cover;">
+                        {% else %}
+                        <div class="avatar-placeholder-lg rounded-circle me-3 d-flex align-items-center justify-content-center"
+                             style="width: 80px; height: 80px; background-color: #5BBA6F; color: white; font-weight: bold; font-size: 24px;">
+                            {{ team.team_name|first|upper }}
+                        </div>
+                        {% endif %}
+                        <div>
+                            <h3 class="card-title mb-1">{{ team.team_name }}</h3>
+                            <p class="text-muted mb-0">Team ID: {{ team.team_ID }}</p>
+                        </div>
                     </div>
                     
                     <div class="mb-4">
                         <label class="text-muted small">Description</label>
-                        <p class="mb-0">{{ team.description|default:"No description" }}</p>
+                        <p class="mb-0">{{ team.description|default:"No description provided" }}</p>
                     </div>
                     
-                    <div class="mb-4">
-                        <label class="text-muted small">Created Date</label>
-                        <p class="mb-0">{{ team.joined_at|slice:":10"|default:"Unknown" }}</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="text-muted small">Created Date</label>
+                                <p class="mb-0">
+                                    {% if team.joined_at %}
+                                        {{ team.joined_at|slice:":10" }}
+                                    {% else %}
+                                        Unknown
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="text-muted small">Owner</label>
+                                <p class="mb-0">
+                                    {% for user in users %}
+                                        {% if user.user_ID == team.user_id_owner %}
+                                            {{ user.username }}
+                                            {% if user.full_name %}
+                                                ({{ user.full_name }})
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -50,6 +94,25 @@
                         <div class="stat-value">{{ members|length }}</div>
                         <div class="stat-label">Total Members</div>
                     </div>
+                    <hr>
+                    <div class="small text-muted">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Active Members:</span>
+                            <span>{{ active_member_count }}</span>
+                        </div>
+                        {% if task_count is not None %}
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Team Tasks:</span>
+                            <span>{{ task_count }}</span>
+                        </div>
+                        {% endif %}
+                        {% if event_count is not None %}
+                        <div class="d-flex justify-content-between">
+                            <span>Team Events:</span>
+                            <span>{{ event_count }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -58,7 +121,7 @@
     <!-- Team Members -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title mb-0">Team Members</h3>
+            <h3 class="card-title mb-0">Team Members ({{ members|length }})</h3>
         </div>
         <div class="card-body p-0">
             {% if members %}
@@ -69,6 +132,8 @@
                             <th>User</th>
                             <th>Email</th>
                             <th>Full Name</th>
+                            <th>Status</th>
+                            <th>Joined</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -76,23 +141,45 @@
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    {% if member.user.profile_picture %}
-                                    <img src="{{ member.user.profile_picture }}" 
-                                         alt="{{ member.user.username }}" 
+                                    {% if member.profile_picture %}
+                                    <img src="{{ member.profile_picture }}" 
+                                         alt="{{ member.username }}" 
                                          class="rounded-circle me-2"
                                          width="32" height="32"
                                          style="object-fit: cover;">
                                     {% else %}
                                     <div class="avatar-placeholder-sm rounded-circle me-2 d-flex align-items-center justify-content-center"
                                          style="width: 32px; height: 32px; background-color: #3D74C3; color: white; font-weight: bold;">
-                                        {{ member.user.username|first|upper }}
+                                        {{ member.username|first|upper }}
                                     </div>
                                     {% endif %}
-                                    <span>{{ member.user.username }}</span>
+                                    <div>
+                                        <div class="fw-medium">
+                                            {{ member.username }}
+                                            {% if member.user_ID == team.user_id_owner %}
+                                            <span class="badge bg-warning ms-1">Owner</span>
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted">ID: {{ member.user_ID }}</small>
+                                    </div>
                                 </div>
                             </td>
-                            <td>{{ member.user.email|default:"-" }}</td>
-                            <td>{{ member.user.full_name|default:"-" }}</td>
+                            <td>{{ member.email|default:"-" }}</td>
+                            <td>{{ member.full_name|default:"-" }}</td>
+                            <td>
+                                {% if not member.left_at %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Left</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if member.joined_at %}
+                                {{ member.joined_at|slice:":10" }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -107,4 +194,82 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteTeamModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete team <strong>"{{ team.team_name }}"</strong>?</p>
+                <p class="text-danger">
+                    <small>This action cannot be undone. All team data and member associations will be permanently removed.</small>
+                </p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <small>This will remove users from the team but not delete the users themselves.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{% url 'admin_app_collabsphere:team_delete' team.team_ID %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Team</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.team-detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.header-left h1 {
+    color: #3D74C3;
+    font-weight: 600;
+}
+
+.avatar-placeholder-lg {
+    width: 80px;
+    height: 80px;
+    background-color: #5BBA6F;
+    color: white;
+    font-weight: bold;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-box {
+    padding: 15px;
+}
+
+.stat-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: #3D74C3;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+</style>
 {% endblock %}

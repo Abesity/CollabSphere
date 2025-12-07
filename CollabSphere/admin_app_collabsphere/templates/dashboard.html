@@ -9,6 +9,47 @@
         <h1>Admin Dashboard</h1>
         <p class="subtitle">Welcome back, {{ request.user.username }}. Here's what's happening in your system.</p>
     </div>
+
+    <!-- Quick Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon bg-primary">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-info">
+                <h3>{{ total_users }}</h3>
+                <p>Total Users</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-success">
+                <i class="fas fa-tasks"></i>
+            </div>
+            <div class="stat-info">
+                <h3>{{ total_tasks }}</h3>
+                <p>Total Tasks</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-info">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-info">
+                <h3>{{ total_teams }}</h3>
+                <p>Total Teams</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-warning">
+                <i class="fas fa-heartbeat"></i>
+            </div>
+            <div class="stat-info">
+                <h3>{{ total_checkins }}</h3>
+                <p>Total Check-ins</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Recent Activity Grid -->
     <div class="activity-grid">
         <!-- Recent Users -->
@@ -143,6 +184,51 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Recent Events -->
+        <div class="activity-card">
+            <div class="card-header">
+                <h3><i class="fas fa-calendar-alt me-2"></i>Recent Events</h3>
+                <a href="{% url 'admin_app_collabsphere:event_management' %}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_events %}
+                <div class="event-list">
+                    {% for event in recent_events %}
+                    <div class="event-item">
+                            <div class="event-date">
+                                <div class="event-date-month">{{ event.start_time|date:"M"|upper }}</div>
+                                <div class="event-date-day">{{ event.start_time|date:"d" }}</div>
+                            </div>
+                        <div class="event-info">
+                            <strong>{{ event.title|truncatechars:40 }}</strong>
+                            <small>
+                                {% if event.user and event.user.username %}
+                                    By: {{ event.user.username }}
+                                {% elif event.user_id %}
+                                    By: User #{{ event.user_id }}
+                                {% else %}
+                                    System Event
+                                {% endif %}
+                            </small>
+                            <span class="text-muted">
+                                {{ event.start_time|date:"h:i A" }} - {{ event.end_time|date:"h:i A" }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-calendar-alt fa-2x text-muted mb-3"></i>
+                    <p class="text-muted">No recent events</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
+</div>
 {% endblock %}

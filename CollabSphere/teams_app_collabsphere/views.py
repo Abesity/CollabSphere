@@ -458,8 +458,10 @@ def view_team(request, team_ID):
     
 # Set users active team
 def active_team_context(request):
-    """Context processor to make active team available globally"""
-    if request.user.is_authenticated:
+    """Context processor to make active team available globally
+    Be defensive: some test/management requests may not attach a `user` attribute.
+    """
+    if hasattr(request, 'user') and getattr(request.user, 'is_authenticated', False):
         try:
             active_team = Team.get_active_team(request.user)
             active_team_id = active_team['team_ID'] if active_team else None

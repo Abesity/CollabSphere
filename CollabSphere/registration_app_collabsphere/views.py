@@ -20,6 +20,15 @@ def login(request):
     form = LoginForm(request.POST or None)
 
     if request.method == 'POST':
+        # Clear any previous auth/session state to avoid mixing sessions
+        try:
+            auth_logout(request)
+        except Exception:
+            pass
+        # Remove common session keys that could conflict
+        for k in ('admin_logged_in', 'admin_username', 'user_ID'):
+            request.session.pop(k, None)
+
         email = request.POST.get('email')
         password = request.POST.get('password')
         
@@ -27,6 +36,12 @@ def login(request):
         
         # Check if it's the admin
         if email == 'admin@example.com' and password == 'admin123':
+            # Clear any queued messages to avoid duplicates
+            try:
+                list(messages.get_messages(request))
+            except Exception:
+                pass
+
             request.session['admin_logged_in'] = True
             request.session['admin_username'] = 'admin'
             messages.success(request, 'Welcome back, Admin!')
@@ -41,6 +56,9 @@ def login(request):
             auth_login(request, user)
             if hasattr(user, 'supabase_id') and user.supabase_id:
                 request.session['user_ID'] = user.supabase_id
+            # Ensure any admin session flags are cleared when a regular user logs in
+            request.session.pop('admin_logged_in', None)
+            request.session.pop('admin_username', None)
             messages.success(request, f'Welcome back, {user.username}!')
             return redirect('home')
 

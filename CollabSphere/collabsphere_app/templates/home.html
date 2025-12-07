@@ -277,6 +277,40 @@ function removeModalIfExists(modalId) {
     });
 }
 
+// Helper to show a Bootstrap modal for messages (info/error)
+function showModalMessage(title, message) {
+    // Remove existing global modal if present
+    const existing = document.getElementById('globalMessageModal');
+    if (existing) {
+        const inst = bootstrap.Modal.getInstance(existing);
+        if (inst) inst.dispose();
+        existing.remove();
+    }
+
+    const modalHtml = `
+    <div class="modal fade" id="globalMessageModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">${title}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body"><p>${message}</p></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+    const tmp = document.createElement('div');
+    tmp.innerHTML = modalHtml;
+    document.body.appendChild(tmp.firstElementChild);
+    const el = document.getElementById('globalMessageModal');
+    const m = new bootstrap.Modal(el);
+    m.show();
+}
+
 // --- TASK MODAL ---
 document.getElementById('openTaskModal').addEventListener('click', async function() {
     try {
@@ -412,13 +446,11 @@ document.getElementById('openTaskModal').addEventListener('click', async functio
         });
 
         modal.show();
-    } catch (error) {
+        } catch (error) {
         console.error("Error loading task modal:", error);
-        alert("Could not load task modal. Please try again.");
+        showModalMessage('Error', 'Could not load task modal. Please try again.');
     }
-});
-
-// Function to open task detail modal
+});// Function to open task detail modal
 async function openTaskDetail(taskId) {
   try {
       const response = await fetch(`/tasks/${taskId}/detail/`, {
@@ -426,7 +458,23 @@ async function openTaskDetail(taskId) {
           credentials: "include"
       });
 
-      if (!response.ok) throw new Error("Failed to fetch task detail.");
+      if (!response.ok) {
+          // Try to extract a helpful message from JSON or text
+          let msg = 'Failed to fetch task detail.';
+          try {
+              const maybeJson = await response.clone().json();
+              if (maybeJson && maybeJson.message) msg = maybeJson.message;
+          } catch (e) {
+              try {
+                  const maybeText = await response.clone().text();
+                  if (maybeText) msg = 'Server returned unexpected content.';
+              } catch (e2) {
+                  /* ignore */
+              }
+          }
+          showModalMessage('Error', msg);
+          return;
+      }
 
       const html = await response.text();
       const parser = new DOMParser();
@@ -434,7 +482,9 @@ async function openTaskDetail(taskId) {
 
       const fetchedModal = doc.getElementById('taskDetailModal');
       if (!fetchedModal) {
-          throw new Error('Task detail modal markup missing in response.');
+          const bodySnippet = doc && doc.body ? doc.body.textContent.trim().slice(0,1000) : '';
+          showModalMessage('Error', 'Task detail modal markup missing in response. Server said: ' + (bodySnippet || 'No response body.'));
+          return;
       }
 
       await removeModalIfExists('taskDetailModal');
@@ -477,7 +527,7 @@ async function openTaskDetail(taskId) {
       }, 100);
   } catch (error) {
       console.error("Error loading task detail:", error);
-      alert("Could not load task details. Please try again.");
+      showModalMessage('Error', 'Could not load task details. Please try again.');
   }
 }
 
@@ -496,7 +546,7 @@ if (wellbeingModalBtn) {
         .then(data => {
             if (data.has_checked_in_today) {
                 updateWellbeingCardToComplete();
-                alert("You've already completed your check-in for today!");
+                showModalMessage('Info', "You've already completed your check-in for today!");
                 return;
             }
             
@@ -556,15 +606,15 @@ function initializeWellbeingModal(modal) {
 
             // Validation: check required fields
             if (!moodRating) {
-                alert("Please select a mood rating.");
+                showModalMessage('Error', 'Please select a mood rating.');
                 return;
             }
             if (!status) {
-                alert("Please select your status from the dropdown.");
+                showModalMessage('Error', 'Please select your status from the dropdown.');
                 return;
             }
             if (!notes) {
-                alert("Please enter some notes about how you feel.");
+                showModalMessage('Error', 'Please enter some notes about how you feel.');
                 return;
             }
 

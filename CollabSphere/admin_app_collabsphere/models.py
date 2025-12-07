@@ -1,6 +1,7 @@
 from django.conf import settings
 from supabase import create_client
 from django.utils import timezone
+from datetime import datetime
 import logging
 import time
 import hashlib
@@ -199,7 +200,10 @@ class AdminSupabaseService:
     def get_all_tasks():
         """Fetch all tasks from Supabase."""
         try:
-            response = supabase.table("tasks").select("*").order("date_created", desc=True).execute()
+            # Include assigned user metadata for templates (join on assigned_to -> user.user_ID)
+            response = supabase.table("tasks").select(
+                "*, assigned_user:assigned_to(user_ID, username, email, full_name, profile_picture)"
+            ).order("date_created", desc=True).execute()
             return response.data or []
         except Exception as e:
             logger.error(f"Error fetching all tasks: {str(e)}")
@@ -209,7 +213,9 @@ class AdminSupabaseService:
     def get_task_by_id(task_id):
         """Get a single task by ID."""
         try:
-            response = supabase.table("tasks").select("*").eq("task_id", int(task_id)).execute()
+            response = supabase.table("tasks").select(
+                "*, assigned_user:assigned_to(user_ID, username, email, full_name, profile_picture)"
+            ).eq("task_id", int(task_id)).execute()
             return response.data[0] if response.data else None
         except Exception as e:
             logger.error(f"Error fetching task {task_id}: {str(e)}")
@@ -220,7 +226,11 @@ class AdminSupabaseService:
         """Create a new task in Supabase."""
         try:
             response = supabase.table("tasks").insert(task_data).execute()
-            return response.data[0] if response.data else None
+            created = response.data[0] if response.data else None
+            # Return enriched task with assigned_user metadata
+            if created and created.get('task_id'):
+                return AdminSupabaseService.get_task_by_id(created['task_id'])
+            return created
         except Exception as e:
             logger.error(f"Error creating task: {str(e)}")
             raise
@@ -230,7 +240,8 @@ class AdminSupabaseService:
         """Update a task in Supabase."""
         try:
             response = supabase.table("tasks").update(update_data).eq("task_id", int(task_id)).execute()
-            return response.data[0] if response.data else None
+            # Return enriched task
+            return AdminSupabaseService.get_task_by_id(task_id)
         except Exception as e:
             logger.error(f"Error updating task {task_id}: {str(e)}")
             raise
@@ -302,12 +313,72 @@ class AdminSupabaseService:
         """Fetch all wellbeing check-ins."""
         try:
             response = supabase.table("wellbeingcheckin").select(
-                "checkin_id, user_id, mood_rating, notes, date_submitted, status, user:user_id(username, email)"
+                "checkin_id, user_id, mood_rating, notes, date_submitted, status, user:user_id(username, email, profile_picture)"
             ).order("date_submitted", desc=True).execute()
-            return response.data or []
+            rows = response.data or []
+
+            # Normalize profile_picture URLs for template usage
+            from django.conf import settings as _settings
+            SUPABASE_URL = getattr(_settings, 'SUPABASE_URL', None)
+            normalized = []
+            for r in rows:
+                try:
+                    user_meta = r.get('user') or {}
+                    pic = user_meta.get('profile_picture') if isinstance(user_meta, dict) else None
+                    if pic and isinstance(pic, str):
+                        if pic.startswith('/') and SUPABASE_URL:
+                            user_meta['profile_picture'] = f"{SUPABASE_URL}/storage/v1/object/public/{pic.lstrip('/')}"
+                        else:
+                            # if it's already a full URL or empty, keep as is
+                            user_meta['profile_picture'] = pic
+                    else:
+                        # default avatar
+                        user_meta['profile_picture'] = '/static/images/default-avatar.png'
+
+                    r['user'] = user_meta
+                except Exception:
+                    pass
+                normalized.append(r)
+
+            return normalized
         except Exception as e:
             logger.error(f"Error fetching all check-ins: {str(e)}")
             return []
+
+    @staticmethod
+    def create_checkin(user_id, mood_rating, status, notes):
+        """Create a wellbeing checkin as admin."""
+        try:
+            payload = {
+                'user_id': int(user_id),
+                'mood_rating': int(mood_rating) if mood_rating else None,
+                'status': status or 'Okay',
+                'notes': notes or '',
+                'date_submitted': timezone.now().isoformat(),
+            }
+            response = supabase.table('wellbeingcheckin').insert(payload).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error creating checkin: {e}")
+            raise
+
+    @staticmethod
+    def update_checkin(checkin_id, update_data):
+        try:
+            response = supabase.table('wellbeingcheckin').update(update_data).eq('checkin_id', int(checkin_id)).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error updating checkin {checkin_id}: {e}")
+            raise
+
+    @staticmethod
+    def delete_checkin(checkin_id):
+        try:
+            supabase.table('wellbeingcheckin').delete().eq('checkin_id', int(checkin_id)).execute()
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting checkin {checkin_id}: {e}")
+            return False
     
     @staticmethod
     def get_checkin_stats():
@@ -324,14 +395,19 @@ class AdminSupabaseService:
             ).gte("date_submitted", f"{today}T00:00:00").lte("date_submitted", f"{today}T23:59:59").execute()
             today_count = len(today_response.data) if today_response.data else 0
             
-            # Get mood distribution
-            mood_response = supabase.table("wellbeingcheckin").select(
-                "mood_rating", count="exact"
-            ).group("mood_rating").execute()
-            
-            mood_stats = {}
-            for item in mood_response.data:
-                mood_stats[item['mood_rating']] = item['count']
+            # Get mood distribution (client-side aggregation because .group() may not be supported)
+            try:
+                mood_rows = supabase.table("wellbeingcheckin").select("mood_rating").execute()
+                mood_stats = {}
+                if mood_rows.data:
+                    for item in mood_rows.data:
+                        key = item.get('mood_rating')
+                        mood_stats[key] = mood_stats.get(key, 0) + 1
+                else:
+                    mood_stats = {}
+            except Exception as e:
+                logger.warning(f"Failed to compute mood distribution via select: {e}")
+                mood_stats = {}
             
             return {
                 'total': total,
@@ -378,7 +454,15 @@ class AdminSupabaseService:
             recent_checkins = supabase.table("wellbeingcheckin").select(
                 "checkin_id, user_id, mood_rating, notes, date_submitted, user:user_id(username)"
             ).order("date_submitted", desc=True).limit(5).execute()
-            stats['recent_checkins'] = recent_checkins.data or []
+            # If the joined-select returned nothing (sometimes RLS or join issues), fall back to a simple select
+            if not recent_checkins.data:
+                logger.debug("No recent_checkins from joined select; falling back to simple select")
+                fallback = supabase.table("wellbeingcheckin").select(
+                    "checkin_id, user_id, mood_rating, notes, date_submitted"
+                ).order("date_submitted", desc=True).limit(5).execute()
+                stats['recent_checkins'] = fallback.data or []
+            else:
+                stats['recent_checkins'] = recent_checkins.data or []
             
             # Today's activities
             today = timezone.now().date().isoformat()
@@ -387,6 +471,55 @@ class AdminSupabaseService:
             
             today_tasks = supabase.table("tasks").select("*").gte("date_created", f"{today}T00:00:00").execute()
             stats['tasks_today'] = len(today_tasks.data) if today_tasks.data else 0
+            
+            # Team events
+            recent_events = supabase.table("calendarevent").select(
+                "event_id, title, description, start_time, end_time, user_id, team_ID, user:user_id(username)"
+            ).order("start_time", desc=True).limit(5).execute()
+
+            # Handle possible join issues
+            if not recent_events.data:
+                fallback_events = supabase.table("calendarevent").select(
+                    "event_id, title, start_time, end_time, user_id, team_ID"
+                ).order("start_time", desc=True).limit(5).execute()
+                events_list = fallback_events.data or []
+            else:
+                events_list = recent_events.data or []
+
+            # Parse ISO timestamps into Python datetimes and normalize keys for templates
+            parsed_events = []
+            for ev in (events_list or []):
+                try:
+                    ev_start = ev.get('start_time')
+                    ev_end = ev.get('end_time')
+                    if isinstance(ev_start, str):
+                        ev_dt_start = datetime.fromisoformat(ev_start.replace('Z', '+00:00'))
+                    else:
+                        ev_dt_start = ev_start
+                    if isinstance(ev_end, str):
+                        ev_dt_end = datetime.fromisoformat(ev_end.replace('Z', '+00:00'))
+                    else:
+                        ev_dt_end = ev_end
+
+                    # Ensure keys/templates compatibility
+                    ev_parsed = ev.copy()
+                    ev_parsed['start_time'] = ev_dt_start
+                    ev_parsed['end_time'] = ev_dt_end
+                    ev_parsed['start_date'] = ev_dt_start
+                    # Provide `id` for templates/JS expecting it and `organizer` structure
+                    ev_parsed['id'] = ev_parsed.get('event_id')
+                    user_meta = ev_parsed.get('user') or {}
+                    ev_parsed['organizer'] = {
+                        'username': user_meta.get('username') if isinstance(user_meta, dict) else None,
+                        'avatar': None,
+                    }
+                    parsed_events.append(ev_parsed)
+                except Exception as e:
+                    logger.warning(f"Failed to parse event timestamps: {e}")
+                    parsed_events.append(ev)
+
+            stats['recent_events'] = parsed_events
+            
             
             return stats
         except Exception as e:
@@ -463,10 +596,72 @@ class AdminSupabaseService:
             response = supabase.table("calendarevent").select(
                 "event_id, title, description, start_time, end_time, user_id, team_ID, user:user_id(username, email)"
             ).order("start_time", desc=True).execute()
-            return response.data or []
+            events = response.data or []
+
+            # Parse timestamps to datetime objects and normalize fields for templates
+            parsed = []
+            for ev in events:
+                try:
+                    ev_start = ev.get('start_time')
+                    ev_end = ev.get('end_time')
+                    if isinstance(ev_start, str):
+                        ev_dt_start = datetime.fromisoformat(ev_start.replace('Z', '+00:00'))
+                    else:
+                        ev_dt_start = ev_start
+                    if isinstance(ev_end, str):
+                        ev_dt_end = datetime.fromisoformat(ev_end.replace('Z', '+00:00'))
+                    else:
+                        ev_dt_end = ev_end
+
+                    ev_parsed = ev.copy()
+                    ev_parsed['start_time'] = ev_dt_start
+                    ev_parsed['end_time'] = ev_dt_end
+                    ev_parsed['start_date'] = ev_dt_start
+                    ev_parsed['id'] = ev_parsed.get('event_id')
+                    user_meta = ev_parsed.get('user') or {}
+                    ev_parsed['organizer'] = {
+                        'username': user_meta.get('username') if isinstance(user_meta, dict) else None,
+                        'avatar': None,
+                    }
+                    parsed.append(ev_parsed)
+                except Exception as e:
+                    logger.warning(f"Failed to parse event in get_all_events: {e}")
+                    parsed.append(ev)
+
+            return parsed
         except Exception as e:
             logger.error(f"Error fetching all events: {str(e)}")
             return []
+
+    @staticmethod
+    def create_event(event_data):
+        """Create a calendar event in Supabase."""
+        try:
+            response = supabase.table('calendarevent').insert(event_data).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error creating event: {e}")
+            raise
+
+    @staticmethod
+    def update_event(event_id, update_data):
+        """Update an existing calendar event."""
+        try:
+            response = supabase.table('calendarevent').update(update_data).eq('event_id', int(event_id)).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error updating event {event_id}: {e}")
+            raise
+
+    @staticmethod
+    def delete_event(event_id):
+        """Delete a calendar event."""
+        try:
+            supabase.table('calendarevent').delete().eq('event_id', int(event_id)).execute()
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting event {event_id}: {e}")
+            return False
     
     # -------------------------------
     # DATA EXPORT
@@ -676,3 +871,530 @@ class AdminSupabaseService:
         
         return AdminSupabaseService.create_user(data)
         
+
+    # Additional crud 
+    @staticmethod
+    def get_checkin_by_id(checkin_id):
+        """Get a single check-in by ID."""
+        try:
+            response = supabase.table("wellbeingcheckin").select(
+                "checkin_id, user_id, mood_rating, notes, date_submitted, status, user:user_id(username, email, profile_picture)"
+            ).eq("checkin_id", int(checkin_id)).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error fetching check-in {checkin_id}: {str(e)}")
+            return None
+
+    # In the EVENT MANAGEMENT section
+    @staticmethod
+    def get_event_by_id(event_id):
+        """Get a single event by ID."""
+        try:
+            response = supabase.table("calendarevent").select(
+                "event_id, title, description, start_time, end_time, user_id, team_ID, user:user_id(username, email)"
+            ).eq("event_id", int(event_id)).execute()
+            event = response.data[0] if response.data else None
+            
+            if event:
+                # Parse timestamps
+                start_time = event.get('start_time')
+                end_time = event.get('end_time')
+                if isinstance(start_time, str):
+                    event['start_time'] = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                if isinstance(end_time, str):
+                    event['end_time'] = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+            
+            return event
+        except Exception as e:
+            logger.error(f"Error fetching event {event_id}: {str(e)}")
+            return None       
+        
+    @staticmethod
+    def get_user_active_teams(user_id):
+        """Get all active teams a user belongs to."""
+        try:
+            response = supabase.table("user_team").select(
+                "team_ID, left_at"
+            ).eq("user_id", int(user_id)).is_("left_at", None).execute()
+            
+            return response.data or []
+        except Exception as e:
+            logger.error(f"Error getting user active teams: {str(e)}")
+            return []
+
+    @staticmethod
+    def check_user_in_team(user_id, team_id):
+        """Check if user is already an active member of a team."""
+        try:
+            response = supabase.table("user_team").select("*").eq("user_id", int(user_id)) \
+                .eq("team_ID", int(team_id)).is_("left_at", None).execute()
+            
+            return len(response.data) > 0
+        except Exception as e:
+            logger.error(f"Error checking user in team: {str(e)}")
+            return False
+
+    @staticmethod
+    def add_team_member(team_id, user_id):
+        """Add a user to a team with validation."""
+        try:
+            # Check if user is already in the team
+            if AdminSupabaseService.check_user_in_team(user_id, team_id):
+                raise Exception(f"User {user_id} is already a member of team {team_id}")
+            
+            # Check if user is in other active teams
+            active_teams = AdminSupabaseService.get_user_active_teams(user_id)
+            if active_teams:
+                # User is already in another active team
+                raise Exception(f"User {user_id} is already a member of another active team")
+            
+            # Add user to team
+            member_data = {
+                "team_ID": int(team_id),
+                "user_id": int(user_id),
+                "joined_at": timezone.now().isoformat()
+            }
+            response = supabase.table("user_team").insert(member_data).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error adding team member: {str(e)}")
+            raise
+
+    @staticmethod
+    def remove_team_member(team_id, user_id):
+        """Remove a user from a team (mark as left)."""
+        try:
+            # Mark user as left instead of deleting record
+            update_data = {
+                "left_at": timezone.now().isoformat()
+            }
+            response = supabase.table("user_team").update(update_data).eq("team_ID", int(team_id)) \
+                .eq("user_id", int(user_id)).is_("left_at", None).execute()
+            
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error removing team member: {str(e)}")
+            raise
+    
+    # -------------------------------
+    # TEAM MANAGEMENT
+    # -------------------------------
+
+    @staticmethod
+    def get_all_teams():
+        """Fetch all teams from Supabase."""
+        try:
+            response = supabase.table("team").select("*").order("joined_at", desc=True).execute()
+            return response.data or []
+        except Exception as e:
+            logger.error(f"Error fetching all teams: {str(e)}")
+            return []
+
+    @staticmethod
+    def get_team_by_id(team_id):
+        """Get a single team by ID."""
+        try:
+            response = supabase.table("team").select("*").eq("team_ID", int(team_id)).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error fetching team {team_id}: {str(e)}")
+            return None
+
+    @staticmethod
+    def get_team_members(team_id):
+        """Get all active members of a team."""
+        try:
+            # First get all user-team relationships for this team
+            response = supabase.table("user_team").select(
+                "user_id, joined_at, left_at"
+            ).eq("team_ID", int(team_id)).execute()
+            
+            team_memberships = response.data or []
+            
+            # Filter for active members (where left_at is null)
+            active_memberships = [m for m in team_memberships if not m.get('left_at')]
+            
+            # Get user details for each active member
+            members = []
+            for membership in active_memberships:
+                user_id = membership.get('user_id')
+                if user_id:
+                    user_response = supabase.table("user").select(
+                        "user_ID, username, email, full_name, profile_picture"
+                    ).eq("user_ID", int(user_id)).execute()
+                    
+                    if user_response.data:
+                        user_data = user_response.data[0]
+                        # Add membership info to user data
+                        user_data['joined_at'] = membership.get('joined_at')
+                        user_data['left_at'] = membership.get('left_at')
+                        members.append(user_data)
+            
+            return members
+        except Exception as e:
+            logger.error(f"Error fetching team members for team {team_id}: {str(e)}")
+            return []
+
+    @staticmethod
+    def get_team_members_detailed(team_id):
+        """Get team members with detailed membership info."""
+        try:
+            response = supabase.table("user_team").select(
+                "user_id, joined_at, left_at, user:user_id(user_ID, username, email, full_name, profile_picture)"
+            ).eq("team_ID", int(team_id)).execute()
+            
+            memberships = response.data or []
+            
+            # Format the data for easier use
+            formatted_members = []
+            for membership in memberships:
+                if membership.get('user'):
+                    member_data = membership['user'].copy()
+                    member_data['joined_at'] = membership.get('joined_at')
+                    member_data['left_at'] = membership.get('left_at')
+                    member_data['is_active'] = not bool(membership.get('left_at'))
+                    formatted_members.append(member_data)
+            
+            return formatted_members
+        except Exception as e:
+            logger.error(f"Error fetching detailed team members for team {team_id}: {str(e)}")
+            # Fall back to simpler method
+            return AdminSupabaseService.get_team_members(team_id)
+
+    @staticmethod
+    def get_team_with_members(team_id):
+        """Get team data with all its members."""
+        try:
+            team = AdminSupabaseService.get_team_by_id(team_id)
+            if not team:
+                return None
+            
+            members = AdminSupabaseService.get_team_members_detailed(team_id)
+            team['members'] = members
+            team['active_members'] = [m for m in members if not m.get('left_at')]
+            team['member_count'] = len(team['active_members'])
+            team['total_members'] = len(members)  # Including inactive
+            
+            return team
+        except Exception as e:
+            logger.error(f"Error fetching team with members {team_id}: {str(e)}")
+            return None
+
+    @staticmethod
+    def create_team(team_data):
+        """Create a new team."""
+        try:
+            # Ensure required fields
+            if 'team_name' not in team_data:
+                raise ValueError("Team name is required")
+            
+            # Add creation timestamp if not provided
+            if 'created_at' not in team_data:
+                team_data['created_at'] = timezone.now().isoformat()
+            
+            response = supabase.table("team").insert(team_data).execute()
+            created_team = response.data[0] if response.data else None
+            
+            # If team has an owner specified, add them as a member
+            if created_team and 'user_id_owner' in team_data and team_data['user_id_owner']:
+                AdminSupabaseService._add_team_member_internal(
+                    created_team['team_ID'], 
+                    team_data['user_id_owner']
+                )
+            
+            return created_team
+        except Exception as e:
+            logger.error(f"Error creating team: {str(e)}")
+            raise
+
+    @staticmethod
+    def update_team(team_id, update_data):
+        """Update a team in Supabase."""
+        try:
+            response = supabase.table("team").update(update_data).eq("team_ID", int(team_id)).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error updating team {team_id}: {str(e)}")
+            raise
+
+    @staticmethod
+    def delete_team(team_id):
+        """Delete a team from Supabase."""
+        try:
+            # First check if team exists
+            team = AdminSupabaseService.get_team_by_id(team_id)
+            if not team:
+                return False
+            
+            # Clear active_team_id for any users with this active team
+            supabase.table("user").update({'active_team_id': None}).eq('active_team_id', team_id).execute()
+            
+            # Delete calendar events for this team
+            supabase.table('calendarevent').delete().eq('team_ID', team_id).execute()
+            
+            # Delete tasks for this team
+            supabase.table('tasks').delete().eq('team_ID', team_id).execute()
+            
+            # Delete user_team relationships for this team
+            supabase.table('user_team').delete().eq('team_ID', team_id).execute()
+            
+            # Finally delete the team
+            supabase.table('team').delete().eq('team_ID', team_id).execute()
+            
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting team {team_id}: {str(e)}")
+            return False
+
+    @staticmethod
+    def is_user_in_team(user_id, team_id):
+        """Check if user is already an active member of a team."""
+        try:
+            response = supabase.table("user_team").select("*").eq("user_id", int(user_id)) \
+                .eq("team_ID", int(team_id)).is_("left_at", None).execute()
+            
+            return len(response.data) > 0
+        except Exception as e:
+            logger.error(f"Error checking user in team: {str(e)}")
+            return False
+
+    @staticmethod
+    def get_user_teams(user_id):
+        """Get all active teams a user belongs to."""
+        try:
+            response = supabase.table("user_team").select(
+                "team_ID, joined_at, left_at, team:team_ID(team_name, team_description, user_id_owner)"
+            ).eq("user_id", int(user_id)).is_("left_at", None).execute()
+            
+            teams = []
+            for item in (response.data or []):
+                if item.get('team'):
+                    team_info = item['team']
+                    team_info['joined_at'] = item.get('joined_at')
+                    team_info['membership_id'] = item.get('id')  # If available
+                    teams.append(team_info)
+            
+            return teams
+        except Exception as e:
+            logger.error(f"Error getting user teams: {str(e)}")
+            return []
+
+    @staticmethod
+    def _add_team_member_internal(team_id, user_id):
+        """Internal method to add a user to a team (used by other methods)."""
+        try:
+            # Check if user exists
+            user = AdminSupabaseService.get_user_by_id(user_id)
+            if not user:
+                raise ValueError(f"User {user_id} does not exist")
+            
+            # Check if team exists
+            team = AdminSupabaseService.get_team_by_id(team_id)
+            if not team:
+                raise ValueError(f"Team {team_id} does not exist")
+            
+            # Check if user is already in the team
+            if AdminSupabaseService.is_user_in_team(user_id, team_id):
+                logger.warning(f"User {user_id} is already a member of team {team_id}")
+                # Return existing membership info
+                response = supabase.table("user_team").select("*").eq("user_id", int(user_id)) \
+                    .eq("team_ID", int(team_id)).is_("left_at", None).execute()
+                return response.data[0] if response.data else None
+            
+            # Add user to team
+            member_data = {
+                "team_ID": int(team_id),
+                "user_id": int(user_id),
+                "joined_at": timezone.now().isoformat()
+            }
+            
+            response = supabase.table("user_team").insert(member_data).execute()
+            logger.info(f"Added user {user_id} to team {team_id}")
+            
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error adding team member: {str(e)}")
+            raise
+
+    @staticmethod
+    def add_member_to_team(team_id, user_id):
+        """Public method to add a user to a team (for admin interface)."""
+        return AdminSupabaseService._add_team_member_internal(team_id, user_id)
+
+    @staticmethod
+    def _remove_team_member_internal(team_id, user_id):
+        """Internal method to remove a user from a team."""
+        try:
+            # First check if the membership exists
+            response = supabase.table("user_team").select("*").eq("user_id", int(user_id)) \
+                .eq("team_ID", int(team_id)).is_("left_at", None).execute()
+            
+            if not response.data:
+                logger.warning(f"User {user_id} is not an active member of team {team_id}")
+                return None
+            
+            # Mark user as left
+            update_data = {
+                "left_at": timezone.now().isoformat()
+            }
+            
+            update_response = supabase.table("user_team").update(update_data).eq("team_ID", int(team_id)) \
+                .eq("user_id", int(user_id)).is_("left_at", None).execute()
+            
+            logger.info(f"Removed user {user_id} from team {team_id}")
+            
+            return update_response.data[0] if update_response.data else None
+        except Exception as e:
+            logger.error(f"Error removing team member: {str(e)}")
+            raise
+
+    @staticmethod
+    def remove_member_from_team(team_id, user_id):
+        """Public method to remove a user from a team (for admin interface)."""
+        return AdminSupabaseService._remove_team_member_internal(team_id, user_id)
+
+    @staticmethod
+    def search_teams(query):
+        """Search teams by name or description."""
+        try:
+            response = supabase.table("team").select("*").or_(
+                f"team_name.ilike.%{query}%,team_description.ilike.%{query}%"
+            ).execute()
+            
+            teams = response.data or []
+            
+            # Get member count for each team
+            for team in teams:
+                members = AdminSupabaseService.get_team_members(team['team_ID'])
+                team['member_count'] = len(members)
+            
+            return teams
+        except Exception as e:
+            logger.error(f"Error searching teams: {str(e)}")
+            return []
+
+    @staticmethod
+    def get_team_statistics(team_id):
+        """Get statistics for a team."""
+        try:
+            team = AdminSupabaseService.get_team_with_members(team_id)
+            if not team:
+                return None
+            
+            stats = {
+                'total_members': team.get('total_members', 0),
+                'active_members': team.get('member_count', 0),
+                'team_info': {
+                    'team_name': team.get('team_name'),
+                    'created_at': team.get('created_at'),
+                    'description': team.get('team_description')
+                }
+            }
+            
+            # Get task count for this team
+            try:
+                tasks_response = supabase.table("tasks").select("task_id", count="exact").eq("team_ID", team_id).execute()
+                stats['task_count'] = tasks_response.count or 0
+            except Exception:
+                stats['task_count'] = 0
+            
+            # Get event count for this team
+            try:
+                events_response = supabase.table("calendarevent").select("event_id", count="exact").eq("team_ID", team_id).execute()
+                stats['event_count'] = events_response.count or 0
+            except Exception:
+                stats['event_count'] = 0
+            
+            return stats
+        except Exception as e:
+            logger.error(f"Error getting team statistics: {str(e)}")
+            return None
+
+    @staticmethod
+    def transfer_team_ownership(team_id, new_owner_id):
+        """Transfer team ownership to another user."""
+        try:
+            # Check if new owner is a team member
+            if not AdminSupabaseService.is_user_in_team(new_owner_id, team_id):
+                raise ValueError(f"User {new_owner_id} is not a member of team {team_id}")
+            
+            # Update team owner
+            update_data = {
+                "user_id_owner": int(new_owner_id),
+                "updated_at": timezone.now().isoformat()
+            }
+            
+            response = supabase.table("team").update(update_data).eq("team_ID", int(team_id)).execute()
+            
+            if response.data:
+                logger.info(f"Transferred ownership of team {team_id} to user {new_owner_id}")
+                return response.data[0]
+            
+            return None
+        except Exception as e:
+            logger.error(f"Error transferring team ownership: {str(e)}")
+            raise
+    
+
+    @staticmethod
+    def upload_team_icon(file, team_id=None):
+        """Upload a team icon to Supabase storage and return the public URL."""
+        try:
+            import time
+            file_extension = file.name.split('.')[-1] if '.' in file.name else 'png'
+            
+            # Generate unique filename
+            if team_id:
+                file_path = f"team_{team_id}_{int(time.time())}.{file_extension}"
+            else:
+                file_path = f"temp_{int(time.time())}_{file.name}"
+            
+            file_bytes = file.read()
+            
+            # Upload to Supabase storage
+            bucket = supabase.storage.from_("team_icons")
+            
+            try:
+                # Try to upload with explicit filename
+                bucket.upload(file_path, file_bytes)
+            except Exception as upload_error:
+                # If bucket doesn't exist, create it first
+                try:
+                    supabase.storage.create_bucket("team_icons", {
+                        "public": True,
+                        "file_size_limit": 5242880,  # 5MB
+                        "allowed_mime_types": ["image/jpeg", "image/png", "image/gif", "image/webp"]
+                    })
+                    bucket.upload(file_path, file_bytes)
+                except Exception as create_error:
+                    logger.error(f"Failed to create bucket or upload: {create_error}")
+                    raise Exception(f"Failed to upload team icon: {create_error}")
+            
+            # Get public URL
+            public_url = bucket.get_public_url(file_path)
+            return public_url
+        except Exception as e:
+            logger.error(f"Error uploading team icon to Supabase: {str(e)}")
+            raise Exception(f"Failed to upload team icon: {str(e)}")
+    
+    @staticmethod
+    def delete_team_icon(icon_url):
+        """Delete a team icon from Supabase storage."""
+        try:
+            if not icon_url or "team_icons" not in icon_url:
+                return False
+            
+            # Extract file path from URL
+            from urllib.parse import urlparse
+            parsed = urlparse(icon_url)
+            file_path = parsed.path.split("/team_icons/")[-1]
+            
+            if file_path:
+                bucket = supabase.storage.from_("team_icons")
+                bucket.remove([file_path])
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error deleting team icon: {str(e)}")
+            return False
+                

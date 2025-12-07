@@ -8,8 +8,12 @@ def user_profile(request):
     """
     Injects user profile data into templates for logged-in users.
     """
-    if not request.user.is_authenticated:
-        return {}  
+    # Be defensive: some callers (e.g., RequestFactory in tests or
+    # shell renderings) may not attach a `user` attribute to the
+    # request object. Guard against that to avoid TemplateSyntaxError
+    # / AttributeError during template rendering.
+    if not hasattr(request, 'user') or not getattr(request.user, 'is_authenticated', False):
+        return {}
 
     user_id = request.session.get("user_ID")
     if not user_id:

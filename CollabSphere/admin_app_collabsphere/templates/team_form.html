@@ -1,0 +1,651 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+
+{% block title %}{% if team %}Edit Team: {{ team.team_name }}{% else %}Create Team{% endif %}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1>
+                <i class="fas fa-users-cog me-2"></i>
+                {% if team %}Edit Team{% else %}Create New Team{% endif %}
+            </h1>
+            <p class="text-muted">
+                {% if team %}Update team information{% else %}Add a new team to CollabSphere{% endif %}
+            </p>
+        </div>
+        
+        {% if messages %}
+        <div class="messages mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="" id="teamForm" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Team Icon Upload -->
+            <div class="form-group mb-3">
+                <label for="team_icon" class="form-label">Team Icon</label>
+                <div class="d-flex align-items-center">
+                    {% if team and team.icon_url and team.icon_url != 'https://example.com/default-team-icon.png' %}
+                    <div class="me-3">
+                        <img src="{{ team.icon_url }}" alt="Current Team Icon" 
+                             class="rounded-circle border" width="80" height="80"
+                             style="object-fit: cover;">
+                    </div>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <input type="file" class="form-control" id="team_icon" name="team_icon" 
+                               accept="image/jpeg,image/png,image/gif,image/webp">
+                        <small class="text-muted">Upload a team icon (max 5MB, JPG, PNG, GIF, WebP)</small>
+                        {% if team and team.icon_url and team.icon_url != 'https://example.com/default-team-icon.png' %}
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="remove_icon" name="remove_icon">
+                            <label class="form-check-label text-danger" for="remove_icon">
+                                Remove current icon
+                            </label>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="team_name" class="form-label">Team Name *</label>
+                <input type="text" class="form-control" id="team_name" name="team_name" 
+                       value="{{ team.team_name|default:'' }}" required>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3">{{ team.description|default:'' }}</textarea>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="user_id_owner" class="form-label">Team Owner *</label>
+                <select class="form-select" id="user_id_owner" name="user_id_owner" required>
+                    <option value="">Select Owner</option>
+                    {% for user in users %}
+                    <option value="{{ user.user_ID }}" 
+                            {% if team.user_id_owner == user.user_ID %}selected{% endif %}>
+                        {{ user.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">The user who owns and manages this team</small>
+            </div>
+            
+            <!-- Team Members Section with Dual List Interface -->
+            <div class="form-group mb-3">
+                <label class="form-label">Team Members Management</label>
+                <div class="row">
+                    <!-- Available Users (Not in Team) -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-user-plus text-success me-2"></i>
+                                    Available Users
+                                </h6>
+                                <small class="text-muted">Users not in this team</small>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush" id="availableUsers" style="max-height: 300px; overflow-y: auto;">
+                                    {% for user in users %}
+                                    {% if not user.user_ID in current_member_ids %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center" data-user-id="{{ user.user_ID }}">
+                                        <div class="d-flex align-items-center">
+                                            {% if user.profile_picture %}
+                                            <img src="{{ user.profile_picture }}" 
+                                                 alt="{{ user.username }}" 
+                                                 class="rounded-circle me-2"
+                                                 width="32" height="32"
+                                                 style="object-fit: cover;">
+                                            {% else %}
+                                            <div class="avatar-placeholder-sm rounded-circle me-2 d-flex align-items-center justify-content-center"
+                                                 style="width: 32px; height: 32px; background-color: #3D74C3; color: white; font-weight: bold;">
+                                                {{ user.username|first|upper }}
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="fw-medium">{{ user.username }}</div>
+                                                <small class="text-muted">{{ user.email }}</small>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-success add-member-btn" title="Add to team">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Current Team Members -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-users text-primary me-2"></i>
+                                    Team Members
+                                    <span class="badge bg-primary float-end" id="memberCount">{{ current_member_ids|length }}</span>
+                                </h6>
+                                <small class="text-muted">Users currently in this team</small>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush" id="currentMembers" style="max-height: 300px; overflow-y: auto;">
+                                    {% for user in users %}
+                                    {% if user.user_ID in current_member_ids %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center" data-user-id="{{ user.user_ID }}">
+                                        <div class="d-flex align-items-center">
+                                            {% if user.profile_picture %}
+                                            <img src="{{ user.profile_picture }}" 
+                                                 alt="{{ user.username }}" 
+                                                 class="rounded-circle me-2"
+                                                 width="32" height="32"
+                                                 style="object-fit: cover;">
+                                            {% else %}
+                                            <div class="avatar-placeholder-sm rounded-circle me-2 d-flex align-items-center justify-content-center"
+                                                 style="width: 32px; height: 32px; background-color: #3D74C3; color: white; font-weight: bold;">
+                                                {{ user.username|first|upper }}
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="fw-medium">
+                                                    {{ user.username }}
+                                                    {% if team and user.user_ID == team.user_id_owner %}
+                                                    <span class="badge bg-warning ms-1">Owner</span>
+                                                    {% endif %}
+                                                </div>
+                                                <small class="text-muted">{{ user.email }}</small>
+                                            </div>
+                                        </div>
+                                        {% if not team or user.user_ID != team.user_id_owner %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-member-btn" title="Remove from team">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        {% else %}
+                                        <span class="text-muted small">Owner</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hidden input field to store selected member IDs -->
+                <input type="hidden" id="selectedMembers" name="members" value="{% for id in current_member_ids %}{{ id }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                
+                <div class="form-text mt-2">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Click <i class="fas fa-plus text-success"></i> to add users, click <i class="fas fa-times text-danger"></i> to remove them.
+                        Owner cannot be removed from the team.
+                    </small>
+                    <br>
+                    <small class="text-muted">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Users can only belong to one active team at a time.
+                    </small>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if team %}Update Team{% else %}Create Team{% endif %}
+                </button>
+                {% if team %}
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteTeamModal">
+                    <i class="fas fa-trash me-1"></i> Delete Team
+                </button>
+                {% endif %}
+                <a href="{% if team %}{% url 'admin_app_collabsphere:team_detail' team.team_ID %}{% else %}{% url 'admin_app_collabsphere:team_management' %}{% endif %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal (only show when editing) -->
+{% if team %}
+<div class="modal fade" id="deleteTeamModal" tabindex="-1" aria-labelledby="deleteTeamModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-danger" id="deleteTeamModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Delete Team
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle fa-lg me-2"></i>
+                    <strong>Warning: This action cannot be undone!</strong>
+                </div>
+                
+                <p>Are you sure you want to permanently delete the team <strong>"{{ team.team_name }}"</strong>?</p>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>This will:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Delete the team record</li>
+                        <li>Remove all team members</li>
+                        <li>Delete all team tasks</li>
+                        <li>Delete all team calendar events</li>
+                        <li>Reset users' active team if set to this team</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-user me-2"></i>
+                    <small>Note: User accounts will not be deleted, only their association with this team.</small>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </button>
+                <form method="POST" action="{% url 'admin_app_collabsphere:team_delete' team.team_ID %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Delete Permanently
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get references to key elements
+    const availableUsersList = document.getElementById('availableUsers');
+    const currentMembersList = document.getElementById('currentMembers');
+    const selectedMembersInput = document.getElementById('selectedMembers');
+    const memberCountSpan = document.getElementById('memberCount');
+    const ownerSelect = document.getElementById('user_id_owner');
+    
+    // Initialize selected members from hidden input
+    let selectedMembers = new Set();
+    const initialMembers = "{{ current_member_ids|join:',' }}";
+    if (initialMembers.trim()) {
+        initialMembers.split(',').forEach(id => {
+            if (id.trim()) selectedMembers.add(parseInt(id.trim()));
+        });
+    }
+    updateMemberCount();
+    
+    // Add owner to selected members if not already there
+    if (ownerSelect.value) {
+        selectedMembers.add(parseInt(ownerSelect.value));
+        updateHiddenInput();
+        updateMemberCount();
+    }
+    
+    // Handle owner change
+    if (ownerSelect) {
+        ownerSelect.addEventListener('change', function() {
+            const newOwnerId = parseInt(this.value);
+            if (newOwnerId) {
+                // Add new owner to selected members
+                selectedMembers.add(newOwnerId);
+                updateHiddenInput();
+                updateMemberCount();
+                
+                // Update UI to reflect owner status
+                updateOwnerStatus();
+            }
+        });
+    }
+    
+    // Function to move user from available to current members
+    function addUserToTeam(userId) {
+        const userElement = document.querySelector(`#availableUsers [data-user-id="${userId}"]`);
+        if (userElement) {
+            // Clone the element
+            const newMemberElement = userElement.cloneNode(true);
+            
+            // Change the button to remove button
+            const addBtn = newMemberElement.querySelector('.add-member-btn');
+            if (addBtn) {
+                addBtn.className = 'btn btn-sm btn-outline-danger remove-member-btn';
+                addBtn.innerHTML = '<i class="fas fa-times"></i>';
+                addBtn.title = 'Remove from team';
+                addBtn.onclick = function() { removeUserFromTeam(userId); };
+            }
+            
+            // Add owner badge if this user is the owner
+            const userNameElement = newMemberElement.querySelector('.fw-medium');
+            if (userNameElement && userId === parseInt(ownerSelect.value)) {
+                userNameElement.innerHTML += ' <span class="badge bg-warning ms-1">Owner</span>';
+            }
+            
+            // Move to current members list
+            currentMembersList.appendChild(newMemberElement);
+            userElement.remove();
+            
+            // Add to selected members set
+            selectedMembers.add(userId);
+            updateHiddenInput();
+            updateMemberCount();
+        }
+    }
+    
+    // Function to move user from current to available members
+    function removeUserFromTeam(userId) {
+        // Don't allow removing the owner
+        if (parseInt(userId) === parseInt(ownerSelect.value)) {
+            alert('The team owner cannot be removed from the team.');
+            return;
+        }
+        
+        const memberElement = document.querySelector(`#currentMembers [data-user-id="${userId}"]`);
+        if (memberElement) {
+            // Clone the element
+            const newAvailableElement = memberElement.cloneNode(true);
+            
+            // Change the button to add button
+            const removeBtn = newAvailableElement.querySelector('.remove-member-btn');
+            if (removeBtn) {
+                removeBtn.className = 'btn btn-sm btn-outline-success add-member-btn';
+                removeBtn.innerHTML = '<i class="fas fa-plus"></i>';
+                removeBtn.title = 'Add to team';
+                removeBtn.onclick = function() { addUserToTeam(userId); };
+            }
+            
+            // Remove owner badge if present
+            const userNameElement = newAvailableElement.querySelector('.fw-medium');
+            if (userNameElement) {
+                userNameElement.innerHTML = userNameElement.textContent.replace(' Owner', '').replace('<span class="badge bg-warning ms-1">Owner</span>', '');
+            }
+            
+            // Move to available users list
+            availableUsersList.appendChild(newAvailableElement);
+            memberElement.remove();
+            
+            // Remove from selected members set
+            selectedMembers.delete(userId);
+            updateHiddenInput();
+            updateMemberCount();
+        }
+    }
+    
+    // Function to update hidden input with selected members
+    function updateHiddenInput() {
+        selectedMembersInput.value = Array.from(selectedMembers).join(',');
+    }
+    
+    // Function to update member count
+    function updateMemberCount() {
+        memberCountSpan.textContent = selectedMembers.size;
+    }
+    
+    // Function to update owner status in UI
+    function updateOwnerStatus() {
+        // Remove owner badge from all users
+        document.querySelectorAll('#currentMembers .badge.bg-warning').forEach(badge => {
+            badge.remove();
+        });
+        
+        // Add owner badge to current owner
+        const ownerElement = document.querySelector(`#currentMembers [data-user-id="${ownerSelect.value}"]`);
+        if (ownerElement) {
+            const userNameElement = ownerElement.querySelector('.fw-medium');
+            if (userNameElement) {
+                if (!userNameElement.innerHTML.includes('badge bg-warning')) {
+                    userNameElement.innerHTML += ' <span class="badge bg-warning ms-1">Owner</span>';
+                }
+            }
+        }
+    }
+    
+    // Initialize event listeners for existing add buttons
+    document.querySelectorAll('.add-member-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = parseInt(this.closest('[data-user-id]').getAttribute('data-user-id'));
+            addUserToTeam(userId);
+        });
+    });
+    
+    // Initialize event listeners for existing remove buttons
+    document.querySelectorAll('.remove-member-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = parseInt(this.closest('[data-user-id]').getAttribute('data-user-id'));
+            removeUserFromTeam(userId);
+        });
+    });
+    
+    // Update UI on page load
+    updateOwnerStatus();
+    
+    // Handle form submission
+    const teamForm = document.getElementById('teamForm');
+    if (teamForm) {
+        teamForm.addEventListener('submit', function(e) {
+            // Ensure owner is selected
+            if (!ownerSelect.value) {
+                e.preventDefault();
+                alert('Please select a team owner.');
+                ownerSelect.focus();
+                return false;
+            }
+            
+            // Ensure owner is in selected members (should always be, but double-check)
+            if (!selectedMembers.has(parseInt(ownerSelect.value))) {
+                selectedMembers.add(parseInt(ownerSelect.value));
+                updateHiddenInput();
+            }
+            
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+                submitBtn.disabled = true;
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.form-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.form-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 30px;
+}
+
+.form-header {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.form-header h1 {
+    color: #3D74C3;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.card {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 12px 15px;
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #e9ecef;
+    padding: 12px 15px;
+    transition: background-color 0.2s;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.avatar-placeholder-sm {
+    width: 32px;
+    height: 32px;
+    background-color: #3D74C3;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+.add-member-btn:hover {
+    background-color: #198754;
+    color: white;
+}
+
+.remove-member-btn:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+.form-text {
+    margin-top: 8px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Scrollbar styling */
+#availableUsers::-webkit-scrollbar,
+#currentMembers::-webkit-scrollbar {
+    width: 6px;
+}
+
+#availableUsers::-webkit-scrollbar-track,
+#currentMembers::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#availableUsers::-webkit-scrollbar-thumb,
+#currentMembers::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#availableUsers::-webkit-scrollbar-thumb:hover,
+#currentMembers::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Modal Styling */
+.modal-content {
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    background-color: #f8f9fa;
+    border-radius: 10px 10px 0 0;
+    padding: 20px;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 0 0 10px 10px;
+}
+
+.alert {
+    border-radius: 8px;
+    border: none;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000;
+    font-size: 0.7em;
+    padding: 2px 6px;
+}
+</style>
+{% endblock %}
