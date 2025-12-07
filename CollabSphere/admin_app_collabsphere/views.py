@@ -400,12 +400,10 @@ def task_management(request):
 
 @admin_required
 def task_detail(request, task_id):
-    """View task details. Returns modal for AJAX, full page for regular requests."""
+    """View task details."""
     task = AdminSupabaseService.get_task_by_id(task_id)
     
     if not task:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'error': 'Task not found'}, status=404)
         messages.error(request, f"Task with ID {task_id} not found.")
         return redirect('admin_app_collabsphere:task_management')
     
@@ -413,11 +411,6 @@ def task_detail(request, task_id):
         'task': task,
         'active_page': 'tasks',
     }
-    
-    # Return modal markup for AJAX requests, full page for regular requests
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return render(request, 'task_detail_modal.html', context)
-    
     return render(request, 'task_detail.html', context)
 
 # -------------------------------
@@ -1194,29 +1187,66 @@ def team_create(request):
     
     if request.method == 'POST':
         try:
+            # Prepare team data according to schema
             team_data = {
-                'team_name': request.POST.get('team_name'),
-                'description': request.POST.get('description', ''),
-                'joined_at': timezone.now().isoformat(),
-                'icon_url': request.POST.get('icon_url', 'https://example.com/default-team-icon.png'),
+                'team_name': request.POST.get('team_name', '').strip(),
+                'description': request.POST.get('description', '').strip(),
+                'joined_at': timezone.now().isoformat(),  # Use joined_at, not created_at
+                'icon_url': 'https://example.com/default-team-icon.png',  # Default icon
             }
             
             # Handle owner
-            user_id_owner = request.POST.get('user_id_owner')
+            user_id_owner = request.POST.get('user_id_owner', '').strip()
             if user_id_owner:
                 team_data['user_id_owner'] = int(user_id_owner)
+            else:
+                messages.error(request, "Team owner is required.")
+                return redirect('admin_app_collabsphere:team_create')
             
-            created_team = AdminSupabaseService.create_team(team_data)
+            # Handle icon upload
+            icon_file = request.FILES.get('team_icon')
+            if icon_file:
+                try:
+                    icon_url = AdminSupabaseService.upload_team_icon(icon_file)
+                    team_data['icon_url'] = icon_url
+                except Exception as e:
+                    logger.error(f"Error uploading icon: {e}")
+                    messages.warning(request, f"Could not upload icon: {str(e)}")
             
-            if created_team:
-                # initial members if specified
-                members = request.POST.getlist('members')
-                for member_id in members:
-                    if member_id:
-                        AdminSupabaseService.add_team_member(created_team['team_ID'], int(member_id))
+            # Get selected members
+            members_input = request.POST.get('members', '')
+            selected_member_ids = []
+            if members_input:
+                raw_ids = members_input.split(',')
+                for raw_id in raw_ids:
+                    clean_id = raw_id.strip()
+                    if clean_id and clean_id.isdigit():
+                        selected_member_ids.append(clean_id)
+            
+            # Ensure owner is in selected members
+            if str(team_data['user_id_owner']) not in selected_member_ids:
+                selected_member_ids.append(str(team_data['user_id_owner']))
+            
+            # Create the team
+            team = AdminSupabaseService.create_team(team_data)
+            
+            if team:
+                team_id = team['team_ID']
                 
-                messages.success(request, f"Team '{created_team['team_name']}' created successfully.")
-                return redirect('admin_app_collabsphere:team_detail', team_id=created_team['team_ID'])
+                # Add members to team
+                for member_id in selected_member_ids:
+                    try:
+                        AdminSupabaseService.add_member_to_team(team_id, int(member_id))
+                    except Exception as e:
+                        error_msg = str(e)
+                        if "already exists" in error_msg.lower() or "duplicate" in error_msg.lower():
+                            logger.warning(f"Member {member_id} already in team")
+                        else:
+                            logger.error(f"Error adding member {member_id}: {e}")
+                            messages.warning(request, f"Failed to add user {member_id}: {error_msg}")
+                
+                messages.success(request, f"Team '{team['team_name']}' created successfully.")
+                return redirect('admin_app_collabsphere:team_detail', team_id=team_id)
             else:
                 messages.error(request, "Failed to create team.")
                 
@@ -1226,52 +1256,30 @@ def team_create(request):
     
     context = {
         'users': users,
+        'current_member_ids': [],  
         'active_page': 'teams',
     }
     return render(request, 'team_form.html', context)
 
 @admin_required
 def team_edit(request, team_id):
-    """Edit an existing team."""
+    """Edit an existing team - FIXED VERSION"""
     team = AdminSupabaseService.get_team_by_id(team_id)
     users = AdminSupabaseService.get_all_users()
+    members = AdminSupabaseService.get_team_members(team_id)
+    
+    # Extract user IDs from members - FIXED
+    member_ids = []
+    for member in (members or []):
+        if isinstance(member, dict):
+            # Try different possible key names for user ID
+            user_id = member.get('user_ID') or member.get('user_id') or member.get('id')
+            if user_id:
+                member_ids.append(str(user_id))
     
     if not team:
         messages.error(request, f"Team with ID {team_id} not found.")
         return redirect('admin_app_collabsphere:team_management')
-    
-    # Get current team members
-    members = AdminSupabaseService.get_team_members(team_id)
-    
-    # Convert member IDs to strings for template comparison
-    current_member_ids = []  # Store as integers for cleaner comparison
-
-    
-    for member in (members or []):
-        try:
-            # Check different possible structures
-            if isinstance(member, dict):
-                # Direct user data
-                user_id = member.get('user_ID') or member.get('user_id') or member.get('id')
-                
-                # If not found, check nested user object
-                if not user_id and isinstance(member.get('user'), dict):
-                    user_data = member['user']
-                    user_id = user_data.get('user_ID') or user_data.get('user_id') or user_data.get('id')
-                
-                if user_id:
-                    current_member_ids.append(str(user_id))
-        except Exception as e:
-            logger.warning(f"Error extracting user ID from member: {e}")
-            continue
-    
-    # Ensure owner is included
-    if team.get('user_id_owner'):
-        owner_id = str(team['user_id_owner'])
-        if owner_id not in current_member_ids:
-            current_member_ids.append(owner_id)
-    
-    logger.debug(f"Team {team_id} - Current members: {current_member_ids}")
     
     if request.method == 'POST':
         try:
@@ -1280,94 +1288,72 @@ def team_edit(request, team_id):
                 'description': request.POST.get('description', ''),
             }
             
-            # Handle team icon upload
-            team_icon = request.FILES.get('team_icon')
-            if team_icon:
-                try:
-                    # Fix: Pass filename parameter properly
-                    import os
-                    file_name = team_icon.name
-                    
-                    # Upload new team icon
-                    icon_url = AdminSupabaseService.upload_team_icon(team_icon, team_id)
-                    update_data['icon_url'] = icon_url
-                    logger.info(f"Uploaded new team icon for team {team_id}")
-                except Exception as e:
-                    logger.error(f"Error uploading team icon: {str(e)}")
-                    messages.warning(request, f"Could not upload team icon: {str(e)}")
-            elif request.POST.get('remove_icon'):
-                # Remove current team icon
-                if team.get('icon_url') and team['icon_url'] != 'https://example.com/default-team-icon.png':
-                    try:
-                        AdminSupabaseService.delete_team_icon(team['icon_url'])
-                    except:
-                        pass  # Ignore deletion errors
-                update_data['icon_url'] = 'https://example.com/default-team-icon.png'
-            
             # Handle owner change
             user_id_owner = request.POST.get('user_id_owner')
             if user_id_owner:
                 update_data['user_id_owner'] = int(user_id_owner)
             
-            # Update team info
+            # Handle icon
+            icon_file = request.FILES.get('team_icon')
+            remove_icon = request.POST.get('remove_icon') == 'on'
+            
+            if icon_file:
+                try:
+                    icon_url = AdminSupabaseService.upload_team_icon(icon_file, team_id)
+                    update_data['icon_url'] = icon_url
+                except Exception as e:
+                    logger.error(f"Error uploading icon: {e}")
+                    messages.warning(request, f"Could not upload icon: {str(e)}")
+            elif remove_icon:
+                update_data['icon_url'] = 'https://example.com/default-team-icon.png'
+            
+            # Update team basic info
             updated_team = AdminSupabaseService.update_team(team_id, update_data)
             
             if updated_team:
-                # FIX: Get members from hidden input, not getlist
+                # Get selected members from form
                 members_input = request.POST.get('members', '')
+                selected_member_ids = []
                 if members_input:
-                    # Split by comma to get individual IDs
-                    new_member_ids = [mid.strip() for mid in members_input.split(',') if mid.strip()]
-                else:
-                    new_member_ids = []
+                    raw_ids = members_input.split(',')
+                    for raw_id in raw_ids:
+                        clean_id = raw_id.strip()
+                        if clean_id and clean_id.isdigit():
+                            selected_member_ids.append(clean_id)
                 
-                current_member_set = set(current_member_ids)
-                new_member_set = set(new_member_ids)
+                # Ensure owner is in selected members
+                if user_id_owner and str(user_id_owner) not in selected_member_ids:
+                    selected_member_ids.append(str(user_id_owner))
                 
-                logger.debug(f"Current members: {current_member_set}")
-                logger.debug(f"New members: {new_member_set}")
+                # Update team members
+                current_member_set = set(member_ids)
+                new_member_set = set(selected_member_ids)
                 
-                # Remove members not in new list (except owner)
-                members_to_remove = current_member_set - new_member_set
-                for member_id in members_to_remove:
-                    if member_id and int(member_id) != updated_team.get('user_id_owner'):
-                        try:
-                            AdminSupabaseService.remove_member_from_team(team_id, int(member_id))
-                            logger.info(f"Removed member {member_id} from team {team_id}")
-                        except Exception as e:
-                            error_msg = str(e)
-                            if "not an active member" in error_msg.lower():
-                                logger.warning(f"Member {member_id} already not in team {team_id}")
-                            else:
-                                logger.error(f"Error removing member {member_id}: {e}")
-                                messages.warning(request, f"Error removing member {member_id}: {error_msg}")
-                
-                # Add new members that aren't already in the team
+                # Members to add
                 members_to_add = new_member_set - current_member_set
                 for member_id in members_to_add:
-                    if member_id:
+                    try:
+                        AdminSupabaseService.add_member_to_team(team_id, int(member_id))
+                    except Exception as e:
+                        error_msg = str(e)
+                        if "already exists" in error_msg.lower() or "duplicate" in error_msg.lower():
+                            logger.warning(f"Member {member_id} already in team")
+                        else:
+                            logger.error(f"Error adding member {member_id}: {e}")
+                            messages.warning(request, f"Failed to add user {member_id}: {error_msg}")
+                
+                # Members to remove (except owner)
+                members_to_remove = current_member_set - new_member_set
+                for member_id in members_to_remove:
+                    # Don't remove the owner
+                    if member_id != str(user_id_owner):
                         try:
-                            user_id_int = int(member_id)
-                            
-                            # Check if user exists
-                            user = AdminSupabaseService.get_user_by_id(user_id_int)
-                            if not user:
-                                logger.warning(f"User {user_id_int} not found, skipping")
-                                continue
-                            
-                            # Add to team
-                            AdminSupabaseService.add_member_to_team(team_id, user_id_int)
-                            logger.info(f"Added member {member_id} to team {team_id}")
+                            AdminSupabaseService.remove_member_from_team(team_id, int(member_id))
                         except Exception as e:
-                            error_msg = str(e)
-                            if "already exists" in error_msg.lower() or "already a member" in error_msg.lower():
-                                logger.warning(f"Member {member_id} already in team")
-                            elif "already a member of another active team" in error_msg.lower():
-                                logger.warning(f"User {member_id} is already in another team")
-                                messages.warning(request, f"User {user.get('username', member_id)} is already a member of another active team")
-                            else:
-                                logger.error(f"Error adding member {member_id}: {e}")
-                                messages.warning(request, f"Error adding member {member_id}: {error_msg}")
+                            logger.error(f"Error removing member {member_id}: {e}")
+                            messages.warning(request, f"Failed to remove user {member_id}: {str(e)}")
+                    else:
+                        messages.info(request, "Team owner cannot be removed from the team.")
                 
                 messages.success(request, f"Team '{updated_team['team_name']}' updated successfully.")
                 return redirect('admin_app_collabsphere:team_detail', team_id=team_id)
@@ -1378,12 +1364,11 @@ def team_edit(request, team_id):
             logger.error(f"Error updating team: {str(e)}")
             messages.error(request, f"Error updating team: {str(e)}")
     
-    # Format context for template
+    # Update context to use 'current_member_ids' which is what the template expects
     context = {
         'team': team,
         'users': users,
-        'member_ids': current_member_ids,
-        'current_member_ids': current_member_ids,
+        'current_member_ids': member_ids,  # Changed from 'member_ids' to 'current_member_ids'
         'active_page': 'teams',
     }
     return render(request, 'team_form.html', context)

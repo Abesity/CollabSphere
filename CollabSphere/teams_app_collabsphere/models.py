@@ -21,16 +21,22 @@ class Team:
     def get_supabase_user_id(django_user):
         """Get or create Supabase user ID for Django user"""
         try:
+            print(f"🔍 DEBUG GET_SUPABASE_ID: Looking for Django user: {django_user.username} (ID: {django_user.id})")
+            
             # If Django user already has a cached supabase_id, validate it first
             supabase_id_field = getattr(django_user, 'supabase_id', None)
+            
+            # Convert cached value to int if it exists
             if supabase_id_field:
                 try:
+                    supabase_id_field = int(supabase_id_field)
+                    # Validate it exists in Supabase
                     validated = supabase.table('user')\
                         .select('user_ID')\
                         .eq('user_ID', supabase_id_field)\
                         .execute()
                     if validated.data:
-                        return supabase_id_field
+                        return supabase_id_field  # Already an int
                 except Exception:
                     # Fall through to try other lookup methods
                     pass
@@ -91,19 +97,21 @@ class Team:
 
             if result.data:
                 supabase_user_id = result.data[0]['user_ID']
-                # Cache the created supabase_id on the Django user when possible
+                # Ensure it's an integer
+                supabase_user_id = int(supabase_user_id)
+                # Cache in Django user model when possible
                 try:
                     if hasattr(django_user, 'supabase_id'):
                         django_user.supabase_id = supabase_user_id
                         django_user.save()
                 except Exception:
                     pass
-                print(f"Created new Supabase user ID {supabase_user_id} for Django user {django_user.id}")
-                return supabase_user_id
+                print(f"Created/Found Supabase user ID {supabase_user_id} for Django user {django_user.id}")
+                return supabase_user_id  # Now an integer
             else:
                 print(f"Failed to create Supabase user for Django user {django_user.id}")
                 return None
-                
+                    
         except Exception as e:
             print(f"Error getting Supabase user ID for Django user {django_user.id}: {e}")
             return None
@@ -483,19 +491,42 @@ class Team:
             if not current_user_id:
                 return {'success': False, 'error': 'Failed to get user information.'}
 
+            print(f"🔍 DEBUG UPDATE_TEAM: Current Django user: {django_user.username}")
+            print(f"🔍 DEBUG UPDATE_TEAM: Current Supabase user ID: {current_user_id} (type: {type(current_user_id)})")
+            print(f"🔍 DEBUG UPDATE_TEAM: Team ID to update: {team_ID}")
+
             # Verify user owns the team or has permission to edit
             team_response = supabase.table('team')\
                 .select('user_id_owner, icon_url')\
                 .eq('team_ID', team_ID)\
                 .execute()
             
+            print(f"🔍 DEBUG UPDATE_TEAM: Team response data: {team_response.data}")
+            
             if not team_response.data:
+                print(f"❌ DEBUG UPDATE_TEAM: Team {team_ID} not found!")
                 return {'success': False, 'error': 'Team not found.'}
             
             team_owner_id = team_response.data[0]['user_id_owner']
-            if team_owner_id != current_user_id:
+            print(f"🔍 DEBUG UPDATE_TEAM: Team owner ID from DB: {team_owner_id} (type: {type(team_owner_id)})")
+            print(f"🔍 DEBUG UPDATE_TEAM: Current user ID: {current_user_id} (type: {type(current_user_id)})")
+            
+            # CONVERT BOTH TO INTEGERS FOR COMPARISON
+            current_user_id_int = int(current_user_id) if current_user_id is not None else None
+            team_owner_id_int = int(team_owner_id) if team_owner_id is not None else None
+            
+            print(f"🔍 DEBUG UPDATE_TEAM: After conversion - Owner: {team_owner_id_int}, User: {current_user_id_int}")
+            print(f"🔍 DEBUG UPDATE_TEAM: Owner match? {team_owner_id_int == current_user_id_int}")
+            
+            if team_owner_id_int != current_user_id_int:
+                print(f"❌ DEBUG UPDATE_TEAM: PERMISSION DENIED!")
+                print(f"   - Team owner (int): {team_owner_id_int}")
+                print(f"   - Current user (int): {current_user_id_int}")
+                print(f"   - Are they equal? {team_owner_id_int == current_user_id_int}")
                 return {'success': False, 'error': 'You do not have permission to edit this team.'}
-
+            
+            print("✅ DEBUG UPDATE_TEAM: Permission granted!")
+        
             # Handle icon upload/removal
             current_icon_url = team_response.data[0].get('icon_url')
             icon_url = current_icon_url  # Keep current by default
