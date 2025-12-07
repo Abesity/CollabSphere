@@ -72,9 +72,96 @@ class AdminSupabaseService:
             user = AdminSupabaseService.get_user_by_id(user_id)
             if not user:
                 return False
-            
-            # Delete user
-            response = supabase.table("user").delete().eq("user_ID", int(user_id)).execute()
+            username = user.get('username')
+
+            # 1) Delete event participants for this user
+            try:
+                supabase.table('eventsparticipant').delete().eq('user_id', int(user_id)).execute()
+            except Exception as e:
+                logger.warning(f"Failed to delete event participants for user {user_id}: {e}")
+
+            # 2) Delete notifications where user is recipient or sender
+            try:
+                supabase.table('notifications').delete().or_(f"recipient.eq.{user_id},sender.eq.{user_id}").execute()
+            except Exception as e:
+                logger.warning(f"Failed to delete notifications for user {user_id}: {e}")
+
+            # 3) Delete wellbeing checkins
+            try:
+                supabase.table('wellbeingcheckin').delete().eq('user_id', int(user_id)).execute()
+            except Exception as e:
+                logger.warning(f"Failed to delete wellbeing checkins for user {user_id}: {e}")
+
+            # 4) Delete login records
+            try:
+                supabase.table('login').delete().eq('user_ID', int(user_id)).execute()
+            except Exception as e:
+                logger.warning(f"Failed to delete login records for user {user_id}: {e}")
+
+            # 5) Anonymize task comments authored by this user (avoid FK parent issues)
+            try:
+                if username:
+                    supabase.table('task_comments').update({
+                        'username': '[deleted]',
+                        'content': '[deleted]'
+                    }).eq('username', username).execute()
+            except Exception as e:
+                logger.warning(f"Failed to anonymize task comments for user {user_id}: {e}")
+
+            # 6) For tasks assigned to this user, nullify assignment
+            try:
+                supabase.table('tasks').update({
+                    'assigned_to': None,
+                    'assigned_to_username': None
+                }).eq('assigned_to', int(user_id)).execute()
+            except Exception as e:
+                logger.warning(f"Failed to nullify task assignments for user {user_id}: {e}")
+
+            # 7) For calendar events created by this user, nullify user_id (keep event)
+            try:
+                supabase.table('calendarevent').update({
+                    'user_id': None
+                }).eq('user_id', int(user_id)).execute()
+            except Exception as e:
+                logger.warning(f"Failed to nullify calendar events for user {user_id}: {e}")
+
+            # 8) Handle teams owned by this user: delete teams and their dependent records
+            try:
+                owned_teams = supabase.table('team').select('team_ID').eq('user_id_owner', int(user_id)).execute()
+                owned_team_ids = [t['team_ID'] for t in (owned_teams.data or [])]
+                for team_id in owned_team_ids:
+                    try:
+                        # Clear active_team_id for any users with this active team
+                        supabase.table('user').update({'active_team_id': None}).eq('active_team_id', team_id).execute()
+
+                        # Delete calendar events for this team
+                        supabase.table('calendarevent').delete().eq('team_ID', team_id).execute()
+
+                        # Delete tasks for this team
+                        supabase.table('tasks').delete().eq('team_ID', team_id).execute()
+
+                        # Delete user_team relationships for this team
+                        supabase.table('user_team').delete().eq('team_ID', team_id).execute()
+
+                        # Finally delete the team
+                        supabase.table('team').delete().eq('team_ID', team_id).execute()
+                    except Exception as e:
+                        logger.warning(f"Failed to fully remove team {team_id} owned by user {user_id}: {e}")
+            except Exception as e:
+                logger.warning(f"Failed to enumerate/delete teams owned by user {user_id}: {e}")
+
+            # 9) Remove this user from any teams (user_team entries)
+            try:
+                supabase.table('user_team').delete().eq('user_id', int(user_id)).execute()
+            except Exception as e:
+                logger.warning(f"Failed to delete user_team rows for user {user_id}: {e}")
+
+            # 10) Finally delete the user record
+            try:
+                supabase.table('user').delete().eq('user_ID', int(user_id)).execute()
+            except Exception as e:
+                logger.error(f"Failed to delete user row for {user_id}: {e}")
+                return False
 
             # Also remove the corresponding Django user if it exists (cleanup)
             try:
