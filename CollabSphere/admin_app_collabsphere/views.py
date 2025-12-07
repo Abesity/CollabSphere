@@ -12,22 +12,23 @@ from teams_app_collabsphere.models import Team as UserTeamModel
 logger = logging.getLogger(__name__)
 
 
-# Decorator to check if user is admin
+# Decorator to check if user is admin / custom admin only hardcoded
 def admin_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
-        # Hardcoded admin session allowed
-        if request.session.get("admin_logged_in"):
+        # Allow admin session access OR Django staff access
+        if request.session.get("admin_logged_in") or request.user.is_staff:
             return view_func(request, *args, **kwargs)
-
-        # Regular staff check
-        if not request.user.is_authenticated:
-            return redirect(f'/login/?next={request.path}')
-        if not request.user.is_staff:
-            messages.error(request, "You don't have permission to access the admin panel.")
-            return redirect('home')
-
-        return view_func(request, *args, **kwargs)
-
+        
+        # If not authenticated at all, redirect to login
+        if not request.user.is_authenticated and not request.session.get("admin_logged_in"):
+            # Store the intended destination
+            next_url = request.path
+            return redirect(f'/login/?next={next_url}')
+        
+        # If authenticated but not admin/staff
+        messages.error(request, "You don't have permission to access the admin panel.")
+        return redirect('home')
+    
     return _wrapped_view
 
 # -------------------------------
@@ -897,18 +898,46 @@ def task_delete(request, task_id):
 # EVENT CRUD VIEWS
 # -------------------------------
 
+
+@admin_required
+def event_detail(request, event_id):
+    """View event details."""
+    event = AdminSupabaseService.get_event_by_id(event_id)
+    
+    if not event:
+        messages.error(request, f"Event with ID {event_id} not found.")
+        return redirect('admin_app_collabsphere:event_management')
+    
+    context = {
+        'event': event,
+        'active_page': 'events',
+    }
+    return render(request, 'event_detail.html', context)
+
 @admin_required
 def event_create(request):
-    """Create a new event."""
+    """Create a new event - ADMIN VERSION (team required)."""
     users = AdminSupabaseService.get_all_users()
     teams = AdminSupabaseService.get_all_teams()
     
     if request.method == 'POST':
         try:
+            # Validate event data
+            errors = validate_event_data(request.POST)
+            if errors:
+                for error in errors:
+                    messages.error(request, error)
+                context = {
+                    'users': users,
+                    'teams': teams,
+                    'active_page': 'events',
+                }
+                return render(request, 'event_form.html', context)
+            
+            # Prepare event data
             event_data = {
                 'title': request.POST.get('title'),
                 'description': request.POST.get('description', ''),
-                'created_at': timezone.now().isoformat(),
             }
             
             # Handle start and end times
@@ -922,16 +951,16 @@ def event_create(request):
             if end_date and end_time:
                 event_data['end_time'] = f"{end_date}T{end_time}:00"
             
-            # Handle user
+            # Handle user (organizer) - optional
             user_id = request.POST.get('user_id')
             if user_id:
                 event_data['user_id'] = int(user_id)
             
-            # Handle team
+            # Handle team - REQUIRED
             team_id = request.POST.get('team_id')
-            if team_id:
-                event_data['team_ID'] = int(team_id)
+            event_data['team_ID'] = int(team_id)
             
+            # Create the event
             created_event = AdminSupabaseService.create_event(event_data)
             
             if created_event:
@@ -950,38 +979,6 @@ def event_create(request):
         'active_page': 'events',
     }
     return render(request, 'event_form.html', context)
-
-@admin_required
-def event_detail(request, event_id):
-    """View event details."""
-    event = AdminSupabaseService.get_event_by_id(event_id)
-    
-    if not event:
-        messages.error(request, f"Event with ID {event_id} not found.")
-        return redirect('admin_app_collabsphere:event_management')
-    
-    context = {
-        'event': event,
-        'active_page': 'events',
-    }
-    return render(request, 'event_detail.html', context)
-
-
-@admin_required
-@require_POST
-def delete_event(request, event_id):
-    """Delete an event."""
-    try:
-        success = AdminSupabaseService.delete_event(event_id)
-        
-        if success:
-            messages.success(request, "Event deleted successfully.")
-        else:
-            messages.error(request, "Failed to delete event.")
-    except Exception as e:
-        messages.error(request, f"Error deleting event: {str(e)}")
-    
-    return redirect('admin_app_collabsphere:event_management')
 
 @admin_required
 def event_edit(request, event_id):
@@ -1012,6 +1009,18 @@ def event_edit(request, event_id):
                 'description': request.POST.get('description', ''),
             }
             
+            # Validate team selection
+            team_id = request.POST.get('team_id')
+            if not team_id:
+                messages.error(request, "A team must be selected for the event.")
+                context = {
+                    'event': event,
+                    'users': users,
+                    'teams': teams,
+                    'active_page': 'events',
+                }
+                return render(request, 'event_form.html', context)
+            
             # Handle start and end times
             start_date = request.POST.get('start_date')
             start_time = request.POST.get('start_time')
@@ -1030,12 +1039,8 @@ def event_edit(request, event_id):
             elif user_id == '':
                 update_data['user_id'] = None
             
-            # Handle team
-            team_id = request.POST.get('team_id')
-            if team_id:
-                update_data['team_ID'] = int(team_id)
-            elif team_id == '':
-                update_data['team_ID'] = None
+            # Handle team - REQUIRED
+            update_data['team_ID'] = int(team_id)
             
             updated_event = AdminSupabaseService.update_event(event_id, update_data)
             
@@ -1056,6 +1061,23 @@ def event_edit(request, event_id):
         'active_page': 'events',
     }
     return render(request, 'event_form.html', context)
+
+
+@admin_required
+@require_POST
+def delete_event(request, event_id):
+    """Delete an event."""
+    try:
+        success = AdminSupabaseService.delete_event(event_id)
+        
+        if success:
+            messages.success(request, "Event deleted successfully.")
+        else:
+            messages.error(request, "Failed to delete event.")
+    except Exception as e:
+        messages.error(request, f"Error deleting event: {str(e)}")
+    
+    return redirect('admin_app_collabsphere:event_management')
 
 # -------------------------------
 # CHECKIN CRUD VIEWS
@@ -1192,8 +1214,8 @@ def team_create(request):
             team_data = {
                 'team_name': request.POST.get('team_name', '').strip(),
                 'description': request.POST.get('description', '').strip(),
-                'joined_at': timezone.now().isoformat(),  # Use joined_at, not created_at
-                'icon_url': 'https://example.com/default-team-icon.png',  # Default icon
+                'joined_at': timezone.now().isoformat(),  
+                'icon_url': 'https://example.com/default-team-icon.png',  
             }
             
             # Handle owner
@@ -1419,3 +1441,57 @@ def team_delete(request, team_id):
         messages.error(request, f"Error deleting team: {str(e)}")
     
     return redirect('admin_app_collabsphere:team_management')
+
+#helper for event data
+def validate_event_data(request_data, is_update=False, existing_event=None):
+        """Validate event data for creation or update."""
+        errors = []
+        
+        # Check required fields
+        if not request_data.get('title'):
+            errors.append("Event title is required")
+        
+        # Check team selection
+        team_id = request_data.get('team_id')
+        if not team_id:
+            errors.append("A team must be selected for the event")
+        
+        # Check if team exists
+        if team_id:
+            team = AdminSupabaseService.get_team_by_id(team_id)
+            if not team:
+                errors.append(f"Selected team (ID: {team_id}) does not exist")
+        
+        # Validate dates if provided
+        start_date = request_data.get('start_date')
+        start_time = request_data.get('start_time')
+        end_date = request_data.get('end_date')
+        end_time = request_data.get('end_time')
+        
+        if start_date and start_time:
+            try:
+                start_datetime_str = f"{start_date}T{start_time}:00"
+                datetime.fromisoformat(start_datetime_str.replace('Z', '+00:00'))
+            except ValueError:
+                errors.append("Invalid start date/time format")
+        
+        if end_date and end_time:
+            try:
+                end_datetime_str = f"{end_date}T{end_time}:00"
+                datetime.fromisoformat(end_datetime_str.replace('Z', '+00:00'))
+            except ValueError:
+                errors.append("Invalid end date/time format")
+        
+        # Check that end time is after start time if both provided
+        if start_date and start_time and end_date and end_time:
+            try:
+                start_str = f"{start_date}T{start_time}:00"
+                end_str = f"{end_date}T{end_time}:00"
+                start_dt = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+                end_dt = datetime.fromisoformat(end_str.replace('Z', '+00:00'))
+                if end_dt <= start_dt:
+                    errors.append("End time must be after start time")
+            except ValueError:
+                pass  
+        
+        return errors

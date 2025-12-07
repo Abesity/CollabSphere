@@ -10,12 +10,12 @@
             <p class="text-muted">View and manage all events</p>
         </div>
         <div class="header-actions">
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
+            <!-- FIXED: Added admin namespace to the URL -->
+            <a href="{% url 'admin_app_collabsphere:create_event' %}" class="btn btn-primary">
                 <i class="fas fa-plus me-1"></i>Create Event
-            </button>
+            </a>
         </div>
     </div>
-
 
     <!-- Event List Card -->
     <div class="activity-card">
@@ -111,10 +111,11 @@
                                         data-event-id="{{ event.id }}">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button class="btn btn-outline-warning btn-sm" title="Edit"
-                                        onclick="editEvent({{ event.id }})">
+                                <!-- FIXED: Changed onclick to use proper URL -->
+                                <a href="{% url 'admin_app_collabsphere:event_edit' event.id %}" 
+                                   class="btn btn-outline-warning btn-sm" title="Edit">
                                     <i class="fas fa-edit"></i>
-                                </button>
+                                </a>
                                 <button class="btn btn-outline-danger btn-sm" title="Delete"
                                         onclick="deleteEvent({{ event.id }})">
                                     <i class="fas fa-trash"></i>
@@ -161,119 +162,12 @@
             <div class="empty-state">
                 <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
                 <p class="text-muted">No events found. Create your first event!</p>
-                <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#createEventModal">
+                <!-- FIXED: Added admin namespace to the URL -->
+                <a href="{% url 'admin_app_collabsphere:create_event' %}" class="btn btn-primary mt-2">
                     <i class="fas fa-plus me-1"></i>Create Event
-                </button>
+                </a>
             </div>
             {% endif %}
-        </div>
-    </div>
-</div>
-
-<!-- Create Event Modal -->
-<div class="modal fade" id="createEventModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-calendar-plus me-2"></i>Create New Event</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="{% url 'create_event' %}">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="form-group mb-3">
-                                <label class="form-label">Event Title *</label>
-                                <input type="text" class="form-control" name="title" required 
-                                       placeholder="Enter event title">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group mb-3">
-                                <label class="form-label">Event Type</label>
-                                <select class="form-select" name="event_type">
-                                    <option value="meeting">Meeting</option>
-                                    <option value="training">Training</option>
-                                    <option value="social">Social Event</option>
-                                    <option value="workshop">Workshop</option>
-                                    <option value="conference">Conference</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" name="description" rows="3" 
-                                  placeholder="Enter event description"></textarea>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="form-label">Start Date *</label>
-                                <input type="date" class="form-control" name="start_date" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="form-label">End Date *</label>
-                                <input type="date" class="form-control" name="end_date" required>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="form-label">Start Time *</label>
-                                <input type="time" class="form-control" name="start_time" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="form-label">End Time *</label>
-                                <input type="time" class="form-control" name="end_time" required>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="form-label">Priority</label>
-                                <select class="form-select" name="priority">
-                                    <option value="low">Low</option>
-                                    <option value="medium" selected>Medium</option>
-                                    <option value="high">High</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="form-label">Location</label>
-                                <input type="text" class="form-control" name="location" 
-                                       placeholder="Enter event location">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group mb-3">
-                        <label class="form-label">Attendees</label>
-                        <select class="form-select" name="attendees" multiple>
-                            {% for user in all_users %}
-                            <option value="{{ user.id }}">{{ user.username }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple attendees</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create Event</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
@@ -320,13 +214,13 @@ document.querySelectorAll('[data-filter]').forEach(button => {
     });
 });
 
-// Load event details
+// Load event details - FIXED URL
 document.querySelectorAll('[data-bs-target="#eventDetailsModal"]').forEach(button => {
     button.addEventListener('click', function() {
         const eventId = this.getAttribute('data-event-id');
         
-        // Fetch event details via AJAX
-        fetch(`/events/${eventId}/details/`)
+        // Fetch event details via AJAX - FIXED: Use admin API URL
+        fetch(`/admin_dashboard/api/event-details/${eventId}/`)
             .then(response => response.json())
             .then(data => {
                 document.getElementById('eventDetailsContent').innerHTML = `
@@ -441,15 +335,12 @@ function formatMonth(month) {
     return months[parseInt(month) - 1];
 }
 
-function editEvent(eventId) {
-    window.location.href = `/admin_dashboard/events/${eventId}/edit/`;
-}
-
+// FIXED deleteEvent function with correct URL
 function deleteEvent(eventId) {
     if (confirm('Are you sure you want to delete this event?')) {
-        // Use admin dashboard URL
-        fetch(`/admin_dashboard/events/${eventId}/delete/`, {
-            method: 'POST',  // Change from DELETE to POST since your view uses @require_POST
+        // Use CORRECT admin-events URL
+        fetch(`/admin_dashboard/admin-events/${eventId}/delete/`, {
+            method: 'POST',
             headers: {
                 'X-CSRFToken': '{{ csrf_token }}',
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -481,5 +372,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-</script>
+</script> 
 {% endblock %}

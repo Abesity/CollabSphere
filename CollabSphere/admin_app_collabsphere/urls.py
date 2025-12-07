@@ -1,11 +1,16 @@
 from django.urls import path
 from . import views
+from django.views.generic.base import RedirectView
 
 app_name = 'admin_app_collabsphere'
 
 urlpatterns = [
     # Dashboard
     path('', views.admin_dashboard, name='dashboard'),
+    
+    # Redirect for backward compatibility
+    path('events/', RedirectView.as_view(pattern_name='admin_app_collabsphere:event_management', permanent=False)),
+    
     
     # User Management
     path('users/', views.user_management, name='user_management'),
@@ -28,10 +33,12 @@ urlpatterns = [
     # Search
     path('search/', views.search, name='search'),
     
-    # Events - FIXED: Changed create_event to event_create to match your views.py
-    path('events/', views.event_management, name='event_management'),
-    path('events/create/', views.event_create, name='create_event'),  # CHANGED HERE
-    path('events/<int:event_id>/delete/', views.delete_event, name='delete_event'),
+    # Events - ALL CHANGED TO USE 'admin-events/' prefix
+    path('admin-events/', views.event_management, name='event_management'),
+    path('admin-events/create/', views.event_create, name='create_event'),  
+    path('admin-events/<int:event_id>/', views.event_detail, name='event_detail'),  # CHANGED
+    path('admin-events/<int:event_id>/edit/', views.event_edit, name='event_edit'),  # CHANGED
+    path('admin-events/<int:event_id>/delete/', views.delete_event, name='delete_event'),
 
     # Admin Task CRUD
     path('tasks/create/', views.task_create, name='task_create_admin'),
@@ -59,23 +66,19 @@ urlpatterns = [
     path('export/users/', views.export_users, name='export_users'),
     path('export/tasks/', views.export_tasks, name='export_tasks'),
         
-    # Task Edit URL (missing from original)
+    # Task Edit URL
     path('tasks/<int:task_id>/edit/', views.task_edit, name='task_edit_admin'),
     # Backwards-compatible names used by templates
     path('tasks/<int:task_id>/edit/', views.task_edit, name='task_edit'),
     
-    # Team CRUD URLs (missing from original)
+    # Team CRUD URLs
     path('teams/create/', views.team_create, name='team_create'),
     path('teams/<int:team_id>/edit/', views.team_edit, name='team_edit'),
     path('teams/<int:team_id>/delete/', views.team_delete, name='team_delete'),
     # Backwards-compatible alias for team management templates
     path('teams/<int:team_id>/delete/', views.team_delete, name='team_delete_admin'),
     
-    # Event Detail and Edit URLs (missing from original)
-    path('events/<int:event_id>/', views.event_detail, name='event_detail'),
-    path('events/<int:event_id>/edit/', views.event_edit, name='event_edit'),
-    
-    # Checkin Detail and Edit URLs (missing from original)
+    # Checkin Detail and Edit URLs
     path('wellbeing/checkins/<int:checkin_id>/', views.checkin_detail, name='checkin_detail'),
     path('wellbeing/checkins/<int:checkin_id>/edit/', views.checkin_edit, name='checkin_edit'),
     # Template-compatible wellbeing names

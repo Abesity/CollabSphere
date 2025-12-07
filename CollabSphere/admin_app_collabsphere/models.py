@@ -179,7 +179,23 @@ class AdminSupabaseService:
         except Exception as e:
             logger.error(f"Error deleting user {user_id}: {str(e)}")
             return False
+   
+    @staticmethod
+    def create_event_with_team_validation(event_data):
+        """Create an event with team validation."""
+        # Check if team_ID is provided
+        if 'team_ID' not in event_data or not event_data['team_ID']:
+            raise ValueError("Team ID is required for event creation")
+        
+        # Check if team exists
+        team = AdminSupabaseService.get_team_by_id(event_data['team_ID'])
+        if not team:
+            raise ValueError(f"Team with ID {event_data['team_ID']} does not exist")
+        
+        # Create the event
+        return AdminSupabaseService.create_event(event_data)
     
+
     @staticmethod
     def search_users(query):
         """Search users by username, email, or full name."""
@@ -1535,4 +1551,35 @@ class AdminSupabaseService:
         except Exception as e:
             logger.error(f"Error deleting team icon: {str(e)}")
             return False
-                
+class AdminEventService:
+    """Event service for admin that doesn't require active teams."""
+    
+    @staticmethod
+    def create_event(event_data):
+        """Create an event without team validation."""
+        try:
+            response = supabase.table('calendarevent').insert(event_data).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error creating admin event: {e}")
+            raise
+    
+    @staticmethod
+    def update_event(event_id, update_data):
+        """Update an event without team validation."""
+        try:
+            response = supabase.table('calendarevent').update(update_data).eq('event_id', int(event_id)).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error updating admin event {event_id}: {e}")
+            raise
+    
+    @staticmethod
+    def delete_event(event_id):
+        """Delete an event without team validation."""
+        try:
+            supabase.table('calendarevent').delete().eq('event_id', int(event_id)).execute()
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting admin event {event_id}: {e}")
+            return False
