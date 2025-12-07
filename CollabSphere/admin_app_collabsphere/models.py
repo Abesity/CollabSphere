@@ -294,38 +294,36 @@ class AdminSupabaseService:
     
     @staticmethod
     def get_team_members(team_id):
-        """Get all members of a team - FIXED VERSION"""
+        """Get all active members of a team - ADMIN VERSION"""
         try:
+            # Get user_team records for this team
             response = supabase.table("user_team").select(
-                "user_id, joined_at, left_at, user:user_id(user_ID, username, email, full_name, profile_picture)"
-            ).eq("team_ID", int(team_id)).execute()
+                "user_id, joined_at, left_at"
+            ).eq("team_ID", int(team_id)).is_("left_at", None).execute()
             
-            members = response.data or []
+            memberships = response.data or []
             
-            # Extract and format member data properly
-            formatted_members = []
-            for member in members:
-                if member.get('user'):
-                    user_data = member['user']
-                    # Ensure we have the correct user_ID
-                    if 'user_ID' in user_data:
-                        formatted_member = {
-                            'user_ID': user_data['user_ID'],
-                            'username': user_data.get('username', ''),
-                            'email': user_data.get('email', ''),
-                            'full_name': user_data.get('full_name', ''),
-                            'profile_picture': user_data.get('profile_picture', ''),
-                            'joined_at': member.get('joined_at'),
-                            'left_at': member.get('left_at'),
-                            'is_active': not bool(member.get('left_at'))
-                        }
-                        formatted_members.append(formatted_member)
+            # Get user details for each active member
+            members = []
+            for membership in memberships:
+                user_id = membership.get('user_id')
+                if user_id:
+                    user_response = supabase.table("user").select(
+                        "user_ID, username, email, full_name, profile_picture"
+                    ).eq("user_ID", int(user_id)).execute()
+                    
+                    if user_response.data:
+                        user_data = user_response.data[0]
+                        # Add membership info to user data
+                        user_data['joined_at'] = membership.get('joined_at')
+                        user_data['left_at'] = membership.get('left_at')
+                        user_data['is_active'] = True  # Since left_at is None
+                        members.append(user_data)
             
-            return formatted_members
+            return members
         except Exception as e:
             logger.error(f"Error fetching team members for team {team_id}: {str(e)}")
             return []
-    
     # -------------------------------
     # WELLBEING MANAGEMENT
     # -------------------------------

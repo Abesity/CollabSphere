@@ -7,6 +7,7 @@ import json
 from .models import AdminSupabaseService
 import logging
 from datetime import datetime
+from teams_app_collabsphere.models import Team as UserTeamModel
 
 logger = logging.getLogger(__name__)
 
@@ -1268,14 +1269,34 @@ def team_edit(request, team_id):
     users = AdminSupabaseService.get_all_users()
     members = AdminSupabaseService.get_team_members(team_id)
     
-    # Extract user IDs from members - FIXED
+    # Extract user IDs from members - FIXED FOR ADMIN SERVICE
     member_ids = []
     for member in (members or []):
         if isinstance(member, dict):
-            # Try different possible key names for user ID
-            user_id = member.get('user_ID') or member.get('user_id') or member.get('id')
+            # AdminSupabaseService returns members with 'user_ID' key
+            user_id = member.get('user_ID')
             if user_id:
+                # Ensure it's a string for template comparison
                 member_ids.append(str(user_id))
+    
+    # DEBUG LOGGING
+    print(f"DEBUG team_edit: team_id={team_id}")
+    print(f"DEBUG team_edit: members count={len(members) if members else 0}")
+    print(f"DEBUG team_edit: member_ids={member_ids}")
+    
+    # Also check what users we have
+    user_ids_in_users = [str(u.get('user_ID')) for u in users if u.get('user_ID')]
+    print(f"DEBUG team_edit: User IDs in users list: {user_ids_in_users}")
+    
+    # Find which member IDs exist in users list
+    existing_member_ids = []
+    for member_id in member_ids:
+        if member_id in user_ids_in_users:
+            existing_member_ids.append(member_id)
+        else:
+            print(f"WARNING: Member ID {member_id} not found in users list!")
+    
+    print(f"DEBUG team_edit: Existing member IDs: {existing_member_ids}")
     
     if not team:
         messages.error(request, f"Team with ID {team_id} not found.")
@@ -1321,19 +1342,27 @@ def team_edit(request, team_id):
                         if clean_id and clean_id.isdigit():
                             selected_member_ids.append(clean_id)
                 
+                print(f"DEBUG team_edit POST: selected_member_ids={selected_member_ids}")
+                
                 # Ensure owner is in selected members
                 if user_id_owner and str(user_id_owner) not in selected_member_ids:
                     selected_member_ids.append(str(user_id_owner))
                 
                 # Update team members
-                current_member_set = set(member_ids)  # Changed from member_ids
+                current_member_set = set(member_ids)
                 new_member_set = set(selected_member_ids)
+                
+                print(f"DEBUG team_edit: current_member_set={current_member_set}")
+                print(f"DEBUG team_edit: new_member_set={new_member_set}")
                 
                 # Members to add
                 members_to_add = new_member_set - current_member_set
+                print(f"DEBUG team_edit: members_to_add={members_to_add}")
+                
                 for member_id in members_to_add:
                     try:
                         AdminSupabaseService.add_member_to_team(team_id, int(member_id))
+                        print(f"DEBUG: Added member {member_id} to team {team_id}")
                     except Exception as e:
                         error_msg = str(e)
                         if "already exists" in error_msg.lower() or "duplicate" in error_msg.lower():
@@ -1344,15 +1373,18 @@ def team_edit(request, team_id):
                 
                 # Members to remove (except owner)
                 members_to_remove = current_member_set - new_member_set
+                print(f"DEBUG team_edit: members_to_remove={members_to_remove}")
+                
                 for member_id in members_to_remove:
                     # Don't remove the owner
-                    if member_id != str(user_id_owner):
+                    if user_id_owner and member_id != str(user_id_owner):
                         try:
                             AdminSupabaseService.remove_member_from_team(team_id, int(member_id))
+                            print(f"DEBUG: Removed member {member_id} from team {team_id}")
                         except Exception as e:
                             logger.error(f"Error removing member {member_id}: {e}")
                             messages.warning(request, f"Failed to remove user {member_id}: {str(e)}")
-                    else:
+                    elif member_id == str(user_id_owner):
                         messages.info(request, "Team owner cannot be removed from the team.")
                 
                 messages.success(request, f"Team '{updated_team['team_name']}' updated successfully.")
@@ -1367,7 +1399,7 @@ def team_edit(request, team_id):
     context = {
         'team': team,
         'users': users,
-        'member_ids': member_ids, 
+        'current_member_ids': existing_member_ids,  # Use filtered list
         'active_page': 'teams',
     }
     return render(request, 'team_form.html', context)

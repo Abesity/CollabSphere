@@ -15,6 +15,8 @@
                 {% if team %}Update team information{% else %}Add a new team to CollabSphere{% endif %}
             </p>
         </div>
+
+
         
         {% if messages %}
         <div class="messages mb-4">
@@ -142,20 +144,23 @@
                                 <small class="text-muted">Users currently in this team</small>
                             </div>
                             <div class="card-body p-0">
-                                <div class="list-group list-group-flush" id="currentMembers" style="max-height: 300px; overflow-y: auto;">
-                                    {% for user in users %}
-                                    {% if user.user_ID in current_member_ids %}
+                            
+                        <!-- Current Team Members section -->
+                        <div class="list-group list-group-flush" id="currentMembers" style="max-height: 300px; overflow-y: auto;">
+                            {% for user in users %}
+                                {% with user_id_str=user.user_ID|stringformat:"s" %}
+                                    {% if user_id_str in current_member_ids %}
                                     <div class="list-group-item d-flex justify-content-between align-items-center" data-user-id="{{ user.user_ID }}">
                                         <div class="d-flex align-items-center">
                                             {% if user.profile_picture %}
                                             <img src="{{ user.profile_picture }}" 
-                                                 alt="{{ user.username }}" 
-                                                 class="rounded-circle me-2"
-                                                 width="32" height="32"
-                                                 style="object-fit: cover;">
+                                                alt="{{ user.username }}" 
+                                                class="rounded-circle me-2"
+                                                width="32" height="32"
+                                                style="object-fit: cover;">
                                             {% else %}
                                             <div class="avatar-placeholder-sm rounded-circle me-2 d-flex align-items-center justify-content-center"
-                                                 style="width: 32px; height: 32px; background-color: #3D74C3; color: white; font-weight: bold;">
+                                                style="width: 32px; height: 32px; background-color: #3D74C3; color: white; font-weight: bold;">
                                                 {{ user.username|first|upper }}
                                             </div>
                                             {% endif %}
@@ -178,8 +183,9 @@
                                         {% endif %}
                                     </div>
                                     {% endif %}
-                                    {% endfor %}
-                                </div>
+                                {% endwith %}
+                            {% endfor %}
+                        </div>
                             </div>
                         </div>
                     </div>
