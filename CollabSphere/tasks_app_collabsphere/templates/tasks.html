@@ -37,21 +37,28 @@
             <div class="col-md-7 border-end pe-4">
               <div class="mb-3">
                 <label for="taskName" class="form-label">Task Name</label>
-                <input type="text" id="taskName" name="taskName" class="form-control" required>
+                <input type="text" id="taskName" name="taskName" class="form-control" required data-required="true">
                 <div class="text-danger small mt-1" id="nameError" style="display:none;">Task name is required.</div>
               </div>
               <!-- Teams yet to be implemented, so team_ID is always None -->
-              <div class="mb-3 d-flex align-items-center justify-content-between">
-                <div class="w-75 me-3">
-                  <label for="assignTo" class="form-label">Assign To</label>
-                  <select id="assignTo" name="assignTo" class="form-select">
-                    <option selected disabled>Select member</option>
-                    {% for member in team_members %}
-                    <option value="{{ member.id }}">{{ member.username }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-
+                <div class="mb-3 d-flex align-items-center justify-content-between">
+                          <div class="w-75 me-3">
+                            <label for="assignTo" class="form-label">Assign To</label>
+                            <select id="assignTo" name="assignTo" class="form-select" required data-required="true">
+                          <option value="" selected disabled>Select member</option>
+                {% if team_members %}
+                  {% for member in team_members %}
+                  <option value="{{ member.id }}">{{ member.username }}</option>
+                  {% endfor %}
+                {% else %}
+                  <!-- Only show current user if no team -->
+                  <option value="{{ request.session.user_ID|default:request.user.id }}">
+                    {{ request.user.username }} (Self)
+                  </option>
+                {% endif %}
+              </select>
+              <div class="text-danger small mt-1" id="assignToError" style="display:none;">Please select a team member.</div>
+            </div>
                 <div class="priority-section">
                   <input type="checkbox" id="priority" name="priority" class="priority-checkbox">
                   <label for="priority" class="priority-label">Priority</label>
@@ -71,7 +78,8 @@
 
               <div class="mb-3">
                 <label for="description" class="form-label">Description</label>
-                <textarea id="description" name="description" class="form-control" rows="4" placeholder="Enter task details..."></textarea>
+                <textarea id="description" name="description" class="form-control" rows="4" placeholder="Enter task details..." required data-required="true"></textarea>
+                <div class="text-danger small mt-1" id="descriptionError" style="display:none;">Description is required.</div>
               </div>
             </div>
 
@@ -93,12 +101,14 @@
 
               <div class="mb-3">
                 <label for="startDate" class="form-label">Start Date</label>
-                <input type="date" id="startDate" name="startDate" class="form-control">
+                <input type="date" id="startDate" name="startDate" class="form-control" required data-required="true">
+                <div class="text-danger small mt-1" id="startDateError" style="display:none;">Start date is required.</div>
               </div>
 
               <div class="mb-3">
                 <label for="dueDate" class="form-label">Due Date</label>
-                <input type="date" id="dueDate" name="dueDate" class="form-control">
+                <input type="date" id="dueDate" name="dueDate" class="form-control" required data-required="true">
+                <div class="text-danger small mt-1" id="dueDateError" style="display:none;">Due date is required.</div>
               </div>
             </div>
 
@@ -118,11 +128,19 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const taskForm = document.getElementById('taskForm');
+    const nameError = taskForm ? taskForm.querySelector('#nameError') : null;
+    const startDateError = taskForm ? taskForm.querySelector('#startDateError') : null;
+    const dueDateError = taskForm ? taskForm.querySelector('#dueDateError') : null;
     const dateCreatedInput = document.getElementById('dateCreated');
     const startDateInput = document.getElementById('startDate');
     const dueDateInput = document.getElementById('dueDate');
     const completionSlider = document.getElementById('completion');
     const completionValue = document.getElementById('completionValue');
+    const taskNameInput = document.getElementById('taskName');
+    const assignToSelect = document.getElementById('assignTo');
+    const descriptionInput = document.getElementById('description');
+    const assignToError = taskForm ? taskForm.querySelector('#assignToError') : null;
+    const descriptionError = taskForm ? taskForm.querySelector('#descriptionError') : null;
     
     // Set today's date as the creation date
     const today = new Date().toISOString().split('T')[0];
@@ -145,6 +163,57 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    function toggleFieldError(errorEl, shouldShow) {
+        if (!errorEl) return;
+        errorEl.style.display = shouldShow ? 'block' : 'none';
+    }
+
+    function validateRequiredFields() {
+        const validations = [
+            { input: taskNameInput, errorEl: nameError },
+            { input: startDateInput, errorEl: startDateError },
+            { input: dueDateInput, errorEl: dueDateError },
+            { input: assignToSelect, errorEl: assignToError },
+            { input: descriptionInput, errorEl: descriptionError },
+        ];
+
+        let hasError = false;
+        validations.forEach(({ input, errorEl }) => {
+            if (!input) {
+                return;
+            }
+            const rawValue = input.value ?? '';
+            const value = input.tagName === 'SELECT' ? rawValue : rawValue.trim();
+            const isMissing = !value;
+            toggleFieldError(errorEl, isMissing);
+            if (isMissing && !hasError) {
+                hasError = true;
+            }
+        });
+
+        return !hasError;
+    }
+
+    const fieldListeners = [
+        { element: taskNameInput, events: ['input'], errorEl: nameError },
+        { element: startDateInput, events: ['input', 'change'], errorEl: startDateError },
+        { element: dueDateInput, events: ['input', 'change'], errorEl: dueDateError },
+        { element: assignToSelect, events: ['change'], errorEl: assignToError },
+        { element: descriptionInput, events: ['input'], errorEl: descriptionError },
+    ];
+
+    fieldListeners.forEach(({ element, events, errorEl }) => {
+        if (!element) return;
+        events.forEach((eventName) => {
+            element.addEventListener(eventName, () => {
+                const val = element.tagName === 'SELECT' ? element.value : element.value.trim();
+                if (errorEl && val) {
+                    toggleFieldError(errorEl, false);
+                }
+            });
+        });
+    });
+
     // Date validation function
     function validateTaskDates() {
         const creationDate = dateCreatedInput ? dateCreatedInput.value : today;
@@ -188,6 +257,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const creationDate = dateCreatedInput ? dateCreatedInput.value : today;
             const start = startDateInput ? startDateInput.value : null;
             const due = dueDateInput ? dueDateInput.value : null;
+
+            const hasRequiredFields = validateRequiredFields();
+            if (!hasRequiredFields) {
+                e.preventDefault();
+                showWarning('Please complete all required fields before saving.');
+                return false;
+            }
             
             // Final validation before submit
             if (start && start < creationDate) {

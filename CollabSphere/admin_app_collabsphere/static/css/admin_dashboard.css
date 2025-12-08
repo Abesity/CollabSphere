@@ -829,24 +829,27 @@
     border: 1px solid var(--card-border);
     border-radius: 8px;
     padding: 5px;
-    display: flex;
+    display: flexbox;
+    text-align: center;
+    justify-content: center;
     align-items: center;
-    padding-right: 20px;
+    padding: 15px;
 }
 
 .event-date-day {
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 0.75rem;
     color: var(--bg-color);
-    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 800;
 }
 
 .event-date-month {
     font-size: 0.75rem;
-    color: var(--text-muted);
+    color: var(--bg-color);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    font-weight: 500;
+    font-weight: 800;
 }
 
 .event-info {
