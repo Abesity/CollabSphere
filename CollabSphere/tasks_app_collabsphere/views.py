@@ -252,6 +252,14 @@ def task_detail(request, task_id):
     
     print(f"🔵 Team members count: {len(team_members)}")
 
+    # Ensure assigned_to_username is in task_data
+    if not task_data.get('assigned_to_username') and task_data.get('assigned_to'):
+        assigned_to_id = task_data.get('assigned_to')
+        for member in team_members:
+            if member.get('id') == assigned_to_id:
+                task_data['assigned_to_username'] = member.get('username')
+                break
+
     # Get comments
     comments = Task.fetch_comments(task_id)
     print(f"🔵 Comments count: {len(comments) if comments else 0}")
@@ -268,6 +276,7 @@ def task_detail(request, task_id):
     print(f"🔵 Rendering task_detail.html with context")
     print(f"🔵 Task ID in context: {task_data.get('task_id')}")
     print(f"🔵 Task title: {task_data.get('title')}")
+    print(f"🔵 Task assigned_to_username: {task_data.get('assigned_to_username')}")
     
     return render(request, "task_detail.html", context)
 
