@@ -190,7 +190,7 @@
         </div>
       </div>
 
-      <!-- Rest of your right column content remains the same -->
+      <!-- Right Column: Wellbeing -->
       <div class="column-right">
         <!-- Wellbeing card -->
         <div class="card wellbeing {% if has_checked_in_today %}completed{% endif %}" 
@@ -217,7 +217,7 @@
         
         <!-- Container where modal will be inserted -->
         <div id="wellbeingModalContainer"></div>
-
+      </div>
         
     </section>
   </main>
@@ -418,27 +418,55 @@ document.getElementById('openTaskModal').addEventListener('click', async functio
     }
 });
 
-// Function to open task detail modal
+// Function to open task detail modal - UPDATED WITH BETTER ERROR HANDLING
 async function openTaskDetail(taskId) {
+  console.log('🔵 Opening task detail for ID:', taskId);
+  
   try {
-      const response = await fetch(`/tasks/${taskId}/detail/`, {
-          headers: { "X-Requested-With": "XMLHttpRequest" },
+      // Construct the URL properly
+      const url = `/tasks/${taskId}/detail/`;
+      console.log('🔵 Fetching from URL:', url);
+      
+      const response = await fetch(url, {
+          method: 'GET',
+          headers: { 
+              "X-Requested-With": "XMLHttpRequest",
+              "Accept": "text/html"
+          },
           credentials: "include"
       });
 
-      if (!response.ok) throw new Error("Failed to fetch task detail.");
+      console.log('🔵 Response status:', response.status);
+      console.log('🔵 Response ok:', response.ok);
+
+      if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Server response error:', errorText);
+          throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
 
       const html = await response.text();
+      console.log('🔵 Received HTML length:', html.length);
+      
+      if (!html || html.trim().length === 0) {
+          throw new Error('Empty response from server');
+      }
+
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
 
       const fetchedModal = doc.getElementById('taskDetailModal');
       if (!fetchedModal) {
+          console.error('❌ Modal element not found in response');
+          console.log('Response HTML preview:', html.substring(0, 500));
           throw new Error('Task detail modal markup missing in response.');
       }
 
+      console.log('🔵 Modal element found, removing any existing modals...');
       await removeModalIfExists('taskDetailModal');
 
+      // Add stylesheets
+      console.log('🔵 Adding stylesheets...');
       doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
           const href = link.getAttribute('href');
           if (href && !document.querySelector(`link[href="${href}"]`)) {
@@ -450,8 +478,11 @@ async function openTaskDetail(taskId) {
           }
       });
 
+      console.log('🔵 Appending modal to body...');
       document.body.appendChild(fetchedModal);
 
+      // Execute scripts
+      console.log('🔵 Executing scripts...');
       doc.querySelectorAll('script').forEach(script => {
           const newScript = document.createElement('script');
           if (script.src) {
@@ -462,9 +493,11 @@ async function openTaskDetail(taskId) {
           document.body.appendChild(newScript);
       });
 
+      console.log('🔵 Showing modal...');
       const modal = new bootstrap.Modal(fetchedModal);
       modal.show();
 
+      // Initialize completion slider
       setTimeout(() => {
           const completionSlider = fetchedModal.querySelector("#completion");
           const completionValue = fetchedModal.querySelector("#completionValue");
@@ -475,9 +508,30 @@ async function openTaskDetail(taskId) {
               });
           }
       }, 100);
+
+      console.log('✅ Task detail modal opened successfully');
+
   } catch (error) {
-      console.error("Error loading task detail:", error);
-      alert("Could not load task details. Please try again.");
+      console.error("❌ Error loading task detail:", error);
+      console.error("❌ Error stack:", error.stack);
+      
+      // More detailed error message
+      let errorMessage = "Could not load task details. ";
+      if (error.message.includes('404')) {
+          errorMessage += "Task not found.";
+      } else if (error.message.includes('403')) {
+          errorMessage += "You don't have permission to view this task.";
+      } else if (error.message.includes('500')) {
+          errorMessage += "Server error. Please try again later.";
+      } else {
+          errorMessage += "Please try again.";
+      }
+      
+      if (typeof showError === 'function') {
+          showError(errorMessage);
+      } else {
+          alert(errorMessage);
+      }
   }
 }
 

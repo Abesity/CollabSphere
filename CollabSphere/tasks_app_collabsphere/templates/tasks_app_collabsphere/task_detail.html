@@ -1,0 +1,697 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/tasks.css' %}?v=2.0">
+
+<div class="modal fade" id="taskDetailModal" tabindex="-1" aria-labelledby="taskDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+
+    <div class="modal-header">
+    <div class="d-flex align-items-center justify-content-between w-100">
+      <div class="modal-top-info">
+        <h3 class="modal-title" id="taskDetailModalLabel">Task Details</h3>  <!-- Changed from Create Task -->
+        <div>
+          <span class="task-id">Task #{{ task.task_id }}</span>  <!-- Use actual task ID -->
+          {% if team_id or task.team_ID %}
+            <span class="team-id">{{ team_name }}</span>
+          {% else %}
+            <span class="team-id text-muted" style="font-style: italic;">No active team</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  </div>
+
+      {% if not has_active_team %}
+      <div class="alert alert-warning mx-3 mt-3 mb-0">
+          <small> No active team selected. Task will not be associated with any team.</small>
+      </div>
+      {% endif %}
+
+      <div class="modal-body">
+        {% if not task %}
+          <p class="text-danger">Task not found.</p>
+        {% else %}
+        <form id="taskDetailForm" method="POST" action="{% url 'task_update' task_id=task.task_id %}">
+          {% csrf_token %}
+          <div class="row">
+
+            <div class="col-md-7 border-end pe-4">
+              <div class="mb-3">
+                <label for="taskName" class="form-label">Task Name</label>
+                <input type="text" id="taskName" name="taskName" class="form-control"
+                       required value="{{ task.title|default:'' }}"
+                       {% if task.created_by != request.user.username %}disabled{% endif %}>
+                <div class="text-danger small mt-1" id="nameError" style="display:none;">Task name is required.</div>
+              </div>
+
+              <div class="mb-3 d-flex align-items-center justify-content-between">
+                <div class="w-75 me-3">
+                  <label for="assignTo" class="form-label">Assign To</label>
+                  <select id="assignTo" name="assignTo" class="form-select"
+                          {% if task.created_by != request.user.username %}disabled{% endif %}>
+                    <option disabled {% if not task.assigned_to %}selected{% endif %}>Select member</option>
+                    {% for member in team_members %}
+                      <option value="{{ member.id }}" {% if member.id == task.assigned_to %}selected{% endif %}>{{ member.username }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="priority-section">
+                  <input type="checkbox" id="priority" name="priority" class="priority-checkbox"
+                         {% if task.priority %}checked{% endif %}
+                         {% if task.created_by != request.user.username %}disabled{% endif %}>
+                  <label for="priority" class="priority-label">Priority</label>
+                </div>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col">
+                  <label for="createdBy" class="form-label">Created By</label>
+                  <input type="text" id="createdBy" name="createdBy" class="form-control"
+                         value="{{ task.created_by|default:request.user.username }}" readonly style="background-color: #e9ecef;">
+                </div>
+                <div class="col">
+                  <label for="dateCreated" class="form-label">Date</label>
+                  <input type="date" id="dateCreated" name="dateCreated" class="form-control"
+                         value="{{ task.date_created|default:'' }}" readonly style="background-color: #e9ecef;">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="4"
+                          placeholder="Enter task details..."
+                          {% if task.created_by != request.user.username %}disabled{% endif %}>{{ task.description|default:'' }}</textarea>
+              </div>
+            </div>
+
+            <div class="col-md-5 ps-4">
+              <div class="mb-3">
+                <label for="status" class="form-label">Task Status</label>
+                <select id="status" name="status" class="form-select"
+                        {% if task.created_by != request.user.username and task.assigned_to_username != request.user.username %}disabled{% endif %}>
+                  {% if task.status == "Pending" %}
+                    <option value="Pending" selected>Pending</option>
+                  {% endif %}
+                  <option value="In Progress" {% if task.status == "In Progress" %}selected{% endif %}>In Progress</option>
+                  <option value="Completed" {% if task.status == "Completed" %}selected{% endif %}>Completed</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="completion" class="form-label">Completion (%)</label>
+                <input type="range" id="completion" name="completion" min="0" max="100" step="1"
+                       class="form-range" value="{{ task.completion|default:0 }}">
+                <div class="text-end"><span id="completionValue">{{ task.completion|default:0 }}</span>%</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="startDate" class="form-label">Start Date</label>
+                <input type="date" id="startDate" name="startDate" class="form-control"
+                       value="{{ task.start_date|default:'' }}"
+                       readonly style="background-color: #e9ecef;">
+              </div>
+
+              <div class="mb-3">
+                <label for="dueDate" class="form-label">Due Date</label>
+                <input type="date" id="dueDate" name="dueDate" class="form-control"
+                       value="{{ task.due_date|default:'' }}"
+                       {% if task.created_by != request.user.username %}disabled{% endif %}>
+              </div>
+            </div>
+
+          </div>
+        </form>
+
+        <!-- Comments Section with Threaded Replies -->
+        <div class="comments-section mt-4 border-top pt-4">
+          <h5 class="mb-3 comments-heading">Comments</h5>
+          
+          <div class="comments-list mb-4" id="commentsList">
+            {% if comments %}
+              {% for comment in comments %}
+                <!-- Top-level comment -->
+                <div class="comment-item mb-3 p-3 border rounded" data-comment-id="{{ comment.comment_id }}">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <strong class="comment-author">{{ comment.username }}</strong>
+                    <div>
+                      <small class="text-muted me-2">{{ comment.created_at|date:"M j, Y g:i A" }}</small>
+                      {% if comment.username == request.user.username %}
+                        <form class="delete-comment-form d-inline" method="POST" action="{% url 'delete_comment' comment_id=comment.comment_id %}">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-sm btn-link text-danger p-0 delete-btn">Delete</button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  </div>
+                  
+                  <p class="mb-0 comment-content">{{ comment.content }}</p>
+                  
+                  <div class="comment-actions mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-reply" data-comment-id="{{ comment.comment_id }}">
+                      💬 Reply
+                    </button>
+                  </div>
+                  
+                  <!-- Reply Form for Top Level Comment -->
+                  <div id="reply-form-{{ comment.comment_id }}" class="reply-form-container" style="display: none;">
+                    <div class="reply-form-box mt-3 p-3 border rounded bg-light">
+                      <form class="reply-comment-form" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="parent_id" value="{{ comment.comment_id }}">
+                        <div class="mb-2">
+                          <label class="form-label small">Reply to {{ comment.username }}:</label>
+                          <textarea name="content" class="form-control form-control-sm" rows="3" placeholder="Write your reply..." required></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                          <button type="submit" class="btn btn-primary btn-sm">Post Reply</button>
+                          <button type="button" class="btn btn-secondary btn-sm cancel-reply-btn" data-comment-id="{{ comment.comment_id }}">Cancel</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                  
+                  <!-- Level 1 Replies -->
+                  {% if comment.replies %}
+                    <div class="replies-container mt-3">
+                      {% for reply in comment.replies %}
+                        <div class="comment-item reply-section mb-3 p-3 border rounded" data-comment-id="{{ reply.comment_id }}">
+                          <div class="d-flex justify-content-between align-items-start mb-2">
+                            <strong class="comment-author">{{ reply.username }}</strong>
+                            <div>
+                              <small class="text-muted me-2">{{ reply.created_at|date:"M j, Y g:i A" }}</small>
+                              {% if reply.username == request.user.username %}
+                                <form class="delete-comment-form d-inline" method="POST" action="{% url 'delete_comment' comment_id=reply.comment_id %}">
+                                  {% csrf_token %}
+                                  <button type="submit" class="btn btn-sm btn-link text-danger p-0 delete-btn">Delete</button>
+                                </form>
+                              {% endif %}
+                            </div>
+                          </div>
+                          
+                          <p class="mb-0 comment-content">{{ reply.content }}</p>
+                          
+                          <div class="comment-actions mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-reply" data-comment-id="{{ reply.comment_id }}">
+                              💬 Reply
+                            </button>
+                          </div>
+                          
+                          <!-- Reply Form for Level 1 -->
+                          <div id="reply-form-{{ reply.comment_id }}" class="reply-form-container" style="display: none;">
+                            <div class="reply-form-box mt-3 p-3 border rounded bg-light">
+                              <form class="reply-comment-form" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="parent_id" value="{{ reply.comment_id }}">
+                                <div class="mb-2">
+                                  <label class="form-label small">Reply to {{ reply.username }}:</label>
+                                  <textarea name="content" class="form-control form-control-sm" rows="3" placeholder="Write your reply..." required></textarea>
+                                </div>
+                                <div class="d-flex gap-2">
+                                  <button type="submit" class="btn btn-primary btn-sm">Post Reply</button>
+                                  <button type="button" class="btn btn-secondary btn-sm cancel-reply-btn" data-comment-id="{{ reply.comment_id }}">Cancel</button>
+                                </div>
+                              </form>
+                            </div>
+                          </div>
+                          
+                          <!-- Level 2 Replies -->
+                          {% if reply.replies %}
+                            <div class="replies-container mt-3">
+                              {% for reply2 in reply.replies %}
+                                <div class="comment-item reply-section mb-3 p-3 border rounded" data-comment-id="{{ reply2.comment_id }}">
+                                  <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <strong class="comment-author">{{ reply2.username }}</strong>
+                                    <div>
+                                      <small class="text-muted me-2">{{ reply2.created_at|date:"M j, Y g:i A" }}</small>
+                                      {% if reply2.username == request.user.username %}
+                                        <form class="delete-comment-form d-inline" method="POST" action="{% url 'delete_comment' comment_id=reply2.comment_id %}">
+                                          {% csrf_token %}
+                                          <button type="submit" class="btn btn-sm btn-link text-danger p-0 delete-btn">Delete</button>
+                                        </form>
+                                      {% endif %}
+                                    </div>
+                                  </div>
+                                  
+                                  <p class="mb-0 comment-content">{{ reply2.content }}</p>
+                                  
+                                  <div class="comment-actions mt-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-reply" data-comment-id="{{ reply2.comment_id }}">
+                                      💬 Reply
+                                    </button>
+                                  </div>
+                                  
+                                  <!-- Reply Form for Level 2 -->
+                                  <div id="reply-form-{{ reply2.comment_id }}" class="reply-form-container" style="display: none;">
+                                    <div class="reply-form-box mt-3 p-3 border rounded bg-light">
+                                      <form class="reply-comment-form" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="parent_id" value="{{ reply2.comment_id }}">
+                                        <div class="mb-2">
+                                          <label class="form-label small">Reply to {{ reply2.username }}:</label>
+                                          <textarea name="content" class="form-control form-control-sm" rows="3" placeholder="Write your reply..." required></textarea>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                          <button type="submit" class="btn btn-primary btn-sm">Post Reply</button>
+                                          <button type="button" class="btn btn-secondary btn-sm cancel-reply-btn" data-comment-id="{{ reply2.comment_id }}">Cancel</button>
+                                        </div>
+                                      </form>
+                                    </div>
+                                  </div>
+                                </div>
+                              {% endfor %}
+                            </div>
+                          {% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-muted text-center no-comments-msg">No comments yet. Be the first to comment!</p>
+            {% endif %}
+          </div>
+
+          <!-- Main Comment Form -->
+          <form id="addCommentForm" class="main-comment-form" method="POST" action="{% url 'add_comment' task_id=task.task_id %}">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="commentContent" class="form-label">Add Comment</label>
+                <textarea id="commentContent" name="content" class="form-control" rows="3" placeholder="Write a comment..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-outline-primary btn-sm">Post Comment</button>
+          </form>
+        </div>
+
+        <form id="taskDeleteForm" method="POST" action="{% url 'task_delete' task_id=task.task_id %}">
+          {% csrf_token %}
+        </form>
+
+        {% endif %}
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        {% if task %}
+        <button type="submit" form="taskDetailForm" class="btn btn-primary"
+                {% if task.created_by != request.user.username and task.assigned_to_username != request.user.username %}disabled{% endif %}>Save Changes</button>
+        <button type="submit" form="taskDeleteForm" class="btn btn-danger"
+                {% if task.created_by != request.user.username %}disabled{% endif %}>Delete</button>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+console.log('🟢 SCRIPT FILE LOADED');
+
+let replyClickHandlerAttached = false;
+
+function initTaskDetailModal() {
+    console.log('🟢 INITIALIZING TASK DETAIL MODAL');
+    
+    const modal = document.getElementById('taskDetailModal');
+    
+    if (modal) {
+        console.log('🟢 Modal element found');
+        
+        // Listen for when modal is shown
+        modal.addEventListener('shown.bs.modal', function () {
+            console.log('🟢 MODAL IS NOW VISIBLE - Initializing...');
+            initializeReplyButtons()});
+        
+        // Also initialize immediately in case modal is already open
+        setTimeout(function() {
+            initializeReplyButtons();
+        }, 500);
+    } else {
+        console.log('❌ Modal element NOT found');
+    }
+    
+    // Completion slider handler
+    const completionSlider = document.getElementById('completion');
+    const completionValue = document.getElementById('completionValue');
+    if (completionSlider && completionValue) {
+        completionSlider.addEventListener('input', function() {
+            completionValue.textContent = this.value;
+        });
+    }
+    
+    // Main comment form handler
+    const commentForm = document.getElementById('addCommentForm');
+    if (commentForm) {
+        commentForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Posting...';
+            
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                if (data.success) {
+                    showSuccess('Comment posted successfully!');
+                    setTimeout(() => window.location.reload(), 1000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                showError('Failed to post comment: ' + error.message);
+            });
+        });
+    }
+    
+    // Reply form submissions
+    document.addEventListener('submit', function(e) {
+        if (e.target.classList.contains('reply-comment-form')) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Posting...';
+            
+            const formData = new FormData(form);
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                if (data.success) {
+                    showSuccess('Reply posted successfully!');
+                    setTimeout(() => window.location.reload(), 1000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                showError('Failed to post reply: ' + error.message);
+            });
+        }
+    });
+    
+    // Delete comment forms
+    const commentsList = document.getElementById('commentsList');
+    if (commentsList) {
+        commentsList.addEventListener('submit', function(e) {
+            const form = e.target.closest('.delete-comment-form');
+            if (!form) return;
+            
+            e.preventDefault();
+            
+            const submitBtn = form.querySelector('button[type="submit"]');
+            
+            // Use styled confirmation dialog
+            showConfirmDialog({
+                title: 'Delete Comment',
+                message: 'Are you sure you want to delete this comment? This will also delete all replies.',
+                type: 'danger',
+                confirmText: 'Delete'
+            }).then(confirmed => {
+                if (!confirmed) {
+                    return;
+                }
+                
+                // Proceed with delete
+                if (submitBtn) submitBtn.disabled = true;
+                
+                const formData = new FormData(form);
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: formData
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                        if (submitBtn) submitBtn.disabled = false;
+                        return;
+                    }
+                    if (data.success) {
+                        showSuccess('Comment deleted successfully!');
+                        setTimeout(() => window.location.reload(), 1000);
+                    }
+                })
+                .catch(err => {
+                    console.error('Delete error:', err);
+                    if (submitBtn) submitBtn.disabled = false;
+                    showError('Failed to delete comment.');
+                });
+            });
+        });
+    }
+    
+    // Task delete form handler
+    const taskDeleteForm = document.getElementById('taskDeleteForm');
+    if (taskDeleteForm) {
+        const deleteBtn = document.querySelector('button[form="taskDeleteForm"]');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                showConfirmDialog({
+                    title: 'Delete Task',
+                    message: 'Are you sure you want to delete this task? This action cannot be undone.',
+                    type: 'danger',
+                    confirmText: 'Delete Task'
+                }).then(confirmed => {
+                    if (confirmed) {
+                        taskDeleteForm.submit();
+                    }
+                });
+            });
+        }
+    }
+    
+    const startDate = document.getElementById('startDate');
+    const dueDate = document.getElementById('dueDate');
+    const creationInput = document.getElementById('dateCreated');
+    const creationDateValue = creationInput ? creationInput.value : new Date().toISOString().split('T')[0];
+    const taskDetailForm = document.getElementById('taskDetailForm');
+
+    function validateTaskDates() {
+        const start = startDate ? startDate.value : null;
+        const due = dueDate ? dueDate.value : null;
+        
+        if (start && start < creationDateValue) {
+            showWarning("Data didn't get saved because the Start Date can't be before today.");
+            startDate.value = creationDateValue;
+            return false;
+        }
+        
+        if (due && due < creationDateValue) {
+            showWarning("Data didn't get saved because the Due Date can't be before today.");
+            dueDate.value = creationDateValue;
+            return false;
+        }
+        
+        if (start && due && due < start) {
+            showWarning('Due date cannot be before the start date.');
+            return false;
+        }
+        
+        return true;
+    }
+
+    if (startDate) {
+        startDate.setAttribute('min', creationDateValue);
+        startDate.addEventListener('change', validateTaskDates);
+    }
+
+    if (dueDate) {
+        dueDate.setAttribute('min', creationDateValue);
+        dueDate.addEventListener('change', validateTaskDates);
+    }
+
+    if (taskDetailForm) {
+        taskDetailForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!validateTaskDates()) {
+                return;
+            }
+
+            const formData = new FormData(taskDetailForm);
+            const modalElement = document.getElementById('taskDetailModal');
+            fetch(taskDetailForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (typeof showSuccess === 'function') {
+                        showSuccess(data.message || 'Task saved successfully.');
+                    } else {
+                        alert(data.message || 'Task saved successfully.');
+                    }
+                    if (modalElement) {
+                        const bootstrapModal = bootstrap.Modal.getInstance(modalElement);
+                        if (bootstrapModal) {
+                            bootstrapModal.hide();
+                        }
+                    }
+                    return;
+                }
+                const errMessage = data.message || 'Unable to save task.';
+                if (typeof showError === 'function') {
+                    showError(errMessage);
+                } else {
+                    alert(errMessage);
+                }
+            })
+            .catch(err => {
+                console.error('Task update failed:', err);
+                if (typeof showError === 'function') {
+                    showError('Task update failed. Please try again.');
+                } else {
+                    alert('Task update failed. Please try again.');
+                }
+            });
+        });
+    }
+}
+
+function handleClicks(e) {
+    // Check for reply button
+    const replyBtn = e.target.closest('.btn-reply');
+    
+    if (replyBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const commentId = replyBtn.getAttribute('data-comment-id');
+        const formId = 'reply-form-' + commentId;
+        const replyFormContainer = document.getElementById(formId);
+        
+        if (!replyFormContainer) {
+            console.error('❌ FORM NOT FOUND!');
+            showError('Reply form not found! Please refresh the page.');
+            return;
+        }
+        
+        // Hide all other forms
+        document.querySelectorAll('.reply-form-container').forEach(form => {
+            if (form.id !== formId) {
+                form.style.display = 'none';
+            }
+        });
+        
+        // Toggle this form
+        if (replyFormContainer.style.display === 'none' || replyFormContainer.style.display === '') {
+            replyFormContainer.style.display = 'block';
+            setTimeout(() => {
+                const textarea = replyFormContainer.querySelector('textarea');
+                if (textarea) {
+                    textarea.focus();
+                }
+            }, 100);
+        } else {
+            replyFormContainer.style.display = 'none';
+        }
+        return;
+    }
+    
+    // Check for cancel button
+    const cancelBtn = e.target.closest('.cancel-reply-btn');
+    
+    if (cancelBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const commentId = cancelBtn.getAttribute('data-comment-id');
+        const form = document.getElementById('reply-form-' + commentId);
+        if (form) {
+            form.style.display = 'none';
+            const textarea = form.querySelector('textarea');
+            if (textarea) textarea.value = '';
+        }
+    }
+}
+
+function initializeReplyButtons() {
+    if (replyClickHandlerAttached) {
+        return;
+    }
+
+    if (document.body) {
+        document.body.addEventListener('click', handleClicks, true);
+        replyClickHandlerAttached = true;
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTaskDetailModal);
+} else {
+    initTaskDetailModal();
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
