@@ -135,7 +135,6 @@ def login(request):
                         django_user.backend = 'django.contrib.auth.backends.ModelBackend'
                         auth_login(request, django_user)
                         request.session['user_ID'] = supabase_user['user_ID']
-                        messages.success(request, f'Welcome back, {django_user.username}!')
                         return redirect('home')
                 else:
                     print(f"DEBUG: Password verification failed")
