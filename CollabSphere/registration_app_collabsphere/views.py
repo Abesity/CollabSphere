@@ -55,7 +55,6 @@ def login(request):
             # Also set admin session variables
             request.session['admin_logged_in'] = True
             request.session['admin_username'] = 'admin'
-            messages.success(request, 'Welcome back, Admin!')
             return redirect('admin_app_collabsphere:dashboard')
         
         # First try Django authentication
@@ -70,7 +69,6 @@ def login(request):
             # Ensure any admin session flags are cleared when a regular user logs in
             request.session.pop('admin_logged_in', None)
             request.session.pop('admin_username', None)
-            messages.success(request, f'Welcome back, {user.username}!')
             return redirect('home')
 
         print(f"DEBUG: Django auth FAILED - trying Supabase...")
@@ -127,7 +125,6 @@ def login(request):
                         print(f"DEBUG: Authentication SUCCESS")
                         auth_login(request, django_user)
                         request.session['user_ID'] = supabase_user['user_ID']
-                        messages.success(request, f'Welcome back, {django_user.username}!')
                         return redirect('home')
                     else:
                         print(f"DEBUG: Authentication still failing, logging in manually")
@@ -142,19 +139,16 @@ def login(request):
                         return redirect('home')
                 else:
                     print(f"DEBUG: Password verification failed")
-                    messages.error(request, 'Invalid email or password.')
                     # Add to form non-field errors so template shows it
                     form.add_error(None, 'Invalid email or password.')
             else:
                 print(f"DEBUG: User not found in Supabase")
-                messages.error(request, 'User not found.')
                 form.add_error(None, 'User not found.')
 
         except Exception as e:
             print(f"DEBUG: Error: {str(e)}")
             import traceback
             traceback.print_exc()
-            messages.error(request, 'Authentication error. Please try again.')
             form.add_error(None, 'Authentication error. Please try again.')
     
     # Render the login template with the form (bound or unbound)
