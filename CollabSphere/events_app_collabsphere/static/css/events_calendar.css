@@ -1,9 +1,9 @@
 :root {
-  --primary-color: #2D333A;
-  --secondary-color: #3D74C3;
-  --bg-color: #FAFBFB;
-  --card-border: #c0c6d1;
-  --text-muted: #6c757d;
+  --primary-color: #1e293b;
+  --secondary-color: #6366f1;
+  --bg-color: #f8fafc;
+  --card-border: #e2e8f0;
+  --text-muted: #64748b;
 }
 
 body {
@@ -13,7 +13,9 @@ body {
   padding: 0;
   min-height: 100vh;
   background-color: var(--bg-color, #f8f8f8);
-  font-family: "Inter", sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body::after {
@@ -79,20 +81,22 @@ body::after {
 
 .btn-calendar {
   color: white;
-  background: #3D74C3;
+  background: linear-gradient(135deg, var(--secondary-color) 0%, #4f46e5 100%);
   border: none;
   padding: 0.5rem 0.75rem;
   border-radius: 10px;
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 0.875rem;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
 }
 
 .btn-calendar:hover {
-  background: #245d8b;
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .current-month {
@@ -105,18 +109,22 @@ body::after {
 
 .btn-new {
   color: white;
-  background: #3D74C3;
+  background: linear-gradient(135deg, var(--secondary-color) 0%, #4f46e5 100%);
   border: none;
   padding: 0.625rem 1rem;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   width: 100%;
   font-size: 0.9rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
 }
 
 .btn-new:hover {
-  background: #245d8b;
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
 }
 
 .btn-new:disabled {
@@ -196,8 +204,9 @@ body::after {
 }
 
 .calendar-day.today .day-number {
-  background: #3D74C3;
+  background: linear-gradient(135deg, var(--secondary-color) 0%, #4f46e5 100%);
   color: white;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
   width: 22px;
   height: 22px;
   border-radius: 50%;

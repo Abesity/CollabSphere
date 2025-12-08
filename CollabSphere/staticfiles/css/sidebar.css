@@ -27,25 +27,30 @@
 
 
 .list-group-item.sidebar-link {
-  background-color: #f8f9fa; 
-  transition: background-color 0.2s ease, color 0.2s ease;
-  color: #495057; 
+  background-color: #f8fafc; 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #64748b; 
   border: none;
+  font-weight: 500;
 }
 
 .list-group-item.sidebar-link:hover {
-  background-color: #e9ecef;
-  color: #212529;
+  background-color: #eef2ff;
+  color: #6366f1;
   text-decoration: none;
+  transform: translateX(2px);
 }
 
 .list-group-item.sidebar-link.sidebar-link-active,
 .list-group-item.sidebar-link.sidebar-link-active:hover {
   color: white;               
-  border-left: 3px solid #007bff;
+  border-left: 3px solid #6366f1;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, transparent 100%);
 }
 
 .list-group-item.sidebar-link.active {
-  background-color: #007bff;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
