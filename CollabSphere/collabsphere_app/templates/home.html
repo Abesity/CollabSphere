@@ -452,22 +452,41 @@ async function openTaskDetail(taskId) {
           throw new Error('Empty response from server');
       }
 
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-
-      const fetchedModal = doc.getElementById('taskDetailModal');
-      if (!fetchedModal) {
-          console.error('❌ Modal element not found in response');
-          console.log('Response HTML preview:', html.substring(0, 500));
-          throw new Error('Task detail modal markup missing in response.');
-      }
-
-      console.log('🔵 Modal element found, removing any existing modals...');
+      // Remove any existing modal first
+      console.log('🔵 Removing any existing task detail modals...');
       await removeModalIfExists('taskDetailModal');
 
-      // Add stylesheets
+      // Create a temporary container to hold the HTML
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      
+      // Find the modal in the temporary container
+      let fetchedModal = tempDiv.querySelector('#taskDetailModal');
+      
+      if (!fetchedModal) {
+          // Try DOMParser as fallback
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          fetchedModal = doc.getElementById('taskDetailModal');
+          
+          if (!fetchedModal) {
+              console.error('❌ Modal element not found');
+              console.log('HTML preview:', html.substring(0, 1000));
+              throw new Error('Task detail modal markup missing in response.');
+          }
+          
+          // Clone it to main document
+          fetchedModal = fetchedModal.cloneNode(true);
+      }
+
+      console.log('🔵 Modal element found, appending to body...');
+      document.body.appendChild(fetchedModal);
+
+      // Add stylesheets from the response
       console.log('🔵 Adding stylesheets...');
-      doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+      const tempStyleDiv = document.createElement('div');
+      tempStyleDiv.innerHTML = html;
+      tempStyleDiv.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
           const href = link.getAttribute('href');
           if (href && !document.querySelector(`link[href="${href}"]`)) {
               const styleTag = document.createElement('link');
@@ -478,44 +497,50 @@ async function openTaskDetail(taskId) {
           }
       });
 
-      console.log('🔵 Appending modal to body...');
-      document.body.appendChild(fetchedModal);
-
-      // Execute scripts
-      console.log('🔵 Executing scripts...');
-      doc.querySelectorAll('script').forEach(script => {
-          const newScript = document.createElement('script');
-          if (script.src) {
-              newScript.src = script.src;
-          } else {
-              newScript.textContent = script.textContent;
+      console.log('🔵 Extracting and executing scripts...');
+      const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+      let match;
+      const scripts = [];
+      while ((match = scriptRegex.exec(html)) !== null) {
+          scripts.push(match[1]);
+      }
+      
+      // Execute scripts in order
+      scripts.forEach(scriptContent => {
+          if (scriptContent.trim()) {
+              const script = document.createElement('script');
+              script.textContent = scriptContent;
+              document.body.appendChild(script);
           }
-          document.body.appendChild(newScript);
       });
 
       console.log('🔵 Showing modal...');
-      const modal = new bootstrap.Modal(fetchedModal);
-      modal.show();
+      const modalElement = document.getElementById('taskDetailModal');
+      if (modalElement) {
+          const modal = new bootstrap.Modal(modalElement);
+          modal.show();
 
-      // Initialize completion slider
-      setTimeout(() => {
-          const completionSlider = fetchedModal.querySelector("#completion");
-          const completionValue = fetchedModal.querySelector("#completionValue");
-          if (completionSlider && completionValue) {
-              completionValue.textContent = completionSlider.value;
-              completionSlider.addEventListener("input", () => {
+          // Initialize completion slider
+          setTimeout(() => {
+              const completionSlider = modalElement.querySelector("#completion");
+              const completionValue = modalElement.querySelector("#completionValue");
+              if (completionSlider && completionValue) {
                   completionValue.textContent = completionSlider.value;
-              });
-          }
-      }, 100);
+                  completionSlider.addEventListener("input", () => {
+                      completionValue.textContent = completionSlider.value;
+                  });
+              }
+          }, 100);
 
-      console.log('✅ Task detail modal opened successfully');
+          console.log('✅ Task detail modal opened successfully');
+      } else {
+          throw new Error('Modal element not found after appending to DOM');
+      }
 
   } catch (error) {
       console.error("❌ Error loading task detail:", error);
       console.error("❌ Error stack:", error.stack);
       
-      // More detailed error message
       let errorMessage = "Could not load task details. ";
       if (error.message.includes('404')) {
           errorMessage += "Task not found.";

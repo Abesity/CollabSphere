@@ -265,11 +265,11 @@ def task_detail(request, task_id):
         "has_active_team": active_team_id is not None
     }
     
-    print(f"🔵 Rendering tasks_app_collabsphere/task_detail.html with context")
+    print(f"🔵 Rendering task_detail.html with context")
     print(f"🔵 Task ID in context: {task_data.get('task_id')}")
     print(f"🔵 Task title: {task_data.get('title')}")
     
-    return render(request, "tasks_app_collabsphere/task_detail.html", context)
+    return render(request, "task_detail.html", context)
 
 # UPDATE TASK
 @login_required
