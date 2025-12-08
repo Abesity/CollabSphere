@@ -87,9 +87,32 @@ def task_create(request):
     # Get active team ID for the task
     active_team_id = Task.get_user_active_team_id(request.user)
 
-    # Validate dates are not in the past
+    # Validate required fields
     start_date = request.POST.get("startDate") or None
     due_date = request.POST.get("dueDate") or None
+    description = request.POST.get("description") or None
+    assign_to_raw = request.POST.get("assignTo")
+
+    missing_required = []
+    if not title:
+        missing_required.append("Task name")
+    if not start_date:
+        missing_required.append("Start date")
+    if not due_date:
+        missing_required.append("Due date")
+    if not description or not description.strip():
+        missing_required.append("Description")
+    if assign_to_raw is None or not assign_to_raw.strip():
+        missing_required.append("Assignee")
+
+    if missing_required:
+        messages.warning(
+            request,
+            f"Unable to create task. Please provide: {', '.join(missing_required)}."
+        )
+        return redirect("home")
+
+    # Validate dates are not in the past
     today = date.today().isoformat()
     
     if start_date and start_date < today:
@@ -98,6 +121,10 @@ def task_create(request):
     
     if due_date and due_date < today:
         messages.warning(request, "Tasks cannot be created for dates earlier than today.")
+        return redirect("home")
+
+    if start_date and due_date and due_date < start_date:
+        messages.warning(request, "Due date cannot be earlier than the start date.")
         return redirect("home")
 
     payload = {
