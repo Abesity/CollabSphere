@@ -84,12 +84,61 @@
 
     .navbar a:nth-child(1) { animation-delay: 0.1s; }
     .navbar a:nth-child(2) { animation-delay: 0.2s; }
+
+         /* ===== LOADING OVERLAY STYLES ===== */
+        #global-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        #global-loading.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(61, 116, 195, 0.2);
+            border-radius: 50%;
+            border-top-color: #3D74C3;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 20px;
+            color: #3D74C3;
+            font-weight: 500;
+            font-size: 1.1rem;
+        }
   </style>
 
   {% block extra_css %}{% endblock %}
 </head>
 
 <body>
+  <!-- Loading Overlay - Always visible initially -->
+    <div id="global-loading" class="active">
+        <div class="text-center">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading...</div>
+        </div>
+    </div>
   <!-- Navbar -->
   <nav class="navbar navbar-light bg-light shadow-sm px-4">
     <div class="d-flex align-items-center">
@@ -130,5 +179,73 @@
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+        // ===== SIMPLE PAGE LOADING SYSTEM =====
+        (function() {
+        const loadingElement = document.getElementById('global-loading');
+        
+        // Check if loading is disabled for this page
+        if (document.body.dataset.disableLoading === 'true') {
+            loadingElement.style.display = 'none';
+            return; // Skip all loading logic
+        }
+        
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                loadingElement.classList.remove('active');
+            }, 500);
+        });
+
+        // Show loading when ANY link is clicked (except dropdowns)
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (link && link.href && 
+                    !link.href.startsWith('javascript:') && 
+                    !link.href.includes('#') &&
+                    link.target !== '_blank' &&
+                    !link.hasAttribute('data-bs-toggle') &&
+                    link.getAttribute('href') !== '#') {
+                    
+                    // Check if it's an internal link
+                    const currentOrigin = window.location.origin;
+                    const targetOrigin = new URL(link.href, window.location.href).origin;
+                    
+                    if (currentOrigin === targetOrigin) {
+                        // Show loading immediately for internal links
+                        loadingElement.classList.add('active');
+                    } else {
+                        // For external links, show loading briefly
+                        loadingElement.classList.add('active');
+                        setTimeout(() => {
+                            loadingElement.classList.remove('active');
+                        }, 1500);
+                    }
+                }
+            });
+            
+            // 3. Show loading for form submissions
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                if (form.method.toLowerCase() === 'post') {
+                    loadingElement.classList.add('active');
+                }
+            });
+            
+            // 4. Show loading when browser back/forward buttons are used
+            window.addEventListener('popstate', function() {
+                loadingElement.classList.add('active');
+            });
+            
+            // 5. Fallback: hide loading after max 3 seconds
+            setTimeout(() => {
+                loadingElement.classList.remove('active');
+            }, 3000);
+            
+            // 6. Ensure loading shows when page is unloading (user navigates away)
+            window.addEventListener('beforeunload', function() {
+                loadingElement.classList.add('active');
+            });
+        })();
+  </script>
 </body>
 </html>
