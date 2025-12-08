@@ -167,27 +167,40 @@ def register(request):
         email = form.cleaned_data["email"]
         password = form.cleaned_data["password"]
 
-        if User.email_exists(email):
+        # Check if username or email already exists in Django database
+        if User.objects.filter(email=email).exists():
             form.add_error("email", "Email already registered.")
-        if User.username_exists(username):
+        if User.objects.filter(username=username).exists():
             form.add_error("username", "Username already taken.")
 
         if not form.errors:
             hashed_pw = hash_password(password)
+            
+            # Create Supabase user first
             new_sb_user = User.create_supabase_user(username, email, hashed_pw)
 
             if new_sb_user:
-                user = User.objects.create(
-                    username=username,
-                    email=email,
-                    supabase_id=new_sb_user["user_ID"]
-                )
-                user.set_unusable_password()
-                user.save()
-                return redirect("login")
+                try:
+                    # Create Django user with create_user() which handles hashing properly
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password  # Django will hash this with its own algorithm
+                    )
+                    user.supabase_id = new_sb_user["user_ID"]
+
+                    user.save()
+                    return redirect("login")
+                except Exception as e:
+                    # Clean up: If Django user creation fails, remove Supabase user
+                    try:
+                        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+                        supabase.table("user").delete().eq("user_ID", new_sb_user["user_ID"]).execute()
+                    except:
+                        pass
+                    form.add_error(None, f"Registration failed: {str(e)}")
 
     return render(request, "register.html", {"form": form})
-
 
 # -------------------------------
 # LOGOUT VIEW
