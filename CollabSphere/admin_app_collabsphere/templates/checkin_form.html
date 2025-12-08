@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}{% if checkin %}Edit Check-in{% else %}Create Check-in{% endif %}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1>
+                <i class="fas fa-heartbeat me-2"></i>
+                {% if checkin %}Edit Check-in{% else %}Create New Check-in{% endif %}
+            </h1>
+            <p class="text-muted">
+                {% if checkin %}Update wellbeing check-in{% else %}Add a new wellbeing check-in{% endif %}
+            </p>
+        </div>
+        
+        {% if messages %}
+        <div class="messages mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="">
+            {% csrf_token %}
+            
+            <div class="form-group mb-3">
+                <label for="user_id" class="form-label">User *</label>
+                <select class="form-select" id="user_id" name="user_id" required>
+                    <option value="">Select User</option>
+                    {% for user in users %}
+                    <option value="{{ user.user_ID }}" 
+                            {% if checkin.user_id == user.user_ID %}selected{% endif %}>
+                        {{ user.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="mood_rating" class="form-label">Mood Rating</label>
+                <div class="mood-rating">
+                    {% for i in "54321" %}
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="mood_rating" id="mood{{ i }}" 
+                               value="{{ i }}" {% if checkin.mood_rating == i|add:0 %}checked{% endif %}>
+                        <label class="form-check-label" for="mood{{ i }}">
+                            {% if i == '5' %}
+                            😊 Excellent
+                            {% elif i == '4' %}
+                            🙂 Good
+                            {% elif i == '3' %}
+                            😐 Neutral
+                            {% elif i == '2' %}
+                            😕 Poor
+                            {% else %}
+                            😢 Very Poor
+                            {% endif %}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="Excellent" {% if checkin.status == 'Excellent' %}selected{% endif %}>Excellent</option>
+                    <option value="Good" {% if checkin.status == 'Good' %}selected{% endif %}>Good</option>
+                    <option value="Okay" {% if checkin.status == 'Okay' or not checkin %}selected{% endif %}>Okay</option>
+                    <option value="Poor" {% if checkin.status == 'Poor' %}selected{% endif %}>Poor</option>
+                    <option value="Very Poor" {% if checkin.status == 'Very Poor' %}selected{% endif %}>Very Poor</option>
+                </select>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="notes" class="form-label">Notes</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3">{{ checkin.notes|default:'' }}</textarea>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="date_submitted" class="form-label">Date Submitted</label>
+                <input type="date" class="form-control" id="date_submitted" name="date_submitted" 
+                       value="{{ checkin.date_submitted|default:'' }}">
+                <small class="text-muted">Leave blank to use current date</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if checkin %}Update Check-in{% else %}Create Check-in{% endif %}
+                </button>
+                <a href="{% if checkin %}{% url 'admin_app_collabsphere:checkin_detail' checkin.checkin_id %}{% else %}{% url 'admin_app_collabsphere:wellbeing_management' %}{% endif %}" 
+                   class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default date to today if not provided
+    const dateField = document.getElementById('date_submitted');
+    if (dateField && !dateField.value) {
+        dateField.value = new Date().toISOString().split('T')[0];
+    }
+});
+</script>
+
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.form-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 30px;
+}
+
+.form-header {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.form-header h1 {
+    color: #3D74C3;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.mood-rating {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mood-rating .form-check {
+    margin: 0;
+}
+
+.mood-rating .form-check-label {
+    font-size: 1.1em;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+</style>
+{% endblock %}

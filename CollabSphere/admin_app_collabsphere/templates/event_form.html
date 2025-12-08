@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}{% if event %}Edit Event: {{ event.title }}{% else %}Create Event{% endif %}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1>
+                <i class="fas fa-calendar-alt me-2"></i>
+                {% if event %}Edit Event{% else %}Create New Event{% endif %}
+            </h1>
+            <p class="text-muted">
+                {% if event %}Update event information{% else %}Add a new event to CollabSphere{% endif %}
+            </p>
+        </div>
+        
+        {% if messages %}
+        <div class="messages mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{% if event %}{% url 'admin_app_collabsphere:event_edit' event.event_id %}{% else %}{% url 'admin_app_collabsphere:create_event' %}{% endif %}">
+            {% csrf_token %}
+            
+            <div class="form-group mb-3">
+                <label for="title" class="form-label">Title *</label>
+                <input type="text" class="form-control" id="title" name="title" 
+                       value="{{ event.title|default:'' }}" required>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3">{{ event.description|default:'' }}</textarea>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="start_date" class="form-label">Start Date *</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" 
+                               value="{{ event.form_start_date|default:'' }}" required>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="start_time" class="form-label">Start Time *</label>
+                        <input type="time" class="form-control" id="start_time" name="start_time" 
+                               value="{{ event.form_start_time|default:'09:00' }}" required>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="end_date" class="form-label">End Date *</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" 
+                               value="{{ event.form_end_date|default:'' }}" required>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="end_time" class="form-label">End Time *</label>
+                        <input type="time" class="form-control" id="end_time" name="end_time" 
+                               value="{{ event.form_end_time|default:'17:00' }}" required>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="team_id" class="form-label">Team *</label>
+                        <select class="form-select" id="team_id" name="team_id" required>
+                            <option value="">Select a Team</option>
+                            {% for team in teams %}
+                            <option value="{{ team.team_ID }}" 
+                                    {% if event.team_ID == team.team_ID %}selected{% endif %}>
+                                {{ team.team_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Events must be assigned to a team.</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="user_id" class="form-label">Organizer (Optional)</label>
+                        <select class="form-select" id="user_id" name="user_id">
+                            <option value="">No Organizer</option>
+                            {% for user in users %}
+                            <option value="{{ user.user_ID }}" 
+                                    {% if event.user_id == user.user_ID %}selected{% endif %}>
+                                {{ user.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Optionally assign a user as organizer.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if event %}Update Event{% else %}Create Event{% endif %}
+                </button>
+                <a href="{% if event %}{% url 'admin_app_collabsphere:event_detail' event.event_id %}{% else %}{% url 'admin_app_collabsphere:event_management' %}{% endif %}" 
+                   class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default dates if not provided
+    const today = new Date().toISOString().split('T')[0];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    
+    const startDate = document.getElementById('start_date');
+    const endDate = document.getElementById('end_date');
+    const teamSelect = document.getElementById('team_id');
+    
+    if (startDate && !startDate.value) {
+        startDate.value = today;
+    }
+    
+    if (endDate && !endDate.value) {
+        endDate.value = tomorrowStr;
+    }
+    
+    // Validate team selection on form submit
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        if (!teamSelect.value) {
+            e.preventDefault();
+            alert('Please select a team for the event.');
+            teamSelect.focus();
+            return false;
+        }
+    });
+});
+</script>
+
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.form-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 30px;
+}
+
+.form-header {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.form-header h1 {
+    color: #3D74C3;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+</style>
+{% endblock %}

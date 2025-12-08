@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}{% if task %}Edit Task: {{ task.title }}{% else %}Create Task{% endif %}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1>
+                <i class="fas fa-tasks me-2"></i>
+                {% if task %}Edit Task{% else %}Create New Task{% endif %}
+            </h1>
+            <p class="text-muted">
+                {% if task %}Update task information{% else %}Add a new task to CollabSphere{% endif %}
+            </p>
+        </div>
+        
+        {% if messages %}
+        <div class="messages mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="">
+            {% csrf_token %}
+            
+            <div class="form-group mb-3">
+                <label for="title" class="form-label">Title *</label>
+                <input type="text" class="form-control" id="title" name="title" 
+                       value="{{ task.title|default:'' }}" required>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3">{{ task.description|default:'' }}</textarea>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="assigned_to" class="form-label">Assign To</label>
+                        <select class="form-select" id="assigned_to" name="assigned_to">
+                            <option value="">Unassigned</option>
+                            {% for user in users %}
+                            <option value="{{ user.user_ID }}" 
+                                    {% if task.assigned_to == user.user_ID %}selected{% endif %}>
+                                {{ user.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="Pending" {% if task.status == 'Pending' %}selected{% endif %}>Pending</option>
+                            <option value="In Progress" {% if task.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                            <option value="Completed" {% if task.status == 'Completed' %}selected{% endif %}>Completed</option>
+                            <option value="On Hold" {% if task.status == 'On Hold' %}selected{% endif %}>On Hold</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" 
+                               value="{{ task.start_date|slice:':10'|default:'' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="due_date" class="form-label">Due Date</label>
+                        <input type="date" class="form-control" id="due_date" name="due_date" 
+                               value="{{ task.due_date|slice:':10'|default:'' }}">
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="completion" class="form-label">Completion (%)</label>
+                        <input type="range" class="form-range" id="completion" name="completion" 
+                               min="0" max="100" value="{{ task.completion|default:0 }}">
+                        <div class="d-flex justify-content-between">
+                            <small>0%</small>
+                            <span id="completionValue">{{ task.completion|default:0 }}%</span>
+                            <small>100%</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-check mb-4">
+                <input class="form-check-input" type="checkbox" id="priority" name="priority"
+                       {% if task.priority %}checked{% endif %}>
+                <label class="form-check-label" for="priority">
+                    High Priority
+                </label>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if task %}Update Task{% else %}Create Task{% endif %}
+                </button>
+                <a href="{% if task %}{% url 'admin_app_collabsphere:task_detail' task.task_id %}{% else %}{% url 'admin_app_collabsphere:task_management' %}{% endif %}" 
+                   class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update completion percentage display
+    const completionSlider = document.getElementById('completion');
+    const completionValue = document.getElementById('completionValue');
+    
+    if (completionSlider && completionValue) {
+        completionSlider.addEventListener('input', function() {
+            completionValue.textContent = this.value + '%';
+        });
+    }
+});
+</script>
+
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.form-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 30px;
+}
+
+.form-header {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.form-header h1 {
+    color: #3D74C3;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+</style>
+{% endblock %}
