@@ -447,56 +447,64 @@ async function openTaskDetail(taskId) {
 
       const html = await response.text();
       console.log('🔵 Received HTML length:', html.length);
+      console.log('🔵 HTML includes taskDetailModal?:', html.includes('taskDetailModal'));
+      console.log('🔵 HTML includes TASK_DETAIL_TEMPLATE_LOADED?:', html.includes('TASK_DETAIL_TEMPLATE_LOADED'));
+      console.log('🔵 HTML first 800 chars:', html.substring(0, 800));
       
       if (!html || html.trim().length === 0) {
           throw new Error('Empty response from server');
       }
 
+      console.log('🔵 Response HTML received, length:', html.length);
+      console.log('🔵 HTML includes taskDetailModal?:', html.includes('taskDetailModal'));
+
       // Remove any existing modal first
       console.log('🔵 Removing any existing task detail modals...');
       await removeModalIfExists('taskDetailModal');
 
-      // Create a temporary container to hold the HTML
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
+      // Use DOMParser as the primary method (more reliable than regex)
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
       
-      // Find the modal in the temporary container
-      let fetchedModal = tempDiv.querySelector('#taskDetailModal');
+      let fetchedModal = doc.getElementById('taskDetailModal');
+      if (!fetchedModal) {
+          fetchedModal = doc.querySelector('#taskDetailModal');
+      }
       
       if (!fetchedModal) {
-          // Try DOMParser as fallback
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, 'text/html');
-          fetchedModal = doc.getElementById('taskDetailModal');
-          
-          if (!fetchedModal) {
-              console.error('❌ Modal element not found');
-              console.log('HTML preview:', html.substring(0, 1000));
-              throw new Error('Task detail modal markup missing in response.');
+          console.error('❌ Modal not found');
+          console.log('HTML first 2000 chars:', html.substring(0, 2000));
+          console.log('HTML length:', html.length);
+          console.log('taskDetailModal in HTML:', html.includes('taskDetailModal'));
+          throw new Error('Task detail modal markup missing in response.');
+      }
+      
+      console.log('🔵 Modal found! HTML length:', fetchedModal.outerHTML.length);
+      const modalMatch = [fetchedModal.outerHTML];
+      
+      const modalHTML = modalMatch[0];
+      console.log('🔵 Modal HTML extracted, length:', modalHTML.length);
+
+      // Inject the modal HTML directly
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+      // Extract and inject stylesheets from response
+      console.log('🔵 Adding stylesheets...');
+      const linkRegex = /<link[^>]*rel="stylesheet"[^>]*>/gi;
+      let linkMatch;
+      while ((linkMatch = linkRegex.exec(html)) !== null) {
+          const linkElement = document.createElement('div');
+          linkElement.innerHTML = linkMatch[0];
+          const link = linkElement.querySelector('link');
+          if (link) {
+              const href = link.getAttribute('href');
+              if (href && !document.querySelector(`link[href="${href}"]`)) {
+                  document.head.appendChild(link);
+              }
           }
-          
-          // Clone it to main document
-          fetchedModal = fetchedModal.cloneNode(true);
       }
 
-      console.log('🔵 Modal element found, appending to body...');
-      document.body.appendChild(fetchedModal);
-
-      // Add stylesheets from the response
-      console.log('🔵 Adding stylesheets...');
-      const tempStyleDiv = document.createElement('div');
-      tempStyleDiv.innerHTML = html;
-      tempStyleDiv.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
-          const href = link.getAttribute('href');
-          if (href && !document.querySelector(`link[href="${href}"]`)) {
-              const styleTag = document.createElement('link');
-              Array.from(link.attributes).forEach(attr => {
-                  styleTag.setAttribute(attr.name, attr.value);
-              });
-              document.head.appendChild(styleTag);
-          }
-      });
-
+      // Extract and execute scripts
       console.log('🔵 Extracting and executing scripts...');
       const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
       let match;
@@ -505,7 +513,6 @@ async function openTaskDetail(taskId) {
           scripts.push(match[1]);
       }
       
-      // Execute scripts in order
       scripts.forEach(scriptContent => {
           if (scriptContent.trim()) {
               const script = document.createElement('script');
@@ -514,28 +521,31 @@ async function openTaskDetail(taskId) {
           }
       });
 
+      // Show the modal
       console.log('🔵 Showing modal...');
-      const modalElement = document.getElementById('taskDetailModal');
-      if (modalElement) {
-          const modal = new bootstrap.Modal(modalElement);
-          modal.show();
+      setTimeout(() => {
+          const modalElement = document.getElementById('taskDetailModal');
+          if (modalElement) {
+              const modal = new bootstrap.Modal(modalElement);
+              modal.show();
 
-          // Initialize completion slider
-          setTimeout(() => {
-              const completionSlider = modalElement.querySelector("#completion");
-              const completionValue = modalElement.querySelector("#completionValue");
-              if (completionSlider && completionValue) {
-                  completionValue.textContent = completionSlider.value;
-                  completionSlider.addEventListener("input", () => {
+              // Initialize completion slider
+              setTimeout(() => {
+                  const completionSlider = modalElement.querySelector("#completion");
+                  const completionValue = modalElement.querySelector("#completionValue");
+                  if (completionSlider && completionValue) {
                       completionValue.textContent = completionSlider.value;
-                  });
-              }
-          }, 100);
+                      completionSlider.addEventListener("input", () => {
+                          completionValue.textContent = completionSlider.value;
+                      });
+                  }
+              }, 100);
 
-          console.log('✅ Task detail modal opened successfully');
-      } else {
-          throw new Error('Modal element not found after appending to DOM');
-      }
+              console.log('✅ Task detail modal opened successfully');
+          } else {
+              throw new Error('Modal element not found after injection');
+          }
+      }, 100);
 
   } catch (error) {
       console.error("❌ Error loading task detail:", error);

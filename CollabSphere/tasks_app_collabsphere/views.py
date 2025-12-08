@@ -278,7 +278,15 @@ def task_detail(request, task_id):
     print(f"🔵 Task title: {task_data.get('title')}")
     print(f"🔵 Task assigned_to_username: {task_data.get('assigned_to_username')}")
     
-    return render(request, "task_detail.html", context)
+    try:
+        response = render(request, "task_detail_modal.html", context)
+        print(f"✅ task_detail_modal.html rendered successfully, response length: {len(response.content)}")
+        return response
+    except Exception as e:
+        print(f"❌ Error rendering task_detail.html: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"error": "Error rendering template"}, status=500)
 
 # UPDATE TASK
 @login_required
