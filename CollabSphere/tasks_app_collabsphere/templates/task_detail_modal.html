@@ -1,4 +1,5 @@
 {% load static %}
+<!-- TASK_DETAIL_TEMPLATE_LOADED -->
 <link rel="stylesheet" href="{% static 'css/tasks.css' %}?v=2.0">
 
 <div class="modal fade" id="taskDetailModal" tabindex="-1" aria-labelledby="taskDetailModalLabel" aria-hidden="true">
@@ -361,8 +362,9 @@ function initTaskDetailModal() {
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
+                    'X-CSRFToken': getCsrfToken(this)
+                },
+                credentials: 'same-origin'
             })
             .then(response => response.json())
             .then(data => {
@@ -408,8 +410,9 @@ function initTaskDetailModal() {
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
+                    'X-CSRFToken': getCsrfToken(form)
+                },
+                credentials: 'same-origin'
             })
             .then(response => response.json())
             .then(data => {
@@ -467,7 +470,7 @@ function initTaskDetailModal() {
                     credentials: 'same-origin',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'X-CSRFToken': getCsrfToken(form)
                     },
                     body: formData
                 })
@@ -567,9 +570,10 @@ function initTaskDetailModal() {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCsrfToken(taskDetailForm)
                 },
-                credentials: 'include'
+                credentials: 'same-origin'
             })
             .then(response => response.json())
             .then(data => {
@@ -680,6 +684,24 @@ if (document.readyState === 'loading') {
     initTaskDetailModal();
 }
 
+function getCsrfToken(form) {
+    // Try the CSRF cookie first (standard Django pattern)
+    let token = getCookie('csrftoken');
+    if (token) return token;
+
+    // Fallback: look for the hidden input in the provided form
+    if (form) {
+        const input = form.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (input && input.value) return input.value;
+    }
+
+    // Global fallback: any csrfmiddlewaretoken input on the page
+    const globalInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (globalInput && globalInput.value) return globalInput.value;
+
+    return '';
+}
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -693,5 +715,37 @@ function getCookie(name) {
         }
     }
     return cookieValue;
+}
+
+// Fallback notification functions (use global ones if available)
+function showError(msg, opts) {
+    if (typeof window.showError === 'function') {
+        return window.showError(msg, opts);
+    }
+    console.error(msg);
+    alert(msg);
+}
+
+function showSuccess(msg, opts) {
+    if (typeof window.showSuccess === 'function') {
+        return window.showSuccess(msg, opts);
+    }
+    console.log(msg);
+    alert(msg);
+}
+
+function showWarning(msg, opts) {
+    if (typeof window.showWarning === 'function') {
+        return window.showWarning(msg, opts);
+    }
+    console.warn(msg);
+    alert(msg);
+}
+
+function showConfirmDialog(opts) {
+    if (typeof window.showConfirmDialog === 'function') {
+        return window.showConfirmDialog(opts);
+    }
+    return Promise.resolve(confirm(opts.message || 'Are you sure?'));
 }
 </script>

@@ -188,24 +188,43 @@ def task_create(request):
             )
             
             for trigger in triggered_notifications:
-                print(f" TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+                print(f"🔔 TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
         except Exception as e:
-            print(f" Error evaluating task triggers: {e}")
+            print(f"⚠️ Error evaluating task triggers: {e}")
     
     return redirect("home")
+
 @login_required
 def task_detail(request, task_id):
     """Display a single task's details (read-only modal)."""
+    print(f"🔵 task_detail called for task_id: {task_id}")
+    print(f"🔵 User: {request.user.username}")
+    print(f"🔵 Session user_ID: {request.session.get('user_ID')}")
+    
     username = request.user.username
     user_id = request.session.get("user_ID")
 
+    # Get task data
     task_data = Task.get(task_id)
+    print(f"🔵 Task data retrieved: {task_data is not None}")
+    
     if not task_data:
+        print(f"❌ Task not found: {task_id}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({"error": "Task not found"}, status=404)
         return redirect("home")
 
-    if not TaskPermissions.user_can_access(task_data, username, user_id):
+    # Check permissions
+    has_permission = TaskPermissions.user_can_access(task_data, username, user_id)
+    print(f"🔵 User has permission: {has_permission}")
+    
+    if not has_permission:
+        print(f"❌ User does not have permission to access task {task_id}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({"error": "Permission denied"}, status=403)
         return redirect("home")
 
+    # Format dates
     for key in ("date_created", "start_date", "due_date"):
         val = task_data.get(key)
         if val and isinstance(val, str) and "T" in val:
@@ -215,8 +234,13 @@ def task_detail(request, task_id):
     active_team_id = Task.get_user_active_team_id(request.user)
     team_name = Task.get_team_name(active_team_id) if active_team_id else None
     
+    print(f"🔵 Active team ID: {active_team_id}")
+    print(f"🔵 Team name: {team_name}")
+    
     # Get members from the task's team or active team
     task_team_id = task_data.get('team_ID')  # Note: uppercase ID from database
+    print(f"🔵 Task team ID: {task_team_id}")
+    
     if task_team_id:
         # Get members from the specific task's team
         team_members = Task.get_team_members(task_team_id)
@@ -225,16 +249,44 @@ def task_detail(request, task_id):
     else:
         # Fallback to active team members
         team_members = Task.get_active_team_members(request.user)
+    
+    print(f"🔵 Team members count: {len(team_members)}")
+
+    # Ensure assigned_to_username is in task_data
+    if not task_data.get('assigned_to_username') and task_data.get('assigned_to'):
+        assigned_to_id = task_data.get('assigned_to')
+        for member in team_members:
+            if member.get('id') == assigned_to_id:
+                task_data['assigned_to_username'] = member.get('username')
+                break
+
+    # Get comments
+    comments = Task.fetch_comments(task_id)
+    print(f"🔵 Comments count: {len(comments) if comments else 0}")
 
     context = {
         "task": task_data,
         "team_members": team_members,
-        "comments": Task.fetch_comments(task_id),
-        "team_id": active_team_id,  # Add this
-        "team_name": team_name,     # Add this
-        "has_active_team": active_team_id is not None  # Add this
+        "comments": comments,
+        "team_id": active_team_id,
+        "team_name": team_name,
+        "has_active_team": active_team_id is not None
     }
-    return render(request, "task_detail.html", context)
+    
+    print(f"🔵 Rendering task_detail.html with context")
+    print(f"🔵 Task ID in context: {task_data.get('task_id')}")
+    print(f"🔵 Task title: {task_data.get('title')}")
+    print(f"🔵 Task assigned_to_username: {task_data.get('assigned_to_username')}")
+    
+    try:
+        response = render(request, "task_detail_modal.html", context)
+        print(f"✅ task_detail_modal.html rendered successfully, response length: {len(response.content)}")
+        return response
+    except Exception as e:
+        print(f"❌ Error rendering task_detail.html: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"error": "Error rendering template"}, status=500)
 
 # UPDATE TASK
 @login_required
@@ -388,7 +440,7 @@ def task_update(request, task_id):
                 completion_value=new_completion,
             )
         except Exception as notify_error:
-            print(f" Error creating completion notification: {notify_error}")
+            print(f"⚠️ Error creating completion notification: {notify_error}")
 
     if status_changed and new_status in {'In Progress', 'Completed'} and actor_is_assignee:
         try:
@@ -404,7 +456,7 @@ def task_update(request, task_id):
                 new_status=new_status,
             )
         except Exception as notify_error:
-            print(f" Error creating status notification: {notify_error}")
+            print(f"⚠️ Error creating status notification: {notify_error}")
 
     # Evaluate notification triggers for task update
     try:
@@ -465,24 +517,25 @@ def task_delete(request, task_id):
 
     Task.delete(task_id)
     return redirect("home")
+
 @login_required
 @require_http_methods(["POST"])
 def add_comment(request, task_id):
     """AJAX endpoint to add a comment or reply to a task."""
     try:
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        print(f" add_comment called for task_id={task_id}")
-        print(f" Request method: {request.method}")
-        print(f" Is AJAX: {is_ajax}")
+        print(f"🔵 add_comment called for task_id={task_id}")
+        print(f"🔵 Request method: {request.method}")
+        print(f"🔵 Is AJAX: {is_ajax}")
         
         content = request.POST.get("content", "").strip()
         parent_id = request.POST.get("parent_id")
         
-        print(f" Content: {content[:50] if content else 'None'}")
-        print(f" Parent ID: {parent_id}")
+        print(f"🔵 Content: {content[:50] if content else 'None'}")
+        print(f"🔵 Parent ID: {parent_id}")
         
         if not content:
-            print(" No content provided")
+            print("❌ No content provided")
             error = {"success": False, "error": "Content required"}
             if is_ajax:
                 return JsonResponse(error, status=400)
@@ -492,14 +545,14 @@ def add_comment(request, task_id):
         # Convert parent_id to int if provided
         try:
             parent_id = int(parent_id) if parent_id else None
-            print(f" Converted parent_id: {parent_id}")
+            print(f"🔵 Converted parent_id: {parent_id}")
         except (ValueError, TypeError):
             parent_id = None
-            print(f" Could not convert parent_id, setting to None")
+            print(f"⚠️ Could not convert parent_id, setting to None")
 
         task_data = Task.get(task_id)
         if not task_data:
-            print(f" Task not found: {task_id}")
+            print(f"❌ Task not found: {task_id}")
             error = {"success": False, "error": "Task not found"}
             if is_ajax:
                 return JsonResponse(error, status=404)
@@ -507,25 +560,25 @@ def add_comment(request, task_id):
             return redirect(request.META.get('HTTP_REFERER', '/'))
 
         if not TaskPermissions.user_can_access(task_data, request.user.username, request.session.get("user_ID")):
-            print(f" User not authorized")
+            print(f"❌ User not authorized")
             error = {"success": False, "error": "Forbidden"}
             if is_ajax:
                 return JsonResponse(error, status=403)
             messages.error(request, error["error"])
             return redirect(request.META.get('HTTP_REFERER', '/'))
 
-        print(f" Adding comment to database...")
+        print(f"🔵 Adding comment to database...")
         result = Comment.add(task_id, request.user.username, content, parent_id)
 
         if "error" in result:
-            print(f" Database error: {result['error']}")
+            print(f"❌ Database error: {result['error']}")
             error = {"success": False, "error": result["error"]}
             if is_ajax:
                 return JsonResponse(error, status=500)
             messages.error(request, error["error"])
             return redirect(request.META.get('HTTP_REFERER', '/'))
         
-        print(f" Comment added successfully: {result}")
+        print(f"🔵 Comment added successfully: {result}")
 
         parent_comment = Comment.get(parent_id) if parent_id else None
         comment_task_data = {
@@ -543,7 +596,7 @@ def add_comment(request, task_id):
                     comment_content=content
                 )
             except Exception as reply_error:
-                print(f" Error creating reply notification: {reply_error}")
+                print(f"⚠️ Error creating reply notification: {reply_error}")
 
         # Create notifications for relevant users
         try:
@@ -576,7 +629,7 @@ def add_comment(request, task_id):
                 exclude_recipient_ids=excluded_ids
             )
         except Exception as notify_error:
-            print(f" Error creating comment notifications: {notify_error}")
+            print(f"⚠️ Error creating comment notifications: {notify_error}")
 
         # Evaluate notification triggers for comment
         try:
@@ -598,9 +651,9 @@ def add_comment(request, task_id):
             )
             
             for trigger in triggered_notifications:
-                print(f" TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
+                print(f"🔔 TRIGGERED: {trigger['trigger_type']} - {trigger['message']}")
         except Exception as e:
-            print(f" Error evaluating comment triggers: {e}")
+            print(f"⚠️ Error evaluating comment triggers: {e}")
 
         success_payload = {
             "success": True,
@@ -618,8 +671,8 @@ def add_comment(request, task_id):
         return redirect(request.META.get('HTTP_REFERER', '/'))
 
     except Exception as e:
-        print(f" EXCEPTION in add_comment: {str(e)}")
-        print(f" Traceback: {traceback.format_exc()}")
+        print(f"❌ EXCEPTION in add_comment: {str(e)}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
         error = {"success": False, "error": f"Server error: {str(e)}"}
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse(error, status=500)
@@ -665,8 +718,8 @@ def delete_comment(request, comment_id):
         return redirect(request.META.get('HTTP_REFERER', '/'))
 
     except Exception as e:
-        print(f" EXCEPTION in delete_comment: {str(e)}")
-        print(f" Traceback: {traceback.format_exc()}")
+        print(f"❌ EXCEPTION in delete_comment: {str(e)}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
         error = {"success": False, "error": str(e)}
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse(error, status=500)
