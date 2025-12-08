@@ -27,6 +27,12 @@ body::after {
   z-index: -1;
 }
 
+.registration-header h1{
+  color: #245d8b !important;
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+}
+
 .register-container {
   justify-content: center;
   align-content: center;

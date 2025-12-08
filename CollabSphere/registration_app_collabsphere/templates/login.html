@@ -18,6 +18,10 @@
     <form method="post" action="{% url 'login' %}">
         {% csrf_token %}
 
+        <div class="registration-header">
+            <h1>Log In</h1>
+        </div>
+
         {# Non-field errors (e.g., invalid credentials) #}
         {% if form and form.non_field_errors %}
           <div class="form-error">
