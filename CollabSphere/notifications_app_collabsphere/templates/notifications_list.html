@@ -39,7 +39,10 @@
                                 <div class="notification-item {% if not n.read %}unread{% endif %}" data-id="{{ n.id }}">
                                     <button type="button" class="btn-close remove-notification" aria-label="Dismiss" data-id="{{ n.id }}"></button>
                                     <div class="notification-content" data-bs-toggle="modal" data-bs-target="#notifModal{{ n.id }}">
-                                        <h5 class="mb-1">{{ n.title }}</h5>
+                                        <div class="d-flex align-items-center mb-1 gap-2">
+                                            <h5 class="mb-0">{{ n.title }}</h5>
+                                            <span class="badge rounded-pill bg-light text-dark text-uppercase">{{ n.notification_type }}</span>
+                                        </div>
                                         <p class="meta mb-1">
                                             <small>From {{ n.sender.username|default:"System" }} · {{ n.created_at|date:"M j, g:i A" }}</small>
                                         </p>
@@ -48,7 +51,7 @@
                                 </div>
 
                                 <!-- Modal -->
-                                <div class="modal fade" id="notifModal{{ n.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal fade" id="notifModal{{ n.id }}" tabindex="-1" aria-hidden="true" data-id="{{ n.id }}" data-type="{{ n.notification_type }}" data-url="{{ n.related_object_url|default_if_none:'' }}">
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <div class="modal-header">
@@ -61,12 +64,30 @@
                                                 {% if n.deadline %}
                                                     <p><strong>Deadline:</strong> {{ n.deadline|date:"F j, Y" }}</p>
                                                 {% endif %}
-                                                {% if n.related_object_url %}
-                                                    <p><strong>Task Link:</strong> <a href="{{ n.related_object_url }}" class="link-primary">Open</a></p>
-                                                {% endif %}
                                                 <p><strong>Received:</strong> {{ n.created_at|date:"F j, Y, g:i A" }}</p>
                                             </div>
                                             <div class="modal-footer">
+                                                {% if n.related_object_url %}
+                                                    {% if n.notification_type == 'task' %}
+                                                        {% with "Open task" as action_label %}
+                                                            <a href="{{ n.related_object_url }}" class="btn btn-primary">{{ action_label }}</a>
+                                                        {% endwith %}
+                                                    {% elif n.notification_type == 'comment' %}
+                                                        {% with "View discussion" as action_label %}
+                                                            <a href="{{ n.related_object_url }}" class="btn btn-primary">{{ action_label }}</a>
+                                                        {% endwith %}
+                                                    {% elif n.notification_type == 'team' %}
+                                                        {% with "View team" as action_label %}
+                                                            <a href="{{ n.related_object_url }}" class="btn btn-primary">{{ action_label }}</a>
+                                                        {% endwith %}
+                                                    {% elif n.notification_type == 'event' %}
+                                                        {% with "View event" as action_label %}
+                                                            <a href="{{ n.related_object_url }}" class="btn btn-primary">{{ action_label }}</a>
+                                                        {% endwith %}
+                                                    {% else %}
+                                                        <a href="{{ n.related_object_url }}" class="btn btn-primary">Open link</a>
+                                                    {% endif %}
+                                                {% endif %}
                                                 <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                             </div>
                                         </div>
@@ -116,6 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const clearInboxBtn = document.getElementById('clear-inbox-btn');
     const categoryFilter = document.getElementById('category-filter');
     const sectionCards = document.querySelectorAll('.notification-section-card');
+    const notificationItems = document.querySelectorAll('.notification-item');
 
     if (markAllBtn) {
         markAllBtn.addEventListener('click', function() {
@@ -144,6 +166,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }).then(res => res.json()).then(() => window.location.reload());
         });
     }
+
+    function markNotificationAsRead(notificationId) {
+        if (!notificationId) return;
+        fetch('{% url "notifications:mark_read" notification_id=0 %}'.replace('0', notificationId), {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken }
+        }).then(() => {
+            const item = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
+            if (item) item.classList.remove('unread');
+        });
+    }
+
+    document.querySelectorAll('.modal[id^="notifModal"]').forEach(modalEl => {
+        modalEl.addEventListener('shown.bs.modal', function() {
+            const id = this.dataset.id;
+            markNotificationAsRead(id);
+        });
+    });
 
     function applyCategoryFilter(value) {
         sectionCards.forEach(card => {
