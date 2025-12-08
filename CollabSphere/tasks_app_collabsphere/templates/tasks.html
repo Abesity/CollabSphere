@@ -41,18 +41,24 @@
                 <div class="text-danger small mt-1" id="nameError" style="display:none;">Task name is required.</div>
               </div>
               <!-- Teams yet to be implemented, so team_ID is always None -->
-              <div class="mb-3 d-flex align-items-center justify-content-between">
-                <div class="w-75 me-3">
-                  <label for="assignTo" class="form-label">Assign To</label>
-                  <select id="assignTo" name="assignTo" class="form-select" required data-required="true">
-                    <option value="" selected disabled>Select member</option>
-                    {% for member in team_members %}
-                    <option value="{{ member.id }}">{{ member.username }}</option>
-                    {% endfor %}
-                  </select>
-                  <div class="text-danger small mt-1" id="assignToError" style="display:none;">Please select a team member.</div>
-                </div>
-
+                <div class="mb-3 d-flex align-items-center justify-content-between">
+                          <div class="w-75 me-3">
+                            <label for="assignTo" class="form-label">Assign To</label>
+                            <select id="assignTo" name="assignTo" class="form-select" required data-required="true">
+                          <option value="" selected disabled>Select member</option>
+                {% if team_members %}
+                  {% for member in team_members %}
+                  <option value="{{ member.id }}">{{ member.username }}</option>
+                  {% endfor %}
+                {% else %}
+                  <!-- Only show current user if no team -->
+                  <option value="{{ request.session.user_ID|default:request.user.id }}">
+                    {{ request.user.username }} (Self)
+                  </option>
+                {% endif %}
+              </select>
+              <div class="text-danger small mt-1" id="assignToError" style="display:none;">Please select a team member.</div>
+            </div>
                 <div class="priority-section">
                   <input type="checkbox" id="priority" name="priority" class="priority-checkbox">
                   <label for="priority" class="priority-label">Priority</label>

@@ -898,6 +898,38 @@ def task_delete(request, task_id):
 # EVENT CRUD VIEWS
 # -------------------------------
 
+@admin_required
+def event_detail(request, event_id):
+    """View event details."""
+    event = AdminSupabaseService.get_event_by_id(event_id)
+    
+    if not event:
+        messages.error(request, f"Event with ID {event_id} not found.")
+        return redirect('admin_app_collabsphere:event_management')
+    
+    # Fetch team information
+    team_info = None
+    team_members = []
+    
+    if event.get('team_ID'):
+        # Get team details
+        team_info = AdminSupabaseService.get_team_by_id(event['team_ID'])
+        
+        # Get team members
+        team_members = AdminSupabaseService.get_team_members(event['team_ID'])
+    
+    if team_info:
+        event['team'] = team_info
+    else:
+        event['team'] = {'team_name': None}
+    
+    context = {
+        'event': event,
+        'team_info': team_info,  
+        'team_members': team_members,
+        'active_page': 'events',
+    }
+    return render(request, 'event_detail.html', context)
 
 @admin_required
 def event_detail(request, event_id):
@@ -908,8 +940,21 @@ def event_detail(request, event_id):
         messages.error(request, f"Event with ID {event_id} not found.")
         return redirect('admin_app_collabsphere:event_management')
     
+    # Fetch team members for this event
+    team_members = []
+    team_info = None
+    
+    if event.get('team_ID'):
+        # Get team members
+        team_members = AdminSupabaseService.get_team_members(event['team_ID'])
+        
+        # Get team info
+        team_info = AdminSupabaseService.get_team_by_id(event['team_ID'])
+    
     context = {
         'event': event,
+        'team_members': team_members,
+        'team_info': team_info,
         'active_page': 'events',
     }
     return render(request, 'event_detail.html', context)

@@ -21,14 +21,6 @@
     <div class="activity-card">
         <div class="card-header">
             <h3 class="card-title"><i class="fas fa-list me-2"></i>All Events</h3>
-            <div class="card-actions">
-                <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" data-filter="all">All</button>
-                    <button type="button" class="btn btn-outline-secondary" data-filter="upcoming">Upcoming</button>
-                    <button type="button" class="btn btn-outline-secondary" data-filter="ongoing">Ongoing</button>
-                    <button type="button" class="btn btn-outline-secondary" data-filter="completed">Completed</button>
-                </div>
-            </div>
         </div>
         <div class="card-body">
             {% if events %}
@@ -44,28 +36,6 @@
                             <div>
                                 <strong>{{ event.title }}</strong>
                                 <small class="d-block text-muted">{{ event.description|truncatechars:60|default:"No description" }}</small>
-                                
-                                <div class="d-flex align-items-center gap-3 mt-2">
-                                    {% if event.event_type == 'meeting' %}
-                                    <span class="badge bg-info">Meeting</span>
-                                    {% elif event.event_type == 'training' %}
-                                    <span class="badge bg-success">Training</span>
-                                    {% elif event.event_type == 'social' %}
-                                    <span class="badge bg-warning">Social</span>
-                                    {% elif event.event_type == 'workshop' %}
-                                    <span class="badge bg-primary">Workshop</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary">{{ event.event_type }}</span>
-                                    {% endif %}
-                                    
-                                    {% if event.priority == 'high' %}
-                                    <span class="badge bg-danger">High Priority</span>
-                                    {% elif event.priority == 'medium' %}
-                                    <span class="badge bg-warning">Medium Priority</span>
-                                    {% else %}
-                                    <span class="badge bg-success">Low Priority</span>
-                                    {% endif %}
-                                </div>
                             </div>
                             
                             <div class="text-end">
@@ -106,11 +76,11 @@
                             </div>
                             
                             <div class="btn-group btn-group-sm" role="group">
-                                <button class="btn btn-outline-primary btn-sm" title="View Details"
-                                        data-bs-toggle="modal" data-bs-target="#eventDetailsModal"
-                                        data-event-id="{{ event.id }}">
+                                <a href="{% url 'admin_app_collabsphere:event_detail' event.id %}" 
+                                    class="btn btn-outline-primary btn-sm" title="View Details">
                                     <i class="fas fa-eye"></i>
-                                </button>
+                                </a>
+                                
                                 <!-- FIXED: Changed onclick to use proper URL -->
                                 <a href="{% url 'admin_app_collabsphere:event_edit' event.id %}" 
                                    class="btn btn-outline-warning btn-sm" title="Edit">

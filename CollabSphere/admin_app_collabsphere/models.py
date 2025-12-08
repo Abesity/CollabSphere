@@ -192,9 +192,35 @@ class AdminSupabaseService:
         if not team:
             raise ValueError(f"Team with ID {event_data['team_ID']} does not exist")
         
+        team_members = AdminSupabaseService.get_team_members(event_data['team_ID'])
+        if not team_members or len(team_members) == 0:
+            logger.warning(f"Team {event_data['team_ID']} has no active members. Creating event anyway.")
+        
         # Create the event
         return AdminSupabaseService.create_event(event_data)
-    
+
+    @staticmethod
+    def get_event_with_team_details(event_id):
+        """Get an event with full team details."""
+        event = AdminSupabaseService.get_event_by_id(event_id)
+        
+        if event and event.get('team_ID'):
+            # Get team info
+            team_id = event['team_ID']
+            team_info = AdminSupabaseService.get_team_by_id(team_id)
+            if team_info:
+                event['team_info'] = team_info
+            
+            # Get team members
+            team_members = AdminSupabaseService.get_team_members(team_id)
+            event['team_members'] = team_members
+            
+            # Get team owner details
+            if team_info and team_info.get('user_id_owner'):
+                owner = AdminSupabaseService.get_user_by_id(team_info['user_id_owner'])
+                event['team_owner_info'] = owner
+        
+        return event
 
     @staticmethod
     def search_users(query):
@@ -308,38 +334,6 @@ class AdminSupabaseService:
             logger.error(f"Error fetching team {team_id}: {str(e)}")
             return None
     
-    @staticmethod
-    def get_team_members(team_id):
-        """Get all active members of a team - ADMIN VERSION"""
-        try:
-            # Get user_team records for this team
-            response = supabase.table("user_team").select(
-                "user_id, joined_at, left_at"
-            ).eq("team_ID", int(team_id)).is_("left_at", None).execute()
-            
-            memberships = response.data or []
-            
-            # Get user details for each active member
-            members = []
-            for membership in memberships:
-                user_id = membership.get('user_id')
-                if user_id:
-                    user_response = supabase.table("user").select(
-                        "user_ID, username, email, full_name, profile_picture"
-                    ).eq("user_ID", int(user_id)).execute()
-                    
-                    if user_response.data:
-                        user_data = user_response.data[0]
-                        # Add membership info to user data
-                        user_data['joined_at'] = membership.get('joined_at')
-                        user_data['left_at'] = membership.get('left_at')
-                        user_data['is_active'] = True  # Since left_at is None
-                        members.append(user_data)
-            
-            return members
-        except Exception as e:
-            logger.error(f"Error fetching team members for team {team_id}: {str(e)}")
-            return []
     # -------------------------------
     # WELLBEING MANAGEMENT
     # -------------------------------
@@ -924,7 +918,7 @@ class AdminSupabaseService:
     # In the EVENT MANAGEMENT section
     @staticmethod
     def get_event_by_id(event_id):
-        """Get a single event by ID."""
+        """Get a single event by ID with team members."""
         try:
             response = supabase.table("calendarevent").select(
                 "event_id, title, description, start_time, end_time, user_id, team_ID, user:user_id(username, email)"
@@ -939,12 +933,32 @@ class AdminSupabaseService:
                     event['start_time'] = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
                 if isinstance(end_time, str):
                     event['end_time'] = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+                
+                # Get team members if team exists
+                team_id = event.get('team_ID')
+                if team_id:
+                    try:
+                        # Use the existing method to get team members
+                        team_members = AdminSupabaseService.get_team_members(team_id)
+                        event['team_members'] = team_members
+                        event['team_member_count'] = len(team_members)
+                        
+                        # Also get team info
+                        team_info = AdminSupabaseService.get_team_by_id(team_id)
+                        if team_info:
+                            event['team_name'] = team_info.get('team_name')
+                            event['team_description'] = team_info.get('description')
+                            event['team_owner'] = team_info.get('user_id_owner')
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch team members for event {event_id}: {e}")
+                        event['team_members'] = []
+                        event['team_member_count'] = 0
             
             return event
         except Exception as e:
             logger.error(f"Error fetching event {event_id}: {str(e)}")
-            return None       
-        
+            return None
+            
     @staticmethod
     def get_user_active_teams(user_id):
         """Get all active teams a user belongs to."""
