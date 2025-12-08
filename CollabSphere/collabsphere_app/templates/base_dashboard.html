@@ -5,6 +5,11 @@
     <title>{% block title %}CollabSphere{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -60,9 +65,11 @@
         body {
             margin: 0;
             padding-top: 70px; 
-            font-family: "Inter", sans-serif;
-            color: #2D333A;
-            background-color: #FAFBFB;
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            color: #1e293b;
+            background-color: #f8fafc;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
         
         .navbar {
@@ -80,19 +87,23 @@
     }
 
     nav.navbar a.nav-link:not(.btn) {
-    color: #333 !important;
-    padding: 8px 12px !important;
-    border-radius: 6px !important;
+    color: #475569 !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
     display: inline-block !important;
     background-color: transparent !important;
-    transition: background-color .18s ease, color .18s ease !important;
+    transition: all .3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     cursor: pointer !important;
+    font-weight: 600 !important;
+    position: relative !important;
     }
 
     nav.navbar a.nav-link:not(.btn):hover,
     nav.navbar a.nav-link:not(.btn).hovering {
-    background-color: rgba(0,0,0,0.08) !important; /* slightly darker */
-    color: #3D74C3 !important;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%) !important;
+    color: #6366f1 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2) !important;
     }
     
     .page-container {
@@ -133,20 +144,20 @@
     }
 
     .active-team {
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border-radius: 10px;
-        padding: 5px 10px;
-        color: #FAFBFB;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+        border-radius: 12px;
+        padding: 6px 12px;
+        color: #ffffff;
         font-size: 1rem;
-        font-weight: bold;
+        font-weight: 700;
         cursor: default;
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     }
     .active-team:hover {
         background: linear-gradient(135deg, #059669 0%, #047857 100%);
         transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
 
     .page-container {
@@ -199,8 +210,8 @@
     <nav class="navbar navbar-light bg-light shadow-sm px-4">
         <div class="container-fluid">
             <!-- Left: Logo + Name -->
-            <img src="{% static 'images/logo.png' %}" alt="CollabSphere Logo" style="height:40px; margin-right:10px;">
-            <div style="margin-right: 40px; font-size: 1.5rem; font-weight: bold; color: #3D74C3;">CollabSphere</div>
+            <img src="{% static 'images/logo.png' %}" alt="CollabSphere Logo" style="height:40px; margin-right:10px; filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));">
+            <div style="margin-right: 40px; font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">CollabSphere ✨</div>
             
             <div class="active-team" style="
                 transition: all 0.3s ease; 
