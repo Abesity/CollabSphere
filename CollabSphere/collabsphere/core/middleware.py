@@ -20,9 +20,7 @@ class IdleTimeoutMiddleware:
         self.timeout = getattr(settings, "SESSION_COOKIE_AGE", 1800)
 
     def __call__(self, request):
-        # Be defensive: some test requests (RequestFactory) or management
-        # shell renderings may not attach a `user` attribute to the request.
-        if hasattr(request, 'user') and getattr(request.user, 'is_authenticated', False):
+        if request.user.is_authenticated:
             now_ts = int(timezone.now().timestamp())
             last = request.session.get("last_activity_ts", now_ts)
             idle = now_ts - int(last)
@@ -83,7 +81,7 @@ class SupabaseUserIDMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if hasattr(request, 'user') and getattr(request.user, 'is_authenticated', False):
+        if request.user.is_authenticated:
             # 1. Try to get the ID from session (fastest) or request.user (if already attached)
             supabase_id = request.session.get('supabase_user_id') or getattr(request.user, 'user_ID', None)
             

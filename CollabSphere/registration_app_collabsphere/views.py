@@ -16,17 +16,10 @@ User = get_user_model()
 # LOGIN VIEW
 # -------------------------------
 def login(request):
+    # Create a bound or unbound form instance so the template can render errors and previous input
     form = LoginForm(request.POST or None)
 
     if request.method == 'POST':
-        # Clear any previous auth/session state
-        try:
-            auth_logout(request)
-        except Exception:
-            pass
-        for k in ('admin_logged_in', 'admin_username', 'user_ID'):
-            request.session.pop(k, None)
-
         email = request.POST.get('email')
         password = request.POST.get('password')
         
@@ -34,30 +27,11 @@ def login(request):
         
         # Check if it's the admin
         if email == 'admin@example.com' and password == 'admin123':
-            # Get or create Django admin user
-            try:
-                admin_user = User.objects.get(username='admin')
-            except User.DoesNotExist:
-                # Create admin user
-                admin_user = User.objects.create_user(
-                    username='admin',
-                    email='admin@example.com',
-                    password='admin123'  # Django will hash this
-                )
-                admin_user.is_staff = True  # Make them staff
-                admin_user.save()
-            
-            # Authenticate and login as Django user
-            user = authenticate(request, username='admin', password='admin123')
-            if user:
-                auth_login(request, user)
-            
-            # Also set admin session variables
             request.session['admin_logged_in'] = True
             request.session['admin_username'] = 'admin'
             messages.success(request, 'Welcome back, Admin!')
             return redirect('admin_app_collabsphere:dashboard')
-        
+
         # First try Django authentication
         print(f"DEBUG: Attempting Django authentication for {email}")
         user = authenticate(request, username=email, password=password)
@@ -67,9 +41,6 @@ def login(request):
             auth_login(request, user)
             if hasattr(user, 'supabase_id') and user.supabase_id:
                 request.session['user_ID'] = user.supabase_id
-            # Ensure any admin session flags are cleared when a regular user logs in
-            request.session.pop('admin_logged_in', None)
-            request.session.pop('admin_username', None)
             messages.success(request, f'Welcome back, {user.username}!')
             return redirect('home')
 

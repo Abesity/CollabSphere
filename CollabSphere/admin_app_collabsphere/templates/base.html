@@ -323,19 +323,6 @@
                     </a>
                 </li>
                 
-                <!-- ADDED: Event Management Link -->
-                <li class="nav-item {% if active_page == 'events' %}active{% endif %}">
-                    <a href="{% url 'admin_app_collabsphere:event_management' %}" class="d-flex align-items-center justify-content-between px-3 py-2 text-white text-decoration-none rounded-2 mb-1">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-calendar-alt me-3"></i>
-                            <span>Events</span>
-                        </div>
-                        {% if total_events %}
-                        <span class="badge bg-danger rounded-pill">{{ total_events }}</span>
-                        {% endif %}
-                    </a>
-                </li>
-                
                 <li class="my-3 px-3">
                     <div class="border-top border-secondary opacity-25"></div>
                 </li>

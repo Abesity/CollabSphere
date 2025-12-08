@@ -17,7 +17,6 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
-from admin_app_collabsphere import views as admin_views
 
 def root_redirect(request):
     # If hardcoded admin is logged in, redirect to admin dashboard
@@ -31,8 +30,6 @@ def root_redirect(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('admin_dashboard/', include('admin_app_collabsphere.urls')),
-
     path('', root_redirect),  
     path('home/', include('collabsphere_app.urls')), 
     path("tasks/", include("tasks_app_collabsphere.urls")),
@@ -41,4 +38,5 @@ urlpatterns = [
     path('teams/', include('teams_app_collabsphere.urls')),
     path('notifications/', include('notifications_app_collabsphere.urls')),
     path('events/', include('events_app_collabsphere.urls')),
+    path('admin_dashboard/', include('admin_app_collabsphere.urls')),
 ]

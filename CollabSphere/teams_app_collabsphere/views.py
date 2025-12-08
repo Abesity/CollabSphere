@@ -135,26 +135,26 @@ def create_team(request):
 
 @login_required
 def get_users_without_teams(request):
-    """Get users without teams (excluding current user)"""
+    """API endpoint to get users who don't have teams (for adding members)"""
     try:
-        team_id = request.GET.get('team_id')
+        # Get team_ID from request if provided (for edit team scenario)
+        team_ID = request.GET.get('team_ID')
         
-        # Get current user's Supabase ID
-        current_user_supabase_id = Team.get_supabase_user_id(request.user)
-        
-        # Call updated method with exclude_user_id parameter
-        users = UserTeam.get_users_without_teams(
-            team_id, 
-            exclude_user_id=current_user_supabase_id
-        )
-        
+        if team_ID:
+            users_data = UserTeam.get_users_without_teams(team_ID=int(team_ID))
+        else:
+            users_data = UserTeam.get_users_without_teams()
+
         return JsonResponse({
             'success': True,
-            'users': users
+            'users': users_data
         })
     except Exception as e:
-        print(f"Error in get_users_without_teams view: {e}")
-        return JsonResponse({'success': False, 'error': str(e)})
+        print(f"Error getting users without teams: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
 
 @login_required
 @require_http_methods(["POST"])

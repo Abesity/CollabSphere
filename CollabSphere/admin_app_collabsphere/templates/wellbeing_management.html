@@ -4,47 +4,40 @@
 
 {% block content %}
 <div class="wellbeing-management-container">
-    <!-- Page Header -->
     <div class="page-header">
         <div class="header-left">
             <h1><i class="fas fa-heartbeat me-2"></i>Wellbeing Check-ins</h1>
             <p class="text-muted">View and manage wellbeing check-ins</p>
         </div>
-        <div class="header-right">
-            <div class="input-group input-group-sm" style="width: 200px;">
-                <input type="text" class="form-control" placeholder="Search check-ins..." id="checkinSearch">
-                <button class="btn btn-outline-secondary" type="button">
-                    <i class="fas fa-search"></i>
-                </button>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ total_checkins }}</h3>
+                    <p class="text-muted mb-0">Total Check-ins</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ checkins_today }}</h3>
+                    <p class="text-muted mb-0">Today</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Wellbeing Check-ins Table -->
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Recent Check-ins</h3>
-            <div class="card-tools">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="fas fa-filter me-1"></i> Filter
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="?filter=all">All</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="?filter=mood=5">Excellent</a></li>
-                        <li><a class="dropdown-item" href="?filter=mood=4">Good</a></li>
-                        <li><a class="dropdown-item" href="?filter=mood=3">Neutral</a></li>
-                        <li><a class="dropdown-item" href="?filter=mood=2">Poor</a></li>
-                        <li><a class="dropdown-item" href="?filter=mood=1">Very Poor</a></li>
-                    </ul>
-                </div>
-            </div>
         </div>
-        <div class="card-body p-0">
+        <div class="card-body">
             {% if checkins %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0" id="checkinsTable">
+                <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -52,7 +45,6 @@
                             <th>Mood</th>
                             <th>Date</th>
                             <th>Notes</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -61,23 +53,9 @@
                             <td>{{ checkin.checkin_id }}</td>
                             <td>
                                 {% if checkin.user %}
-                                <div class="d-flex align-items-center">
-                                    {% if checkin.user.profile_picture %}
-                                    <img src="{{ checkin.user.profile_picture }}" 
-                                         alt="{{ checkin.user.username }}" 
-                                         class="rounded-circle me-2"
-                                         width="32" height="32"
-                                         style="object-fit: cover;">
-                                    {% else %}
-                                    <div class="avatar-placeholder-sm rounded-circle me-2 d-flex align-items-center justify-content-center"
-                                         style="width: 32px; height: 32px; background-color: #3D74C3; color: white; font-weight: bold;">
-                                        {{ checkin.user.username|first|upper }}
-                                    </div>
-                                    {% endif %}
-                                    <span>{{ checkin.user.username|default:"Unknown" }}</span>
-                                </div>
+                                    {{ checkin.user.username|default:"Unknown" }}
                                 {% else %}
-                                <span class="text-muted">User {{ checkin.user_id }}</span>
+                                    User {{ checkin.user_id }}
                                 {% endif %}
                             </td>
                             <td>
@@ -97,25 +75,6 @@
                             </td>
                             <td>{{ checkin.date_submitted|slice:":10" }}</td>
                             <td>{{ checkin.notes|truncatechars:50|default:"-" }}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'admin_app_collabsphere:wellbeing_detail' checkin.checkin_id %}" 
-                                       class="btn btn-outline-primary" title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{% url 'admin_app_collabsphere:wellbeing_edit' checkin.checkin_id %}" 
-                                       class="btn btn-outline-warning" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <button class="btn btn-outline-danger delete-checkin-btn" 
-                                            title="Delete"
-                                            data-checkin-id="{{ checkin.checkin_id }}"
-                                            data-user-name="{{ checkin.user.username|default:'Unknown' }}"
-                                            data-checkin-date="{{ checkin.date_submitted|slice:':10' }}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -128,144 +87,6 @@
             </div>
             {% endif %}
         </div>
-        {% if checkins %}
-        <div class="card-footer">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <small class="text-muted">
-                        Showing {{ checkins|length }} of {{ total_checkins }} check-ins
-                    </small>
-                </div>
-                <div>
-                    <nav aria-label="Check-in pagination">
-                        <ul class="pagination pagination-sm mb-0">
-                            {% if checkins.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ checkins.previous_page_number }}">Previous</a>
-                            </li>
-                            {% else %}
-                            <li class="page-item disabled">
-                                <a class="page-link" href="#">Previous</a>
-                            </li>
-                            {% endif %}
-                            
-                            {% for i in checkins.paginator.page_range %}
-                                {% if checkins.number == i %}
-                                <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
-                                {% else %}
-                                <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
-                                {% endif %}
-                            {% endfor %}
-                            
-                            {% if checkins.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ checkins.next_page_number }}">Next</a>
-                            </li>
-                            {% else %}
-                            <li class="page-item disabled">
-                                <a class="page-link" href="#">Next</a>
-                            </li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-                </div>
-            </div>
-        </div>
-        {% endif %}
     </div>
 </div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteCheckinModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete the wellbeing check-in from <strong id="deleteCheckinDate"></strong> for user <strong id="deleteCheckinUser"></strong>?</p>
-                <p class="text-danger">
-                    <small>This action cannot be undone. The check-in data will be permanently removed.</small>
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="POST" action="" id="deleteCheckinForm">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Delete Check-in</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Search functionality
-    const checkinSearch = document.getElementById('checkinSearch');
-    const checkinsTable = document.getElementById('checkinsTable');
-    
-    if (checkinSearch && checkinsTable) {
-        checkinSearch.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            const rows = checkinsTable.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-            
-            for (let row of rows) {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
-            }
-        });
-    }
-    
-    // Delete check-in confirmation
-    const deleteButtons = document.querySelectorAll('.delete-checkin-btn');
-    const deleteCheckinModal = document.getElementById('deleteCheckinModal');
-    const deleteCheckinDate = document.getElementById('deleteCheckinDate');
-    const deleteCheckinUser = document.getElementById('deleteCheckinUser');
-    const deleteCheckinForm = document.getElementById('deleteCheckinForm');
-    
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const checkinId = this.getAttribute('data-checkin-id');
-            const userName = this.getAttribute('data-user-name');
-            const checkinDate = this.getAttribute('data-checkin-date');
-            
-            deleteCheckinDate.textContent = checkinDate;
-            deleteCheckinUser.textContent = userName;
-            deleteCheckinForm.action = "{% url 'admin_app_collabsphere:wellbeing_delete' 0 %}".replace('0', checkinId);
-            
-            const modal = new bootstrap.Modal(deleteCheckinModal);
-            modal.show();
-        });
-    });
-    
-    // Mood filter highlighting
-    const urlParams = new URLSearchParams(window.location.search);
-    const filterParam = urlParams.get('filter');
-    if (filterParam && filterParam.startsWith('mood=')) {
-        const moodValue = filterParam.split('=')[1];
-        const moodBadges = document.querySelectorAll('.badge');
-        
-        moodBadges.forEach(badge => {
-            if (!badge.textContent.toLowerCase().includes(getMoodText(moodValue))) {
-                badge.parentElement.parentElement.style.opacity = '0.5';
-            }
-        });
-    }
-    
-    function getMoodText(value) {
-        const moods = {
-            '1': 'very poor',
-            '2': 'poor',
-            '3': 'neutral',
-            '4': 'good',
-            '5': 'excellent'
-        };
-        return moods[value] || '';
-    }
-});
-</script>
 {% endblock %}

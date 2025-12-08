@@ -7,156 +7,56 @@
     <div class="page-header">
         <div class="header-left">
             <h1><i class="fas fa-tasks me-2"></i>Task Details</h1>
-            <p class="text-muted">View and manage task information</p>
+            <p class="text-muted">View task information</p>
         </div>
         <div class="header-right">
-            <div class="btn-group">
-                <a href="{% url 'admin_app_collabsphere:task_edit' task.task_id %}" class="btn btn-warning">
-                    <i class="fas fa-edit me-1"></i> Edit
-                </a>
-                <a href="{% url 'admin_app_collabsphere:task_management' %}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-1"></i> Back
-                </a>
-            </div>
+            <a href="{% url 'admin_app_collabsphere:task_management' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Tasks
+            </a>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h3 class="card-title">{{ task.title }}</h3>
-                    <div class="mb-4">
-                        <span class="badge 
-                            {% if task.status == 'Completed' %}bg-success
-                            {% elif task.status == 'In Progress' %}bg-warning
-                            {% else %}bg-secondary{% endif %} fs-6">
-                            {{ task.status|default:"Pending" }}
-                        </span>
-                        {% if task.priority %}
-                        <span class="badge bg-danger ms-2">High Priority</span>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h5>Description</h5>
-                        <p>{{ task.description|default:"No description"|linebreaks }}</p>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="text-muted small">Task ID</label>
-                                <p class="mb-0">{{ task.task_id }}</p>
-                            </div>
-                            <div class="mb-3">
-                                <label class="text-muted small">Created Date</label>
-                                <p class="mb-0">{{ task.date_created|slice:":10"|default:"Unknown" }}</p>
-                            </div>
-                            <div class="mb-3">
-                                <label class="text-muted small">Start Date</label>
-                                <p class="mb-0">{{ task.start_date|default:"Not set" }}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="text-muted small">Due Date</label>
-                                <p class="mb-0">{{ task.due_date|default:"No due date" }}</p>
-                            </div>
-                            <div class="mb-3">
-                                <label class="text-muted small">Completion</label>
-                                <div class="progress">
-                                    <div class="progress-bar" role="progressbar" 
-                                         style="width: {{ task.completion|default:0 }}%">
-                                        {{ task.completion|default:0 }}%
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="text-muted small">Team</label>
-                                <p class="mb-0">{{ task.team_ID|default:"No team assigned" }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Assignee</h5>
-                </div>
-                <div class="card-body">
-                    {% if task.assigned_user %}
-                    <div class="d-flex align-items-center">
-                        {% if task.assigned_user.profile_picture %}
-                        <img src="{{ task.assigned_user.profile_picture }}" 
-                             alt="{{ task.assigned_user.username }}" 
-                             class="rounded-circle me-3"
-                             width="48" height="48"
-                             style="object-fit: cover;">
-                        {% else %}
-                        <div class="avatar-placeholder rounded-circle me-3 d-flex align-items-center justify-content-center"
-                             style="width: 48px; height: 48px; background-color: #3D74C3; color: white; font-weight: bold;">
-                            {{ task.assigned_user.username|first|upper }}
-                        </div>
-                        {% endif %}
-                        <div>
-                            <strong>{{ task.assigned_user.username }}</strong>
-                            {% if task.assigned_user.full_name %}
-                            <p class="text-muted mb-0 small">{{ task.assigned_user.full_name }}</p>
-                            {% endif %}
-                            <p class="text-muted mb-0 small">{{ task.assigned_user.email }}</p>
-                        </div>
-                    </div>
-                    {% else %}
-                    <p class="text-muted mb-0">Unassigned</p>
-                    {% endif %}
-                </div>
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title">{{ task.title }}</h3>
+            <div class="mb-4">
+                <span class="badge 
+                    {% if task.status == 'Completed' %}bg-success
+                    {% elif task.status == 'In Progress' %}bg-warning
+                    {% else %}bg-secondary{% endif %} fs-6">
+                    {{ task.status|default:"Pending" }}
+                </span>
             </div>
             
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Actions</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'admin_app_collabsphere:task_edit' task.task_id %}" 
-                           class="btn btn-warning">
-                            <i class="fas fa-edit me-1"></i> Edit Task
-                        </a>
-                        <button class="btn btn-danger" data-bs-toggle="modal" 
-                                data-bs-target="#deleteTaskModal">
-                            <i class="fas fa-trash me-1"></i> Delete Task
-                        </button>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="text-muted small">Task ID</label>
+                        <p class="mb-0">{{ task.task_id }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small">Description</label>
+                        <p class="mb-0">{{ task.description|default:"No description" }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small">Priority</label>
+                        <p class="mb-0">{{ task.priority|default:"Medium" }}</p>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteTaskModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete task <strong>"{{ task.title }}"</strong>?</p>
-                <p class="text-danger">
-                    <small>This action cannot be undone.</small>
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="POST" action="{% url 'admin_app_collabsphere:task_delete_admin' task.task_id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Delete Task</button>
-                </form>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="text-muted small">Assigned To</label>
+                        <p class="mb-0">{{ task.assigned_to|default:"Unassigned" }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small">Due Date</label>
+                        <p class="mb-0">{{ task.due_date|slice:":10"|default:"No due date" }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small">Created Date</label>
+                        <p class="mb-0">{{ task.date_created|slice:":10"|default:"Unknown" }}</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

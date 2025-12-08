@@ -15,16 +15,11 @@
         <div class="card-header">
             <h3 class="card-title">All Tasks</h3>
             <div class="card-tools">
-                <div class="d-flex gap-2">
-                    <a href="{% url 'admin_app_collabsphere:task_create_admin' %}" class="btn btn-sm btn-primary">
-                        <i class="fas fa-plus me-1"></i>Create Task
-                    </a>
-                    <div class="input-group input-group-sm" style="width: 200px;">
-                        <input type="text" class="form-control" placeholder="Search tasks...">
-                        <button class="btn btn-outline-secondary" type="button">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
+                <div class="input-group input-group-sm" style="width: 200px;">
+                    <input type="text" class="form-control" placeholder="Search tasks...">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -48,31 +43,16 @@
                             <td>{{ task.task_id }}</td>
                             <td>{{ task.title|truncatechars:50 }}</td>
                             <td>
-                                <span class="badge {% if task.status == 'Completed' %}bg-success{% elif task.status == 'In Progress' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                <span class="badge 
+                                    {% if task.status == 'Completed' %}bg-success
+                                    {% elif task.status == 'In Progress' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
                                     {{ task.status|default:"Pending" }}
                                 </span>
                             </td>
                             <td>{{ task.assigned_to|default:"Unassigned" }}</td>
                             <td>{{ task.due_date|slice:":10"|default:"-" }}</td>
                             <td>{{ task.date_created|slice:":10" }}</td>
-                           <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'admin_app_collabsphere:task_detail' task.task_id %}" 
-                                    class="btn btn-outline-primary" title="View">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{% url 'admin_app_collabsphere:task_edit' task.task_id %}" 
-                                    class="btn btn-outline-warning" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <button class="btn btn-outline-danger delete-task-btn" 
-                                            title="Delete"
-                                            data-task-id="{{ task.task_id }}"
-                                            data-task-title="{{ task.title }}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

@@ -120,7 +120,23 @@
 {% block content %}
 <div class="container-fluid dashboard-container">
   <main class="dashboard-main">
-      <!-- Header Section -->
+  <!-- Add this after the search section -->
+  {% if active_team %}
+  <section class="current-team-section">
+      <div class="current-team-header">
+          <div class="current-team-info">
+              <span class="current-team-label">Current Active Team:</span>
+              <div class="current-team-details">
+                  {% if active_team.icon_url %}
+                  <img src="{{ active_team.icon_url }}" alt="{{ active_team.team_name }}" class="current-team-icon">
+                  {% endif %}
+                  <strong class="current-team-name">{{ active_team.team_name }}</strong>
+              </div>
+          </div>
+      </div>
+  </section>
+  {% endif %}
+    <!-- Header Section -->
     <section class="welcome-text">
       <h1>Your Teams</h1>
       <p>Browse and manage your teams across CollabSphere.</p>
@@ -794,25 +810,18 @@ function setupMembersSearch() {
     });
   }
 }
-
 function loadUsersWithoutTeams() {
   const membersContainer = document.getElementById("membersContainer");
   const loadingDiv = document.getElementById("membersLoading");
   
   if (!membersContainer) return;
   
-  // Get current user's ID from Django template
-  const currentUserId = "{{ request.user.id }}"; // Or pass current user's Supabase ID
-  
   fetch("{% url 'get_users_without_teams' %}")
     .then(response => response.json())
     .then(data => {
       if (data.success && data.users.length > 0) {
-        membersContainer.innerHTML = data.users.map(user => {
-          // Don't show current user in the list at all
-          // if (user.user_ID == currentUserId) return '';
-          
-          return `<div class="user-option" data-user-id="${user.user_ID}" data-username="${user.username}" data-email="${user.email}">
+        membersContainer.innerHTML = data.users.map(user => 
+          `<div class="user-option" data-user-id="${user.user_ID}" data-username="${user.username}" data-email="${user.email}">
             <img src="${user.profile_picture || '{% static "images/default-avatar.png" %}'}" 
                  alt="${user.username}" 
                  class="user-avatar">
@@ -821,9 +830,8 @@ function loadUsersWithoutTeams() {
               <div class="email">${user.email}</div>
             </div>
             <button type="button" class="add-user-btn" onclick="addMemberToTeam(${user.user_ID}, '${user.username.replace(/'/g, "\\'")}')">+</button>
-          </div>`;
-        }).join('');
-        
+          </div>`
+        ).join('');
         loadingDiv.style.display = 'none';
         membersContainer.style.display = 'block';
         
@@ -894,6 +902,7 @@ function updateSelectedMembersDisplay() {
   ).join('');
 }
 
+// ===== Edit Team Modal Setup =====
 // ===== Edit Team Modal Setup =====
 function setupEditTeamModal(editModalContent) {
     const form = editModalContent.querySelector('#editTeamForm');
@@ -1026,73 +1035,59 @@ if (deleteBtn) {
     // Load available users for adding
     loadAvailableUsersForEdit();
 
-  function loadAvailableUsersForEdit() {
-      const membersContainer = editModalContent.querySelector("#membersContainer");
-      const loadingDiv = editModalContent.querySelector("#membersLoading");
-      
-      if (!membersContainer) return;
-      
-      // Get team ID from the form action
-      const teamId = form.action.split('/').filter(part => part).pop();
-      
-      // Get current user's ID (you need to pass this from Django)
-      const currentUserId = "{{ request.user.id }}"; // Or get current user's Supabase ID
-      
-      fetch(`{% url 'get_users_without_teams' %}?team_id=${teamId}`)
-          .then(response => response.json())
-          .then(data => {
-              if (data.success && data.users.length > 0) {
-                  membersContainer.innerHTML = data.users.map(user => {
-                      // Don't show current user in the list
-                      // if (user.user_ID == currentUserId) return '';
-                      
-                      return `<div class="user-option" data-user-id="${user.user_ID}" data-username="${user.username}" data-email="${user.email}">
-                          <img src="${user.profile_picture || '{% static "images/default-avatar.png" %}'}" 
-                              alt="${user.username}" 
-                              class="user-avatar">
-                          <div class="user-info">
-                              <div class="username">${user.username}</div>
-                              <div class="email">${user.email}</div>
-                          </div>
-                          <button type="button" class="add-user-btn" data-user-id="${user.user_ID}" data-username="${user.username}">+</button>
-                      </div>`;
-                  }).join('');
-                  
-                  loadingDiv.style.display = 'none';
-                  membersContainer.style.display = 'block';
-                  
-                  // Add event listeners to all add buttons
-                  membersContainer.querySelectorAll('.add-user-btn').forEach(btn => {
-                      btn.addEventListener('click', function() {
-                          const userId = parseInt(this.getAttribute('data-user-id'));
-                          const username = this.getAttribute('data-username');
-                          
-                          // Optional: Add frontend check
-                          if (userId == currentUserId) {
-                              showAlertModal('Error', 'You cannot add yourself to the team');
-                              return;
-                          }
-                          
-                          addNewMemberToTeam(userId, username);
-                      });
-                  });
-                  
-                  // Hide already selected members
-                  selectedNewMembers.forEach(member => {
-                      removeUserFromSuggestions(member.id);
-                  });
-                  
-                  setupEditMembersSearch();
-              } else {
-                  loadingDiv.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No available users to add.</p>';
-                  membersContainer.style.display = 'none';
-              }
-          })
-          .catch(error => {
-              console.error('Error loading users:', error);
-              loadingDiv.innerHTML = '<p style="color: #dc2626; text-align: center;">Error loading users.</p>';
-          });
-  }
+    function loadAvailableUsersForEdit() {
+    const membersContainer = editModalContent.querySelector("#membersContainer");
+    const loadingDiv = editModalContent.querySelector("#membersLoading");
+    
+    if (!membersContainer) return;
+    
+    // Get team ID from the form action
+    const teamId = form.action.split('/').filter(part => part).pop();
+    
+    fetch(`{% url 'get_users_without_teams' %}?team_id=${teamId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.users.length > 0) {
+                membersContainer.innerHTML = data.users.map(user => 
+                    `<div class="user-option" data-user-id="${user.user_ID}" data-username="${user.username}" data-email="${user.email}">
+                        <img src="${user.profile_picture || '{% static "images/default-avatar.png" %}'}" 
+                             alt="${user.username}" 
+                             class="user-avatar">
+                        <div class="user-info">
+                            <div class="username">${user.username}</div>
+                            <div class="email">${user.email}</div>
+                        </div>
+                        <button type="button" class="add-user-btn" data-user-id="${user.user_ID}" data-username="${user.username}">+</button>
+                    </div>`
+                ).join('');
+                loadingDiv.style.display = 'none';
+                membersContainer.style.display = 'block';
+                
+                // Add event listeners to all add buttons
+                membersContainer.querySelectorAll('.add-user-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const userId = parseInt(this.getAttribute('data-user-id'));
+                        const username = this.getAttribute('data-username');
+                        addNewMemberToTeam(userId, username);
+                    });
+                });
+                
+                // Hide already selected members
+                selectedNewMembers.forEach(member => {
+                    removeUserFromSuggestions(member.id);
+                });
+                
+                setupEditMembersSearch();
+            } else {
+                loadingDiv.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No available users to add.</p>';
+                membersContainer.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading users:', error);
+            loadingDiv.innerHTML = '<p style="color: #dc2626; text-align: center;">Error loading users.</p>';
+        });
+}
 
     function setupEditMembersSearch() {
         const searchInput = editModalContent.querySelector('#membersSearch');

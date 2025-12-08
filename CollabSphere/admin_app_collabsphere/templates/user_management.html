@@ -17,6 +17,21 @@
         </div>
     </div>
 
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-label">Total Users</span>
+            <span class="stat-value">{{ total_users }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Active Today</span>
+            <span class="stat-value">{{ users_today|default:"0" }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">New This Week</span>
+            <span class="stat-value" id="weeklyUsers">Loading...</span>
+        </div>
+    </div>
 
     <!-- Users Table -->
     <div class="card">
