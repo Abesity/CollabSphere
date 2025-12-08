@@ -37,6 +37,11 @@ def admin_required(view_func):
 
 @admin_required
 def admin_dashboard(request):
+    
+    storage = messages.get_messages(request)
+    for message in storage:
+        pass
+    
     """Admin dashboard overview."""
     stats = AdminSupabaseService.get_system_stats()
     
