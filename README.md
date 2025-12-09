@@ -64,5 +64,5 @@ Hosting Provider: Render (Web Service)
 | ------------------------------------| --------------------------------------------------- | -------------------------------------- |
 | John Fil Roe Taboada                | Lead Developer                                      |   johnfilroe.taboada@cit.edu           | 
 | Sharbelle A. Temperatura            | Developer                                           |   sharbelle.temperatura@cit.edu        |
-| Niña Isabelle Tupas                 | Developer / Front End Designer                      |   ninaisabelletupas@cit.edu            |
+| Niña Isabelle Tupas                 | Developer                                           |   ninaisabelletupas@cit.edu            |
 
